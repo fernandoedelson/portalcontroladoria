@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+{% block title %}Como usar{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Como usar o portal</h1>
+    <div class="sub">Documentação do que cada tela faz e do passo a passo da rotina.</div></div>
+</div>
+
+<div class="adm-tabs" id="adm-tabs">
+  {% if current_user.is_empresa and consolidacao_ativa %}
+  <button class="adm-tab" data-tab="empresa">Sou da empresa</button>
+  {% endif %}
+  {% if current_user.is_controladoria %}
+  {% if consolidacao_ativa %}<button class="adm-tab" data-tab="ctrl">Controladoria</button>{% endif %}
+  <button class="adm-tab" data-tab="time">Gestão da área</button>
+  <button class="adm-tab" data-tab="sistema">Administração</button>
+  {% endif %}
+  <button class="adm-tab" data-tab="notas">Minhas notas</button>
+  {% if consolidacao_ativa %}<button class="adm-tab" data-tab="validacao">O que é validado</button>{% endif %}
+  <button class="adm-tab" data-tab="duvidas">Dúvidas frequentes</button>
+</div>
+
+<!-- ===================== EMPRESA ===================== -->
+{% if current_user.is_empresa and consolidacao_ativa %}
+<section class="adm-pane" data-pane="empresa">
+  <div class="card">
+    <h2>Seu fluxo, em 4 passos</h2>
+    <ol class="doc-steps">
+      <li><strong>Baixe o template vigente</strong> em <em>Baixar Template</em>.
+        Use sempre o do portal — se a estrutura mudar, é por lá que a nova versão chega.
+        Não exclua nem renomeie abas e linhas.</li>
+      <li><strong>Preencha no Excel</strong> e salve normalmente. Importante: salve
+        pelo próprio Excel, para que ele grave os valores calculados das fórmulas.</li>
+      <li><strong>Confira antes de enviar</strong> em <em>Conferir arquivo</em>.
+        Essa tela roda a mesma validação do envio oficial, mas
+        <strong>não registra nada</strong> — você pode testar quantas vezes quiser.</li>
+      <li><strong>Envie</strong> em <em>Enviar Arquivo</em>. Se ficar verde, acabou.
+        Se reprovar, o relatório diz exatamente o que corrigir; ajuste e reenvie.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Quando o arquivo é reprovado</h2>
+    <p>O relatório lista cada problema com três informações: <strong>o que está
+      errado</strong>, <strong>por que é um problema</strong> e <strong>o que fazer
+      no arquivo</strong>. Cada item tem também um “Detalhe técnico” com a linha, o
+      período e os números, caso você queira conferir célula a célula.</p>
+    <p class="mt-1">Se você tem certeza de que o número está certo e mesmo assim o
+      portal reprovou (um evento não recorrente, por exemplo), use
+      <strong>Solicitar exceção</strong> no fim do relatório: escreva a justificativa
+      e a controladoria decide. Aprovada a exceção, o arquivo passa a valer.</p>
+  </div>
+
+  <div class="card">
+    <h2>Conta corrente entre empresas</h2>
+    <p>Em <em>Conta Corrente</em> você declara suas posições com as outras empresas
+      do grupo. A convenção é simples: valor <strong>positivo</strong> = você tem a
+      <strong>receber</strong> da contraparte; <strong>negativo</strong> = você deve
+      ou enviou recursos.</p>
+    <p class="mt-1">Sua declaração não bloqueia o envio do arquivo. Ela serve para a
+      controladoria cruzar os dois lados: se você declara e a contraparte não, aparece
+      uma pendência para ser resolvida entre vocês.</p>
+  </div>
+</section>
+{% endif %}
+
+<!-- ===================== CONTROLADORIA (só com Consolidação ligada) ===================== -->
+{% if current_user.is_controladoria %}
+{% if consolidacao_ativa %}
+<section class="adm-pane" data-pane="ctrl">
+  <div class="card">
+    <h2>O ciclo do mês</h2>
+    <ol class="doc-steps">
+      <li><strong>Abrir a competência</strong> em <em>Gestão de Fechamento</em>.
+        Só a competência “Aberta” aparece para as empresas enviarem.</li>
+      <li><strong>Acompanhar</strong> no <em>Dashboard</em> e em <em>Fechamento</em>:
+        quem enviou, quem reprovou, quem ainda falta.</li>
+      <li><strong>Cobrar</strong> — a régua de avisos dispara sozinha nos dias
+        configurados; dá para disparar na hora em <em>Gestão de Fechamento</em>.</li>
+      <li><strong>Resolver pendências</strong>: exceções solicitadas, divergências de
+        conta corrente e restatements.</li>
+      <li><strong>Fechar a competência</strong>. Isso congela os arquivos aprovados,
+        exporta o lote para o ETL e grava as métricas no histórico.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Telas e para que servem</h2>
+    <dl class="doc-dl">
+      <dt>Dashboard</dt><dd>Visão do fechamento corrente: progresso, aprovadas,
+        reprovadas, pendentes, prazo e atalhos para exceções e conta corrente.</dd>
+      <dt>Fechamento</dt><dd>Status por empresa em qualquer competência, com acesso ao
+        relatório de cada envio e exportação para Excel.</dd>
+      <dt>Gestão de Fechamento</dt><dd>Cronograma do ano, abertura/fechamento/reabertura
+        de períodos, edição de prazos e configuração da régua de avisos.</dd>
+      <dt>Conta Corrente</dt><dd>Matriz N×N das declarações bilaterais. Mostra pares
+        divergentes, declarações unilaterais e a soma consolidada, que deve zerar.</dd>
+      <dt>Forecast x Real</dt><dd>Assertividade: o realizado do mês contra o que a
+        empresa projetava antes e contra o orçado.</dd>
+      <dt>Restatement</dt><dd>Alterações retroativas em meses já aceitos — o portal
+        compara cada envio com a versão anterior aprovada.</dd>
+      <dt>Exceções</dt><dd>Fila de justificativas das empresas para aprovar ou recusar.</dd>
+      <dt>Histórico</dt><dd>Série de todos os fechamentos: acerto de primeira, rodadas
+        por empresa, dias vs. prazo e ranking de quem dá mais retrabalho.</dd>
+    </dl>
+  </div>
+</section>
+{% endif %}
+
+<!-- ===================== TIME ===================== -->
+<section class="adm-pane" data-pane="time">
+  <div class="card">
+    <h2>Passo a passo do mês (gestor)</h2>
+    <ol class="doc-ol">
+      <li><strong>Defina a competência atual.</strong> Em <em>Administração › Sistema ›
+        Competência atual</em>, escolha o mês vigente. É o que orienta o Resumo, o prazo e
+        as telas do time. Se a competência ainda não existe, crie-a logo acima (Competências).</li>
+      <li><strong>Monte/ajuste o cronograma.</strong> Em <em>Cronograma</em>, confira as
+        atividades recorrentes, os responsáveis e os dias úteis de vencimento.</li>
+      <li><strong>Gere as atividades do mês.</strong> No próprio Cronograma, botão
+        <em>Gerar</em> → escolha “Um mês”, “Período” ou “Ano”. Pode rodar de novo quando quiser.</li>
+      <li><strong>Acompanhe no Painel do Dia.</strong> Veja o que vence hoje, o que atrasou
+        e a carga de cada pessoa.</li>
+      <li><strong>Registre metas.</strong> Em <em>Administração › Time</em>, crie os painéis
+        e adicione indicadores (do catálogo) com a meta de cada painel.</li>
+      <li><strong>Cuide da capacidade.</strong> Aprove as férias solicitadas, veja as
+        <em>atividades descobertas</em> e realoque antes das ausências.</li>
+      <li><strong>Feche o mês.</strong> Acompanhe o <em>Resumo do fechamento</em> (cumprimento
+        do cronograma) e, no mês seguinte, atualize a competência atual (volta ao passo 1).</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>Passo a passo (profissional)</h2>
+    <ol class="doc-ol">
+      <li><strong>Painel do Dia / Atividades:</strong> veja o que é seu, conclua em um clique
+        e registre bloqueios quando travar.</li>
+      <li><strong>Minhas Tarefas</strong> (menu Pessoal): monte suas listas pessoais, com
+        vencimento e aviso. Só você vê.</li>
+      <li><strong>Minhas Notas</strong> (menu Pessoal): bloco privado para reuniões e lembretes.</li>
+      <li><strong>Férias:</strong> em <em>Férias e ausências</em>, solicite as suas — o gestor
+        aprova e, no retorno, confirma a data real.</li>
+    </ol>
+  </div>
+  {% if consolidacao_ativa %}
+  <div class="card">
+    <h2>Princípio: o portal não pergunta o que já sabe</h2>
+    <p>Quando uma empresa envia o arquivo, a atividade de fechamento correspondente
+      vai sozinha para <em>em andamento</em>; quando o arquivo é aprovado, ela é
+      <strong>concluída automaticamente</strong>, com registro no histórico da
+      atividade. Ninguém precisa marcar nada à mão para o painel ficar correto.</p>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Telas da área</h2>
+    <dl class="doc-dl">
+      <dt>Painel do Dia</dt><dd>O que vence hoje, o que atrasou e como está a carga de
+        cada pessoa. Ponto de partida da rotina.</dd>
+      <dt>Atividades</dt><dd>Lista completa com filtros. Dá para concluir em um clique
+        direto da lista e concluir várias de uma vez pelo checkbox. Alterne entre
+        <strong>Tabela</strong> e <strong>Kanban</strong>, e use <strong>Agrupar por status</strong>
+        (grupos recolhíveis: Atrasada, Vence hoje, Pendente…). Toda atividade ligada a um
+        <strong>projeto</strong> vira tipo “Projeto” e dispensa competência.</dd>
+      <dt>Cronograma</dt><dd>O cadastro das atividades recorrentes do fechamento —
+        atividade, responsável e o dia útil de vencimento. A partir dele você
+        <strong>gera as atividades de um mês, de um período ou do ano inteiro</strong>
+        num clique (ver card abaixo).</dd>
+      <dt>Indicadores &amp; Metas</dt><dd>Metas organizadas por <strong>painel</strong>,
+        com registro de resultado e anexo de evidência. Os indicadores vêm de um
+        <strong>catálogo</strong> reutilizável — o mesmo indicador pode entrar em vários
+        painéis com metas diferentes. Um painel pode ser pessoal (de uma pessoa) ou de
+        equipe, como Controladoria — crie e edite painéis em Administração › Time.</dd>
+      <dt>Projetos</dt><dd>Projetos com responsável, marcos e linha do tempo (Gantt).
+        As datas do projeto e dos marcos alimentam o gráfico. <strong>Dentro de cada
+        projeto</strong> há uma linha do tempo própria, onde cada barra é uma atividade
+        do projeto (início→prazo; verde = concluída, vermelho = atrasada). No cabeçalho:
+        <strong>Abrir</strong> (inicia), <strong>Encerrar</strong> (conclui) e
+        <strong>Bloquear/Desbloquear</strong> (confidencial 🔒 — o nome não vai a canais
+        externos).</dd>
+      <dt>Capacidade</dt><dd>Visível só para o perfil gestor. Mapa pessoa × dia útil:
+        mostra onde a carga se concentra e quem vai estourar, antes do atraso acontecer.</dd>
+      <dt>Férias e ausências</dt><dd>Controle das férias e ausências do time. Mostra as
+        <strong>atividades descobertas</strong> — que vencem durante a ausência de alguém —
+        para o gestor reatribuir antes.</dd>
+      <dt>Carteira</dt><dd>Quais empresas cada pessoa atende e quais entregas cada uma
+        exige.</dd>
+      <dt>Alertas</dt><dd>Matriz evento × canal: o que notifica e por onde.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Cronograma: gerar as atividades do fechamento</h2>
+    <p>No <em>Cronograma</em> você monta uma vez a lista das atividades que se repetem
+      todo mês. Cada item tem um <strong>responsável</strong> e um <strong>dia útil de
+      vencimento</strong> — que conta sempre no <strong>mês seguinte</strong> à
+      competência (ex.: item “5” = 5º dia útil do mês seguinte).</p>
+    <dl class="doc-dl">
+      <dt>Escopo de cada item</dt><dd>Ao cadastrar a atividade você escolhe:
+        <strong>Geral</strong> (uma atividade no mês, com o responsável fixo),
+        <strong>Todas as empresas</strong> (replica para cada empresa da carteira, no
+        responsável de cada uma) ou <strong>uma empresa específica</strong> (só aquela,
+        usando o responsável dela na carteira).</dd>
+      <dt>Gerar / sincronizar</dt><dd>O botão gera as atividades de <strong>um mês, um período
+        ou o ano inteiro</strong>. Rodar de novo <strong>sincroniza</strong>: cria as que
+        faltam, <strong>atualiza</strong> as existentes (responsável, prazo, prioridade),
+        <strong>remove</strong> as em aberto que saíram do cronograma e <strong>preserva as
+        concluídas</strong> (histórico). Competências que faltarem são criadas.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Catálogo de indicadores</h2>
+    <p>Os indicadores ficam num <strong>catálogo central</strong> (Indicadores › Catálogo).
+      Cadastre o indicador uma vez — nome, dimensão e como é avaliado — e depois
+      <strong>use o mesmo indicador em vários painéis, cada um com a sua meta</strong>.
+      Ex.: “Prazo de entrega do painel” pode ser D+2 num painel e D+3 em outro.</p>
+    <p class="mt-1">Ao adicionar um indicador a um painel, escolha-o da lista do catálogo
+      (ou cadastre um novo na hora) e informe a <strong>meta daquele painel</strong>.
+      Editar o indicador no catálogo atualiza o nome em todos os painéis que o usam.</p>
+  </div>
+
+  <div class="card">
+    <h2>Prazos de projeto: revisão, aprovação e liderança</h2>
+    <dl class="doc-dl">
+      <dt>Redefinir o prazo do projeto</dt><dd>Mudar o prazo (alvo) do projeto é atribuição
+        do <strong>líder do projeto</strong> (o responsável) ou do <strong>gestor</strong>.
+        Cada mudança pede uma justificativa e fica no histórico (de → para, adiado/antecipado,
+        motivo e quem fez).</dd>
+      <dt>Realinhar prazo de atividade/marco</dt><dd>Qualquer pessoa do time pode
+        <strong>solicitar</strong> o realinhamento de um prazo (as ações costumam depender
+        umas das outras). A solicitação <strong>passa pela aprovação</strong> do líder do
+        projeto ou do gestor — só então a data muda. Se quem realinha já é o líder ou o
+        gestor, é aplicado na hora.</dd>
+      <dt>Líder × gestor do projeto</dt><dd>Cada projeto tem um <strong>líder</strong> (o
+        responsável pelo andamento) e um <strong>gestor</strong> (quem aprova/superviona) —
+        podem ser pessoas diferentes. Defina ambos no cartão “Dados do projeto”. Assim dá
+        para ter mais de uma pessoa com papel de gestão na ferramenta.</dd>
+      <dt>Delegação nas férias</dt><dd>Ao registrar as férias, a pessoa (sobretudo quem tem
+        cargo de gestão) informa <strong>quem aprova</strong> e <strong>quem toca o
+        andamento</strong> no seu lugar. Durante o período, os realinhamentos vão para o
+        aprovador delegado, e o andamento fica com o delegado de operação. Se ninguém for
+        indicado, escala para o gestor do time. Ao voltar, tudo retorna sozinho.</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Quando você trava numa atividade</h2>
+    <p>Abra a atividade e registre um <strong>bloqueio</strong> dizendo o motivo. Três
+      coisas acontecem: a atividade muda de situação, o gestor é notificado e o motivo
+      fica no histórico — então ninguém precisa perguntar “e aí, como ficou?”.
+      Quando destravar, registre o desbloqueio.</p>
+    <p class="mt-1">Use os <strong>anexos</strong> para deixar a evidência junto da
+      tarefa: o e-mail, o print, a conciliação. Assim a resposta não se perde no chat.</p>
+  </div>
+</section>
+
+<!-- ===================== SISTEMA ===================== -->
+<section class="adm-pane" data-pane="sistema">
+  <div class="card">
+    <h2>Administração</h2>
+    <dl class="doc-dl">
+      <dt>Time</dt><dd>Cadastro das pessoas.</dd>
+      <dt>Carteira</dt><dd>Vínculo empresa × responsável × entregas. Toda empresa nova
+        precisa entrar aqui, senão ela não aparece para o time.</dd>
+      <dt>Organização</dt><dd>Empresas (incluindo o rótulo canônico usado no
+        cruzamento de conta corrente) e usuários, com redefinição de senha.</dd>
+      <dt>Template &amp; regras</dt><dd>Substituição do template oficial com
+        regeneração automática do manifesto de validação, e tolerância padrão.</dd>
+      <dt>Sistema</dt><dd>Liga/desliga o <strong>módulo de Consolidação</strong>,
+        cadastra as <strong>competências</strong> (o período dos indicadores) e configura
+        o agendador (horário do disparo diário e dia do resumo semanal).</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Ligar e desligar a Consolidação</h2>
+    <p>Na aba <em>Sistema</em>, o botão <strong>Módulo de Consolidação</strong> ativa ou
+      esconde toda a área de envio, validação, conta corrente, forecast e fechamento.
+      Desligado, o portal abre direto na Gestão da Área e essas telas somem do menu —
+      <strong>nada é apagado</strong>, é totalmente reversível.</p>
+    <p class="mt-1">Enquanto a Consolidação está desligada, o atingimento dos indicadores
+      é <strong>preenchido manualmente</strong> e as competências são criadas aqui, na aba
+      Sistema, sem depender da Gestão de Fechamento.</p>
+  </div>
+  <div class="card">
+    <h2>Perfil Profissional</h2>
+    <p>Além de Administrador e Controladoria, existe o perfil <strong>Profissional</strong>:
+      tem a mesma navegação da Gestão da Área, mas <strong>só enxerga o que é dele</strong>
+      — suas atividades, indicadores, projetos, carga e fila. Vincule o usuário a uma
+      pessoa do Time (na aba Time) para o escopo funcionar.</p>
+  </div>
+  <div class="card">
+    <h2>Competência atual (em que mês estamos)</h2>
+    <p>A ferramenta precisa saber <strong>qual é o mês vigente</strong>. Em
+      <em>Administração › Sistema › Competência atual</em> você escolhe a competência do
+      momento — é ela que orienta o <strong>Resumo do fechamento</strong>, o prazo exibido e
+      as telas do time. <strong>Atualize no começo de cada mês.</strong> Se deixar em
+      “automático”, o portal usa a competência aberta mais recente (o que pode apontar para
+      o mês errado). As competências em si são criadas logo acima, no cartão “Competências”.</p>
+  </div>
+  <div class="card">
+    <h2>Férias: solicitar, aprovar e confirmar retorno</h2>
+    <dl class="doc-dl">
+      <dt>Profissional solicita</dt><dd>Em <em>Férias e ausências</em>, o profissional pede as
+        próprias férias (data de início e fim). A solicitação fica <strong>pendente</strong> e
+        o gestor é notificado.</dd>
+      <dt>Gestor aprova ou recusa</dt><dd>O gestor vê as solicitações pendentes e
+        <strong>aprova</strong> ou <strong>recusa</strong> (pode deixar uma observação). Só as
+        aprovadas contam como “fora” no mapa de capacidade e nas atividades descobertas.</dd>
+      <dt>Confirmação de retorno</dt><dd>Quando o período termina, a ausência entra em
+        <em>Confirmar retorno</em>: o gestor confirma que a pessoa saiu de fato e registra a
+        <strong>data real de retorno</strong> (que pode diferir da prevista).</dd>
+      <dt>Cadastro direto</dt><dd>O gestor também pode registrar uma ausência de qualquer
+        pessoa já aprovada, sem passar pela solicitação.</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Excluir ou inativar uma pessoa do time</h2>
+    <p>Ao remover alguém em <strong>Administração › Time</strong>, o portal pergunta antes.
+      Se a pessoa <strong>não tem histórico</strong> (nenhuma atividade nem empresa na
+      carteira), ela é <strong>excluída definitivamente</strong>.</p>
+    <p class="mt-1">Se a pessoa <strong>já tem atividades atribuídas</strong>, em vez de
+      apagar (o que quebraria o histórico) ela é <strong>inativada</strong>: some do Painel
+      do Dia, dos Indicadores &amp; Metas e dos seletores de responsável, mas continua no
+      cadastro e nas atividades já concluídas. Para reativar, marque <em>Ativo</em> na linha
+      dela. Você também pode inativar direto, desmarcando <em>Ativo</em> e salvando.</p>
+  </div>
+  <div class="card">
+    <h2>O agendador</h2>
+    <p>Roda junto da aplicação e, uma vez por dia, faz três coisas: dispara o ciclo de
+      alertas do time, envia as cobranças às empresas pendentes nos dias definidos na
+      régua e, no dia escolhido da semana, manda o resumo do fechamento à
+      controladoria.</p>
+    <p class="mt-1"><strong>Importante:</strong> ele só funciona enquanto a aplicação
+      estiver rodando. Se o portal for desligado à noite, as tarefas do dia acontecem
+      quando ele voltar a subir.</p>
+  </div>
+</section>
+{% endif %}
+
+<!-- ===================== NOTAS ===================== -->
+<section class="adm-pane" data-pane="notas">
+  <div class="card">
+    <h2>Bloco de notas pessoal</h2>
+    <p>Em <em>Minhas Notas</em> você tem um bloco só seu. <strong>Ninguém mais no
+      portal vê o que você escreve</strong> — nem a controladoria, nem o
+      administrador. As notas são vinculadas ao seu login.</p>
+    <p class="mt-1">Foi pensado para uso em tablet durante reuniões: campo de escrita
+      grande, toques confortáveis e <strong>salvamento automático</strong> — o texto
+      é gravado sozinho pouco depois de você parar de digitar. O rodapé mostra
+      “Salvando…” e depois o horário em que ficou salvo.</p>
+  </div>
+  <div class="card">
+    <h2>Recursos</h2>
+    <dl class="doc-dl">
+      <dt>Título automático</dt><dd>Se você não preencher o título, a primeira linha
+        do texto vira o nome da nota na lista.</dd>
+      <dt>Fixar</dt><dd>Notas fixadas sobem para o topo da lista — útil para a pauta
+        recorrente da reunião mensal.</dd>
+      <dt>Cores</dt><dd>Uma marca colorida na lateral ajuda a separar assuntos
+        (por exemplo: uma cor por empresa ou por tipo de reunião).</dd>
+      <dt>Busca</dt><dd>Procura no título e no corpo de todas as suas notas.</dd>
+      <dt>Aviso de não salvo</dt><dd>Se você tentar sair com algo ainda não gravado,
+        o navegador avisa antes de fechar.</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Minhas Tarefas</h2>
+    <p>No menu <strong>Pessoal › Minhas Tarefas</strong> cada profissional monta suas
+      próprias listas de pendências do dia. <strong>São privadas</strong> — só você vê.
+      Diferente das <em>Atividades</em> do fechamento (que são o trabalho do time
+      atribuído a você), aqui é a sua gestão pessoal.</p>
+    <dl class="doc-dl">
+      <dt>Listas</dt><dd>Crie quantas listas quiser (ex.: “Hoje”, “Semana”, “Aguardando terceiros”).</dd>
+      <dt>Situação</dt><dd>Cada tarefa passa por <strong>Não iniciado → Em andamento →
+        Concluído</strong>. A lista se organiza sozinha nesses grupos, e o que estiver
+        <strong>atrasado aparece sempre no topo</strong>.</dd>
+      <dt>Vencimento</dt><dd>Dê uma data à tarefa; as atrasadas aparecem em vermelho e as de hoje em destaque.</dd>
+      <dt>Aviso de vencimento 🔔</dt><dd>Marque o sino ao criar a tarefa para receber uma
+        notificação no dia do vencimento (e enquanto seguir em atraso).</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ===================== VALIDAÇÃO (só com Consolidação ligada) ===================== -->
+{% if consolidacao_ativa %}
+<section class="adm-pane" data-pane="validacao">
+  <div class="card">
+    <h2>O que o portal verifica no arquivo</h2>
+    <p class="text-muted text-sm mb-2">A ideia central: o portal <strong>não confia nas
+      fórmulas do arquivo enviado</strong>. Ele conhece a estrutura oficial e recalcula
+      as relações a partir dos valores. Mesmo que alguém apague as fórmulas e digite
+      números, a inconsistência aparece.</p>
+    <ol class="doc-steps">
+      <li><strong>Estrutura</strong> — todas as abas e linhas do template presentes, e
+        as células que são calculadas continuam sendo fórmula (não podem virar valor
+        digitado).</li>
+      <li><strong>Aditividade</strong> — cada subtotal é recalculado a partir dos
+        componentes e comparado com o que o arquivo informa.</li>
+      <li><strong>Sinais</strong> — deduções, capex e impostos negativos; receita,
+        volume e preço positivos.</li>
+      <li><strong>Identidades de saldo</strong> — dívida líquida final = inicial +
+        variação = soma dos componentes; alavancagem recalculada.</li>
+      <li><strong>Sanity check</strong> — a variação da dívida líquida apurada pela
+        geração de caixa tem que bater com a apurada pela ponte de saldos.</li>
+      <li><strong>Encadeamento no tempo</strong> — o saldo inicial do mês tem que ser
+        igual ao saldo final aceito no mês anterior.</li>
+      <li><strong>Forecast</strong> — a projeção do ano precisa estar preenchida.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>Erro x alerta</h2>
+    <p><strong>Erro</strong> bloqueia o aceite — precisa ser corrigido (ou justificado
+      via exceção). <strong>Alerta</strong> não bloqueia: é um ponto que merece conferência,
+      como uma despesa que ficou positiva por causa de um estorno legítimo.</p>
+  </div>
+  <div class="card">
+    <h2>Tolerância</h2>
+    <p>Regras estruturais (somas e identidades de saldo) usam tolerância praticamente
+      zero: o arquivo deve fechar por construção. Já as comparações de valor usam uma
+      tolerância proporcional ao tamanho da empresa — o padrão é configurável e cada
+      empresa pode ter o seu, porque não faz sentido usar a mesma régua para quem
+      fatura 500 mil e para quem fatura bilhões.</p>
+  </div>
+</section>
+{% endif %}
+
+<!-- ===================== DÚVIDAS ===================== -->
+<section class="adm-pane" data-pane="duvidas">
+  <div class="card">
+    <h2>Dúvidas frequentes</h2>
+    <dl class="doc-dl">
+      <dt>O portal disse que o arquivo veio “sem os valores calculados”. O que é?</dt>
+      <dd>O arquivo foi salvo por um programa que não recalcula fórmulas, então as
+        células calculadas ficaram vazias. Abra no Excel, deixe recalcular e salve
+        novamente.</dd>
+
+      <dt>Preciso reenviar o ano inteiro todo mês?</dt>
+      <dd>Sim — o arquivo carrega o realizado e a projeção do ano. Por isso o portal
+        compara cada envio com o anterior: se um mês já fechado mudar, ele avisa
+        (restatement) e pede justificativa.</dd>
+
+      <dt>Alterei um mês antigo de propósito. E agora?</dt>
+      <dd>Não há bloqueio, mas a alteração fica visível para a controladoria. Explique
+        o motivo na solicitação de exceção.</dd>
+
+      <dt>Posso testar o arquivo sem “gastar” uma tentativa?</dt>
+      <dd>Pode. Use <em>Conferir arquivo</em>: mesma validação, sem registrar versão e
+        sem aparecer para ninguém.</dd>
+
+      <dt>Cadastrei uma empresa e ela não apareceu para o time.</dt>
+      <dd>Falta incluí-la na <em>Carteira</em>, em Administração. Há um botão para
+        incluir de uma vez todas as que estiverem de fora.</dd>
+
+      <dt>Por que a competência não aparece para a empresa enviar?</dt>
+      <dd>Só a competência com status <strong>Aberta</strong> aceita envio. Verifique
+        em Gestão de Fechamento.</dd>
+
+      <dt>Mudei o template. Preciso avisar as empresas?</dt>
+      <dd>Ao subir a nova versão em Administração › Template &amp; regras, o manifesto
+        é regenerado e todos passam a baixar a versão nova em <em>Baixar Template</em>.</dd>
+
+      <dt>Alterei um código e nada mudou na tela.</dt>
+      <dd>O servidor não recarrega sozinho. Feche a janela do portal e rode o
+        <code>iniciar_portal.bat</code> de novo.</dd>
+    </dl>
+  </div>
+</section>
+
+<script>
+(function(){
+  var tabs=document.querySelectorAll('.adm-tab'), panes=document.querySelectorAll('.adm-pane');
+  function show(n){
+    var achou=false;
+    panes.forEach(function(p){var on=p.dataset.pane===n; if(on)achou=true; p.style.display=on?'block':'none';});
+    if(!achou&&tabs.length){n=tabs[0].dataset.tab;panes.forEach(function(p){p.style.display=(p.dataset.pane===n)?'block':'none';});}
+    tabs.forEach(function(t){t.classList.toggle('active',t.dataset.tab===n);});
+    history.replaceState(null,'','/ajuda?t='+n);
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.dataset.tab);});});
+  show(new URLSearchParams(location.search).get('t')||(tabs[0]&&tabs[0].dataset.tab));
+})();
+</script>
+{% endblock %}

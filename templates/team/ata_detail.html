@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ ata.titulo }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ ata.titulo }}</h1>
+    <div class="sub">
+      <span class="kind-chip">{{ 'Resultado' if ata.tipo=='resultado' else 'Geral' }}</span>
+      {% if ata.company %}· {{ ata.company.name }}{% endif %}
+      {% if ata.comp_ym %}· {{ ata.comp_label }}{% endif %}
+      {% if ata.data_reuniao %}· {{ ata.data_reuniao.strftime('%d/%m/%Y') }}{% endif %}
+    </div></div>
+  <div class="flex gap-1">
+    <a href="/atas" class="btn btn-outline">← Atas</a>
+    <form method="post" action="/ata/{{ ata.id }}/excluir" onsubmit="return confirm('Excluir esta ata?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline btn-danger" type="submit">{{ icone('trash') }} Excluir</button>
+    </form>
+  </div>
+</div>
+
+{% if ata.resumo %}
+<div class="card"><h2>Resumo</h2><p>{{ ata.resumo }}</p></div>
+{% endif %}
+
+{% if ata.decisoes %}
+<div class="card">
+  <h2>Decisões ({{ ata.decisoes|length }})</h2>
+  <ul class="doc-steps">{% for d in ata.decisoes %}<li>{{ d.decisao if d.decisao is defined else d }}{% if d.contexto is defined and d.contexto %} <span class="text-muted text-sm">— {{ d.contexto }}</span>{% endif %}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% if ata.acoes %}
+<div class="card">
+  <h2>Ações da ata ({{ ata.acoes|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Tarefa</th><th scope="col">Responsável</th><th scope="col">Prazo</th></tr></thead>
+    <tbody>{% for a in ata.acoes %}
+      <tr><td>{{ a.tarefa }}</td><td>{{ a.responsavel or '—' }}</td>
+        <td class="text-sm">{{ a.prazo or a.prazo_texto or '—' }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  <p class="help-txt mt-1">As atividades geradas a partir desta ata estão em <a href="/atividades">Atividades</a>.</p>
+</div>
+{% endif %}
+
+{% if ata.tipo == 'resultado' and ata.qualitativo %}
+{% set q = ata.qualitativo %}
+<div class="card">
+  <h2>Leitura qualitativa</h2>
+  <dl class="doc-dl">
+    {% if q.drivers_do_mes %}<dt>Drivers do mês</dt><dd>{{ q.drivers_do_mes|join('; ') }}</dd>{% endif %}
+    {% if q.nao_recorrentes %}<dt>Não-recorrentes</dt><dd>{{ q.nao_recorrentes|join('; ') }}</dd>{% endif %}
+    {% if q.destaques_positivos %}<dt>Destaques positivos</dt><dd>{{ q.destaques_positivos|join('; ') }}</dd>{% endif %}
+    {% if q.pontos_atencao_riscos %}<dt>Pontos de atenção / riscos</dt><dd>{{ q.pontos_atencao_riscos|join('; ') }}</dd>{% endif %}
+    {% if q.compromissos_promessas %}<dt>Compromissos assumidos pelo negócio</dt><dd>{{ q.compromissos_promessas|join('; ') }}</dd>{% endif %}
+    {% if q.outlook %}<dt>Outlook</dt><dd>{{ q.outlook }}</dd>{% endif %}
+    {% if q.numeros_citados %}<dt>Números citados</dt><dd>{% for n in q.numeros_citados %}{{ n.metrica }}: <strong>{{ n.valor }}</strong>{{ ' (' ~ n.observacao ~ ')' if n.observacao else '' }}{{ '; ' if not loop.last }}{% endfor %}</dd>{% endif %}
+    {% if q.temas %}<dt>Temas</dt><dd>{% for t in q.temas %}<span class="kind-chip">{{ t }}</span> {% endfor %}</dd>{% endif %}
+  </dl>
+  <p class="help-txt mt-1">Este qualitativo é o lastro por empresa × competência que, no futuro, alimenta o release.</p>
+</div>
+{% endif %}
+
+{% if ata.ata_texto %}
+<details class="card">
+  <summary style="cursor:pointer;font-weight:700;">Ver a ata completa (texto)</summary>
+  <pre class="resumo-box" style="white-space:pre-wrap;margin-top:.8rem;">{{ ata.ata_texto }}</pre>
+</details>
+{% endif %}
+{% endblock %}

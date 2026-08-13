@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ p.name }}
+      {% if p.confidential %}<span class="lock-badge" title="Projeto bloqueado (confidencial): o nome não é enviado a canais externos de notificação">{{ icone('lock') }} confidencial</span>{% endif %}</h1>
+    <div class="sub"><span class="st st-{{ p.status }}">{{ p.status_pt }}</span>
+      {% if p.owner %}· líder {{ p.owner.name }}{% endif %}
+      {% if gestor %}· gestor {{ gestor.name }}{% endif %}{% if p.code %} · {{ p.code }}{% endif %}
+      {% if p.start_date %}· início {{ p.start_date.strftime('%d/%m/%Y') }}{% endif %}
+      {% if p.target_date %}· alvo {{ p.target_date.strftime('%d/%m/%Y') }}{% endif %}</div></div>
+  <div class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    <form method="post" action="/projeto/{{ p.id }}/status" class="flex gap-1">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <select class="input" name="status" style="width:auto;" onchange="this.form.submit()" title="Situação">
+        {% for s, lbl in [('planejado','Planejado'),('ativo','Ativo'),('pausado','Pausado'),('concluido','Concluído'),('cancelado','Cancelado')] %}
+        <option value="{{ s }}" {{ 'selected' if p.status==s }}>{{ lbl }}</option>{% endfor %}
+      </select>
+    </form>
+    {% if p.status != 'concluido' %}
+    <form method="post" action="/projeto/{{ p.id }}/encerrar">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline btn-sm" type="submit" title="Concluir o projeto e registrar a data de término">{{ icone('check') }} Encerrar</button>
+    </form>
+    {% else %}
+    <form method="post" action="/projeto/{{ p.id }}/abrir">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline btn-sm" type="submit" title="Reabrir o projeto como ativo">{{ icone('refresh') }} Reabrir</button>
+    </form>
+    {% endif %}
+    <form method="post" action="/projeto/{{ p.id }}/confidencial">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline btn-sm {{ 'btn-danger' if p.confidential }}" type="submit"
+              title="{{ 'Desbloquear: o nome volta a poder aparecer em avisos externos' if p.confidential else 'Bloquear: torna o projeto confidencial (o nome não vai a canais externos)' }}">
+        {{ icone('lock') }} {{ 'Desbloquear' if p.confidential else 'Bloquear' }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Dados do projeto <span class="muted">· datas alimentam a linha do tempo (Gantt)</span></h2>
+  <form method="post" action="/projeto/{{ p.id }}/editar" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">Nome</label>
+      <input class="input" name="name" value="{{ p.name }}" required/></div>
+    <div class="form-row"><label class="field-label">Código</label>
+      <input class="input" name="code" value="{{ p.code or '' }}"/></div>
+    <div class="form-row"><label class="field-label">Líder (responsável)</label>
+      <select class="input" name="owner_member_id"><option value="">— a definir —</option>
+        {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if p.owner_member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+      </select></div>
+    <div class="form-row"><label class="field-label">Gestor do projeto</label>
+      <select class="input" name="manager_member_id"><option value="">— gestor do time (padrão) —</option>
+        {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if p.manager_member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+      </select>
+      <div class="help-txt">Quem aprova/superviona. Pode ser diferente do líder.</div></div>
+    <div class="form-row"><label class="field-label">Início</label>
+      <input class="input" type="date" name="start_date" value="{{ p.start_date.isoformat() if p.start_date else '' }}"/></div>
+    <div class="form-row"><label class="field-label">Prazo (alvo)</label>
+      <input class="input" type="date" name="target_date" value="{{ p.target_date.isoformat() if p.target_date else '' }}"/></div>
+    <div class="form-row"><label class="field-label">Cor na linha do tempo</label>
+      <input class="input" type="color" name="color" value="{{ p.color }}" style="height:42px;padding:.2rem;"/></div>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Descrição</label>
+      <textarea class="input" name="description" rows="2">{{ p.description or '' }}</textarea></div>
+    <div class="form-row"><label class="chk"><input type="checkbox" name="confidential" value="1" {{ 'checked' if p.confidential }}/> Confidencial</label></div>
+    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">Salvar</button></div>
+  </form>
+</div>
+
+<div class="card">
+  {% set rot = {'project':'Projeto','milestone':'Marco','activity':'Atividade'} %}
+  <h2>Prazo do projeto <span class="muted">· revise para frente ou para trás, com justificativa</span></h2>
+  {% if lider_ferias %}
+  <div class="alert alert-warning">{{ icone('alert') }} <strong>{{ p.owner.name }}</strong> (líder)
+    está de férias — o andamento do projeto passa temporariamente para
+    <strong>{{ lider.name if lider else 'o gestor' }}</strong> durante a ausência.</div>
+  {% endif %}
+  {% if gestor_ferias %}
+  <div class="alert alert-warning">{{ icone('alert') }} <strong>{{ gestor.name }}</strong> (gestor)
+    está de férias — as aprovações ficam com quem ele delegou (ou o gestor do time) durante a ausência.</div>
+  {% endif %}
+
+  {% if pode_gerir %}
+  <form method="post" action="/projeto/{{ p.id }}/revisar-prazo" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">Prazo atual</label>
+      <input class="input" type="date" value="{{ p.target_date.isoformat() if p.target_date else '' }}" disabled/></div>
+    <div class="form-row"><label class="field-label">Novo prazo *</label>
+      <input class="input" type="date" name="new_date" required/></div>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Justificativa *</label>
+      <input class="input" name="reason" placeholder="Ex.: aguardando entrega da etapa anterior" required/></div>
+    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('calendar') }} Redefinir prazo</button></div>
+  </form>
+  {% else %}
+  <p class="help-txt">Redefinir o prazo do projeto é atribuição do <strong>líder do projeto</strong>
+    ou do <strong>gestor</strong>. O realinhamento de prazo de atividades/marcos pode ser
+    solicitado e passa pela aprovação deles.</p>
+  {% endif %}
+
+  {% if pendentes %}
+  <h3 style="margin-top:1rem;">Realinhamentos a aprovar ({{ pendentes|length }})</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">O quê</th><th scope="col">De → Para</th><th scope="col">Justificativa</th><th scope="col">Quem pediu</th><th scope="col">Ação</th></tr></thead>
+    <tbody>{% for r in pendentes %}
+      <tr>
+        <td>{{ rot.get(r.entity_type, r.entity_type) }}</td>
+        <td class="text-sm">{{ r.old_date.strftime('%d/%m/%y') if r.old_date else '—' }} → <strong>{{ r.new_date.strftime('%d/%m/%Y') }}</strong></td>
+        <td class="text-sm">{{ r.reason }}</td>
+        <td class="text-sm text-muted">{{ users[r.requested_by].display_name if r.requested_by and users.get(r.requested_by) else '—' }}</td>
+        <td>{% if pode_gerir %}<div class="flex gap-1">
+          <form method="post" action="/revisao/{{ r.id }}/aprovar"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-primary btn-sm" type="submit">{{ icone('check') }} Aprovar</button></form>
+          <form method="post" action="/revisao/{{ r.id }}/recusar" onsubmit="return confirm('Recusar este realinhamento?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-outline btn-danger btn-sm" type="submit">{{ icone('x') }}</button></form>
+        </div>{% else %}<span class="badge-soft">aguardando líder/gestor</span>{% endif %}</td>
+      </tr>
+    {% endfor %}</tbody></table></div>
+  {% endif %}
+
+  {% if revisoes %}
+  <h3 style="margin-top:1rem;">Histórico de prazos</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Quando</th><th scope="col">O quê</th><th scope="col">De</th><th scope="col">Para</th><th scope="col">Movimento</th><th scope="col">Justificativa</th><th scope="col">Por</th></tr></thead>
+    <tbody>{% for r in revisoes %}
+      <tr>
+        <td class="text-sm">{{ r.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ rot.get(r.entity_type, r.entity_type) }}</td>
+        <td class="text-sm">{{ r.old_date.strftime('%d/%m/%Y') if r.old_date else '—' }}</td>
+        <td class="text-sm">{{ r.new_date.strftime('%d/%m/%Y') if r.new_date else '—' }}</td>
+        <td><span class="badge-soft">{{ r.sentido }}{% if r.dias %} {{ r.dias }}d{% endif %}</span></td>
+        <td class="text-sm">{{ r.reason }}</td>
+        <td class="text-sm text-muted">{{ users[r.created_by].display_name if r.created_by and users.get(r.created_by) else '—' }}</td>
+      </tr>
+    {% endfor %}</tbody></table></div>
+  {% elif not pendentes %}<p class="help-txt mt-1">Nenhuma revisão de prazo ainda. A primeira mudança já cria o histórico.</p>{% endif %}
+</div>
+
+{% if timeline %}
+<div class="card">
+  <h2>Linha do tempo das ações <span class="muted">· {{ timeline.inicio.strftime('%m/%Y') }} a {{ timeline.fim.strftime('%m/%Y') }}</span></h2>
+  <div class="gantt-wrap">
+    <div class="gantt">
+      <div class="g-row g-head">
+        <div class="g-label"></div>
+        <div class="g-track">
+          {% for m in timeline.meses %}
+          <div class="g-month {{ 'cur' if m.is_current }}" style="left:{{ m.left }}%;width:{{ m.width }}%;">{{ m.label }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% for l in timeline.linhas %}
+      <div class="g-row">
+        <div class="g-label" title="{{ l.a.title }}">
+          <a href="/atividade/{{ l.a.id }}">{{ l.a.title }}</a>
+          <span class="g-sub">{{ l.a.member.name.split()[0] if l.a.member else '—' }}</span>
+        </div>
+        <div class="g-track">
+          {% for m in timeline.meses %}<div class="g-grid" style="left:{{ m.left }}%;width:{{ m.width }}%;"></div>{% endfor %}
+          {% if timeline.hoje_left is not none %}<div class="g-today" style="left:{{ timeline.hoje_left }}%;"></div>{% endif %}
+          {% if l.sem_data %}<div class="g-nodate">sem datas</div>
+          {% else %}
+            <div class="g-bar {{ 'late' if l.atrasada }}" style="left:{{ l.left }}%;width:{{ l.width }}%;background:{{ l.cor }}33;border-color:{{ l.cor }};"
+                 title="{{ l.a.title }} — {{ l.a.start_date.strftime('%d/%m/%Y') if l.a.start_date else '?' }} a {{ l.a.due_date.strftime('%d/%m/%Y') if l.a.due_date else '?' }}">
+              <div class="g-fill" style="width:{{ 100 if l.concluida else 0 }}%;background:{{ l.cor }};"></div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <p class="help-txt mt-1">Cada barra é uma atividade do projeto (início → prazo). Verde = concluída, vermelho = atrasada.</p>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Marcos ({{ p.milestones|length }})</h2>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th></th><th>Marco</th><th>Prazo</th><th></th></tr></thead>
+      <tbody>
+      {% for m in p.milestones %}
+      <tr>
+        <td><form method="post" action="/marco/{{ m.id }}/toggle" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-outline btn-sm" type="submit">{{ '✓' if m.done else '○' }}</button></form></td>
+        <td style="{{ 'text-decoration:line-through;color:var(--text-soft);' if m.done }}">
+          <input class="input" form="ms-{{ m.id }}" name="title" value="{{ m.title }}" style="min-width:130px;"/></td>
+        <td><input class="input" form="ms-{{ m.id }}" type="date" name="due_date"
+                   value="{{ m.due_date.isoformat() if m.due_date else '' }}" style="width:145px;"/></td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" type="submit" form="ms-{{ m.id }}" title="Salvar">Salvar</button>
+          <button class="btn btn-outline btn-sm btn-danger" type="submit" form="msdel-{{ m.id }}" title="Remover">{{ icone("x") }}</button>
+        </div></td>
+      </tr>
+      {% else %}<tr><td colspan="4" class="text-muted" style="text-align:center;padding:1rem;">Sem marcos. Adicione abaixo — eles aparecem como losangos na linha do tempo.</td></tr>{% endfor %}
+      </tbody></table></div>
+    <div hidden>
+      {% for m in p.milestones %}
+      <form id="ms-{{ m.id }}" method="post" action="/marco/{{ m.id }}/editar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
+      <form id="msdel-{{ m.id }}" method="post" action="/marco/{{ m.id }}/excluir"
+            onsubmit="return confirm('Remover o marco {{ m.title }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
+      {% endfor %}
+    </div>
+    <form method="post" action="/projeto/{{ p.id }}/marco" class="flex gap-1 items-center mt-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input class="input" name="title" placeholder="Novo marco" required/>
+      <input class="input" type="date" name="due_date" style="width:150px;"/>
+      <button class="btn btn-primary btn-sm" type="submit">+</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Atividades do projeto ({{ acts|length }})</h2>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Atividade</th><th>Responsável</th><th>Prazo</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for a in acts %}
+      <tr class="row-link" onclick="location.href='/atividade/{{ a.id }}'" title="Abrir atividade">
+        <td><a href="/atividade/{{ a.id }}" style="text-decoration:none;color:var(--text);font-weight:500;">{{ a.title }}</a></td>
+        <td>{{ a.member.name.split()[0] if a.member else '—' }}</td>
+        <td>{{ a.due_date.strftime('%d/%m') if a.due_date else '—' }}</td>
+        <td><span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','concluida':'Concluída','bloqueada':'Bloqueada','cancelada':'Cancelada','aguardando':'Aguardando'}.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+      </tr>
+      {% else %}<tr><td colspan="4" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma atividade vinculada.</td></tr>{% endfor %}
+      </tbody></table></div>
+    <a href="/atividade/nova?project_id={{ p.id }}" class="btn btn-outline btn-sm mt-2">+ Nova atividade</a>
+  </div>
+</div>
+<div class="mt-2"><a href="/projetos" class="btn btn-outline btn-sm">← Projetos</a></div>
+{% endblock %}

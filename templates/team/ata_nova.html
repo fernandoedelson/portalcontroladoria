@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Nova ata{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Nova ata</h1>
+    <div class="sub">Cole a saída do prompt (a ata inteira ou só o bloco JSON). O portal extrai o JSON e
+      mostra as ações para você conferir antes de criar.</div></div>
+  <a href="/atas" class="btn btn-outline">← Atas</a>
+</div>
+
+<div class="card">
+  <form method="post" action="/atas/nova">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">JSON estruturado (ou saída completa do prompt)</label>
+      <textarea class="input" name="json" rows="14" required
+                placeholder='Cole aqui. Ex.: { "meta": {"tipo":"resultado","empresa":"Âmbar","competencia":"2026-06", ...}, "acoes":[...], "qualitativo":{...} }'
+                style="font-family:ui-monospace,monospace;font-size:.82rem;"></textarea></div>
+    <button class="btn btn-primary" type="submit">Analisar →</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Projetos{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Projetos</h1>
+    <div class="sub">Controle dos projetos do time com responsável, marcos e atividades vinculadas.</div></div>
+  <a href="/export/projetos.xlsx" class="btn btn-outline btn-sm">{{ icone("download") }} Excel</a>
+</div>
+
+<div class="board-grid" style="margin-bottom:1.2rem;">
+  {% for p in projects %}
+  {% set pr = prog[p.id] %}
+  <a class="board-card" href="/projeto/{{ p.id }}" style="text-decoration:none;color:inherit;border-left:3px solid {{ p.color }};">
+    <div class="bc-head" style="justify-content:space-between;">
+      <div class="bc-name">{{ p.name }}{% if p.confidential %} <span title="Confidencial: nome não vai a canais externos" style="color:var(--warning-text);">{{ icone('lock', 14) }}</span>{% endif %}</div>
+      <span class="st st-{{ p.status }}">{{ p.status_pt }}</span>
+    </div>
+    <div class="text-sm text-muted" style="margin-bottom:.5rem;">
+      {{ p.owner.name if p.owner else 'sem responsável' }}{% if p.target_date %} · alvo {{ p.target_date.strftime('%d/%m/%Y') }}{% endif %}</div>
+    <div class="flex gap-1 items-center">
+      <div class="mini-prog" style="flex:1;"><span style="width:{{ pr.pct }}%"></span></div>
+      <span class="text-sm text-muted">{{ pr.done }}/{{ pr.total }}</span>
+    </div>
+    <div class="text-sm text-muted mt-1">{{ pr.open_acts }} atividade(s) em aberto</div>
+  </a>
+  {% else %}<p class="text-muted">Nenhum projeto ainda.</p>{% endfor %}
+</div>
+
+{% if gantt %}
+<div class="card">
+  <h2>Linha do tempo <span class="muted">· {{ gantt.inicio.strftime('%m/%Y') }} a {{ gantt.fim.strftime('%m/%Y') }}</span></h2>
+  <div class="gantt-legend">
+    <span><i class="lg-bar"></i> duração</span>
+    <span><i class="lg-fill"></i> progresso (marcos concluídos)</span>
+    <span><i class="lg-ms"></i> marco</span>
+    <span><i class="lg-ms done"></i> concluído</span>
+    <span><i class="lg-ms late"></i> atrasado</span>
+    <span><i class="lg-today"></i> hoje</span>
+  </div>
+
+  <div class="gantt-wrap">
+    <div class="gantt">
+      <!-- cabecalho de meses -->
+      <div class="g-row g-head">
+        <div class="g-label"></div>
+        <div class="g-track">
+          {% for m in gantt.meses %}
+          <div class="g-month {{ 'cur' if m.is_current }}"
+               style="left:{{ m.left }}%;width:{{ m.width }}%;">{{ m.label }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% for l in gantt.linhas %}
+      <div class="g-row">
+        <div class="g-label" title="{{ l.p.name }}">
+          <a href="/projeto/{{ l.p.id }}">{{ l.p.name }}</a>
+          <span class="g-sub">{{ l.p.owner.name.split()[0] if l.p.owner else '—' }}</span>
+        </div>
+        <div class="g-track">
+          {% for m in gantt.meses %}
+          <div class="g-grid" style="left:{{ m.left }}%;width:{{ m.width }}%;"></div>
+          {% endfor %}
+          {% if gantt.hoje_left is not none %}
+          <div class="g-today" style="left:{{ gantt.hoje_left }}%;"></div>
+          {% endif %}
+
+          {% if l.sem_data %}
+            <div class="g-nodate">sem datas definidas</div>
+          {% else %}
+            <div class="g-bar {{ 'late' if l.atrasado }}"
+                 style="left:{{ l.left }}%;width:{{ l.width }}%;
+                        background:{{ l.p.color }}22;border-color:{{ l.p.color }};"
+                 title="{{ l.p.name }} — {{ l.p.start_date.strftime('%d/%m/%Y') if l.p.start_date else '?' }} a {{ l.p.target_date.strftime('%d/%m/%Y') if l.p.target_date else '?' }} · {{ l.pct }}%">
+              <div class="g-fill" style="width:{{ l.pct }}%;background:{{ l.p.color }};"></div>
+              <span class="g-pct">{{ l.pct }}%</span>
+            </div>
+            {% for ms in l.marcos %}
+            <div class="g-ms {{ 'done' if ms.m.done }}{{ ' late' if ms.atrasado }}"
+                 style="left:{{ ms.left }}%;"
+                 title="{{ ms.m.title }} — {{ ms.m.due_date.strftime('%d/%m/%Y') }}{{ ' (concluído)' if ms.m.done else (' (atrasado)' if ms.atrasado else '') }}"></div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <p class="help-txt mt-1">Passe o mouse sobre as barras e os losangos para ver datas e detalhes. Clique no nome para abrir o projeto.</p>
+
+  <details class="alt-dados">
+    <summary>{{ icone('table') }} Ver a linha do tempo como tabela</summary>
+    <div class="tbl-wrap"><table class="tbl">
+      <caption class="sr-only">Datas e marcos de cada projeto — mesma informação do gráfico acima</caption>
+      <thead><tr>
+        <th scope="col">Projeto</th><th scope="col">Responsável</th>
+        <th scope="col">Início</th><th scope="col">Prazo</th>
+        <th scope="col" class="num">Progresso</th><th scope="col">Marcos</th>
+      </tr></thead>
+      <tbody>
+      {% for l in gantt.linhas %}
+        <tr>
+          <th scope="row"><a href="/projeto/{{ l.p.id }}">{{ l.p.name }}</a></th>
+          <td>{{ l.p.owner.name if l.p.owner else '—' }}</td>
+          <td>{{ l.p.start_date.strftime('%d/%m/%Y') if l.p.start_date else '—' }}</td>
+          <td class="{{ 'neg' if l.atrasado }}">
+            {{ l.p.target_date.strftime('%d/%m/%Y') if l.p.target_date else '—' }}
+            {{ '(atrasado)' if l.atrasado else '' }}</td>
+          <td class="num">{{ l.pct if not l.sem_data else '—' }}{{ '%' if not l.sem_data }}</td>
+          <td class="text-sm">
+            {% for ms in l.marcos %}
+              {{ ms.m.title }} ({{ ms.m.due_date.strftime('%d/%m') }}{% if ms.m.done %}, concluído{% elif ms.atrasado %}, atrasado{% endif %}){{ '; ' if not loop.last }}
+            {% else %}sem marcos{% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody></table></div>
+  </details>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Novo projeto</h2>
+  <form method="post" action="/projeto/novo">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Nome *</label><input class="input" name="name" required/></div>
+      <div class="form-row"><label class="field-label">Código</label><input class="input" name="code"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Responsável</label>
+        <select class="input" name="owner_member_id"><option value="">—</option>{% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
+      <div class="form-row"><label class="field-label">Status</label>
+        <select class="input" name="status"><option value="ativo">Ativo</option><option value="planejado">Planejado</option><option value="pausado">Pausado</option><option value="concluido">Concluído</option></select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Início</label><input class="input" type="date" name="start_date"/></div>
+      <div class="form-row"><label class="field-label">Alvo</label><input class="input" type="date" name="target_date"/></div>
+    </div>
+    <div class="form-row"><label class="field-label">Descrição</label><textarea class="input" name="description" rows="2"></textarea></div>
+    <label class="flex gap-1 items-center text-sm mb-2"><input type="checkbox" name="confidential" value="1"/> Confidencial (nome não vai a canais externos)</label>
+    <div><button class="btn btn-primary" type="submit">Criar projeto</button></div>
+  </form>
+</div>
+{% endblock %}

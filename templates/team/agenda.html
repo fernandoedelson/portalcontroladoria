@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Agenda de Fechamento{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Agenda de Fechamento</h1>
+    <div class="sub">Template recorrente: a cada competência, o checklist do fechamento nasce sozinho com prazos em dia útil.</div></div>
+</div>
+
+<div class="card">
+  <h2>Gerar checklist da competência</h2>
+  <div class="grid-2">
+    <form method="post" action="/agenda/gerar" class="flex gap-1 items-center">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <select class="input" name="competency_id" style="width:auto;">
+        {% for c in comps %}<option value="{{ c.id }}" {{ 'selected' if comp and c.id==comp.id }}>{{ c.label }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">Gerar atividades</button>
+    </form>
+    <form method="post" action="/agenda/sincronizar" class="flex gap-1 items-center" style="justify-content:flex-end;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline" type="submit">↻ Sincronizar prazos e evidências</button>
+    </form>
+  </div>
+  <p class="help-txt mt-1">A competência aberta é <strong>{{ comp.label if comp else '—' }}</strong>{% if comp %} e já tem <strong>{{ gen_count }}</strong> atividade(s) geradas por template{% endif %}. Prazos <code>insumo +N</code> ficam provisórios até as 8 empresas-âncora enviarem; "Sincronizar" recalcula e conclui as auto-métricas.</p>
+</div>
+
+{% if preview %}
+<div class="card">
+  <h2>Prévia dos prazos <span class="muted">· {{ comp.label }}</span></h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Item</th><th>Responsável</th><th>Regra</th><th>Prazo calculado</th></tr></thead>
+    <tbody>{% for pv in preview %}
+      <tr><td>{{ pv.item.title }} {% if not pv.item.active %}<span class="badge-soft">inativo</span>{% endif %}</td>
+        <td>{{ pv.item.member.name if pv.item.member else '—' }}</td>
+        <td><span class="kind-chip">{{ pv.item.due_label }}</span></td>
+        <td>{{ pv.due.strftime('%d/%m/%Y') if pv.due else '—' }}{% if pv.prov %} <span class="badge-soft">provisório</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Itens do template ({{ items|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Item</th><th>Tipo</th><th>Responsável</th><th>Empresa</th><th>Regra de prazo</th><th>Auto</th><th>Ativo</th><th></th></tr></thead>
+    <tbody>
+    {% for it in items %}
+    <tr>
+      <td><strong>{{ it.title }}</strong>{% if it.deliverable %} <span class="text-muted text-sm">· {{ it.deliverable }}</span>{% endif %}
+        {% if it.insumo_codes %}<div class="text-sm text-muted">insumo: {{ it.insumo_codes|join(', ') }}</div>{% endif %}</td>
+      <td><span class="kind-chip">{{ it.kind }}</span></td>
+      <td>{{ it.member.name.split()[0] if it.member else '—' }}</td>
+      <td>{{ it.company.name if it.company else '—' }}</td>
+      <td><span class="kind-chip">{{ it.due_label }}</span></td>
+      <td>{{ '✓' if it.auto_metric else '—' }}</td>
+      <td><span class="st st-{{ 'aprovado' if it.active else 'pendente' }}">{{ 'Ativo' if it.active else 'Inativo' }}</span></td>
+      <td class="text-right">
+        <form method="post" action="/agenda/item/{{ it.id }}/toggle" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if it.active else 'Ativar' }}</button></form>
+        <form method="post" action="/agenda/item/{{ it.id }}/excluir" onsubmit="return confirm('Remover item do template?');" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-danger btn-sm" type="submit">×</button></form>
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="8" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhum item ainda. Adicione abaixo.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+
+<div class="card">
+  <h2>Adicionar item ao template</h2>
+  <form method="post" action="/agenda/item">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Título *</label><input class="input" name="title" required/></div>
+      <div class="form-row"><label class="field-label">Entrega (rótulo)</label><input class="input" name="deliverable" placeholder="Painel, Consolidação, Custos, Release..."/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Responsável</label>
+        <select class="input" name="member_id"><option value="">—</option>{% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
+      <div class="form-row"><label class="field-label">Empresa (opcional)</label>
+        <select class="input" name="company_id"><option value="">—</option>{% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Base do prazo</label>
+        <select class="input" name="due_base">
+          <option value="deadline">5º dia útil (deadline da competência)</option>
+          <option value="insumo">Chegada das empresas-âncora (insumo)</option>
+          <option value="fixed_bd">N-ésimo dia útil do mês seguinte</option>
+        </select></div>
+      <div class="form-row"><label class="field-label">Offset (dias úteis)</label>
+        <input class="input" type="number" name="due_offset" value="0"/>
+        <div class="help-txt">D+2 → 2 · D−2 → −2 · para "N-ésimo DU" use o número (ex.: 5).</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Códigos de insumo (se base = insumo)</label>
+        <input class="input" name="insumo_codes" placeholder="ELDORADO, AMBAR_GER, LHG, ..."/>
+        <div class="help-txt">Separe por vírgula os <code>code</code> das empresas cujo envio dispara o relógio.</div></div>
+      <div class="form-row"><label class="field-label">Tipo / Prioridade / Auto-métrica</label>
+        <div class="flex gap-1">
+          <select class="input" name="kind"><option value="fechamento">Fechamento</option><option value="recorrente">Recorrente</option></select>
+          <select class="input" name="priority"><option value="alta">Alta</option><option value="media" selected>Média</option><option value="critica">Crítica</option><option value="baixa">Baixa</option></select>
+          <label class="flex gap-1 items-center text-sm" style="white-space:nowrap;"><input type="checkbox" name="auto_metric" value="1"/> auto</label>
+        </div></div>
+    </div>
+    <button class="btn btn-primary" type="submit">Adicionar item</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ i.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ i.title }}</h1>
+    <div class="sub">Meta {{ i.seq }} · {{ i.member.name if i.member else 'sem responsável' }} · alvo <strong>{{ i.target_label or '—' }}</strong></div></div>
+  <a href="/indicadores" class="btn btn-outline">← Indicadores</a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Definição</h2>
+    <table class="tbl">
+      <tr><th style="width:38%;">Dimensão</th><td>{{ i.dimension }}</td></tr>
+      <tr><th>Indicador</th><td>{{ i.target_label or '—' }}</td></tr>
+      <tr><th>Tipo</th><td>{{ {'manual':'Manual','prazo_du':'Prazo em dia útil (auto)','data_marco':'Data / marco','contagem':'Contagem','projeto':'Projeto'}.get(i.target_type, i.target_type) }}</td></tr>
+      <tr><th>Ano</th><td>{{ i.year }}</td></tr>
+    </table>
+    {% if i.rational %}<div class="mt-2"><div class="field-label">Racional / considerações</div><p class="text-sm">{{ i.rational }}</p></div>{% endif %}
+    {% if i.target_type == 'prazo_du' and consolidacao_ativa %}
+    <form method="post" action="/indicador/{{ i.id }}/auto" class="mt-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline btn-sm" type="submit">{{ icone('refresh') }} Calcular pelo fechamento (competência aberta)</button>
+      <div class="help-txt mt-1">Deriva "atingido/não atingido" das atividades de fechamento concluídas do responsável — a submissão é a evidência.</div>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Registrar resultado</h2>
+    <form method="post" action="/indicador/{{ i.id }}/resultado" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="grid-2">
+        <div class="form-row"><label class="field-label">Competência</label>
+          <select class="input" name="competency_id"><option value="">—</option>{% for c in comps %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}</select></div>
+        <div class="form-row"><label class="field-label">Período (rótulo)</label><input class="input" name="period_label" placeholder="Jun/2026 ou 2026"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-row"><label class="field-label">Resultado</label>
+          <select class="input" name="outcome">
+            <option value="atingido">Atingido</option><option value="parcial">Parcial</option>
+            <option value="nao_atingido">Não atingido</option><option value="na">N/A</option></select></div>
+        <div class="form-row"><label class="field-label">Valor / detalhe</label><input class="input" name="value_label" placeholder="Ex.: D+2 (entregue em D+1)"/></div>
+      </div>
+      <div class="form-row"><label class="field-label">Evidência (anexo)</label>
+        <input class="input" type="file" name="evidence"/>
+        <div class="help-txt">Registra quem anexou e quando. Exclusão permitida. Formatos: PDF, Excel, imagem, Word, PPT, e-mail.</div></div>
+      <div class="form-row"><label class="field-label">Observação</label><textarea class="input" name="note" rows="2"></textarea></div>
+      <button class="btn btn-primary" type="submit">Registrar</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Histórico de resultados ({{ results|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Período</th><th>Resultado</th><th>Valor</th><th>Evidência</th><th>Registrado</th><th></th></tr></thead>
+    <tbody>
+    {% for r in results %}
+    <tr>
+      <td>{{ r.period_label or (r.competency.label if r.competency else '—') }}</td>
+      <td><span class="st st-{{ r.outcome }}">{{ {'atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'N/A'}.get(r.outcome, r.outcome) }}</span>{% if r.computed %} <span class="badge-soft">auto</span>{% endif %}</td>
+      <td>{{ r.value_label or '—' }}</td>
+      <td>{% if r.evidence_path %}<a href="/indicador/resultado/{{ r.id }}/evidencia">{{ r.evidence_name or 'arquivo' }}</a>
+        <div class="text-sm text-muted">por {{ users.get(r.evidence_by).display_name if r.evidence_by and users.get(r.evidence_by) else '—' }}{% if r.evidence_at %}, {{ r.evidence_at.strftime('%d/%m %H:%M') }}{% endif %}</div>
+        {% else %}<span class="text-muted">—</span>{% endif %}</td>
+      <td class="text-sm text-muted">{{ r.recorded_at.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td class="text-right">
+        <form method="post" action="/indicador/resultado/{{ r.id }}/excluir" onsubmit="return confirm('Remover este resultado?');" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-danger btn-sm" type="submit">×</button></form>
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhum resultado registrado.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

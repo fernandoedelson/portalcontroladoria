@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Minhas notas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Minhas notas</h1>
+    <div class="sub">Bloco pessoal — só você vê estas notas.</div></div>
+  <form method="post" action="/notas/nova">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button class="btn btn-primary" type="submit">{{ icone('plus') }} Nova nota</button>
+  </form>
+</div>
+
+<!-- ===== editor: largura total no topo ===== -->
+{% if atual %}
+<section class="notas-editor cor-{{ atual.color }}" id="notas-editor">
+  <form method="post" action="/nota/{{ atual.id }}/salvar" id="form-nota">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="color" id="nota-cor" value="{{ atual.color }}"/>
+    <div class="ne-barra">
+      <span class="ne-status" id="ne-status" aria-live="polite">
+        Editada em {{ atual.updated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+      <div class="ne-acoes">
+        <div class="ne-cores" role="group" aria-label="Cor da nota">
+          {% for v, lbl in cores %}
+          <button type="button" class="ne-cor cor-{{ v }} {{ 'sel' if atual.color == v }}"
+                  data-cor="{{ v }}" title="{{ lbl }}" aria-label="Cor {{ lbl }}"></button>
+          {% endfor %}
+        </div>
+        <button class="btn btn-outline btn-toque" type="submit"
+                formaction="/nota/{{ atual.id }}/fixar"
+                title="{{ 'Desafixar' if atual.pinned else 'Fixar no topo' }}">
+          {{ icone('pin') }}<span class="so-desktop">{{ 'Desafixar' if atual.pinned else 'Fixar' }}</span>
+        </button>
+        <button class="btn btn-primary btn-toque" type="submit">
+          {{ icone('check') }}<span class="so-desktop">Salvar</span></button>
+      </div>
+    </div>
+    <input class="ne-titulo" name="title" value="{{ atual.title }}"
+           placeholder="Título" aria-label="Título da nota" autocomplete="off"/>
+    <textarea class="ne-corpo" name="body" id="ne-corpo"
+              placeholder="Escreva aqui…&#10;&#10;Dica: dá para anotar durante a reunião e voltar depois — o texto salva sozinho."
+              aria-label="Conteúdo da nota">{{ atual.body }}</textarea>
+  </form>
+  <form method="post" action="/nota/{{ atual.id }}/excluir" class="ne-excluir"
+        onsubmit="return confirm('Excluir esta nota? Não dá para desfazer.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button class="btn btn-outline btn-danger btn-toque" type="submit">
+      {{ icone('trash') }} Excluir nota</button>
+  </form>
+</section>
+{% else %}
+<section class="notas-editor vazio">
+  <div class="empty-box" style="margin:auto;max-width:460px;text-align:center;">
+    <p><strong>Escolha uma nota abaixo</strong> ou crie uma nova.</p>
+    <p class="text-muted text-sm">Suas notas são privadas: ninguém mais no portal —
+      nem a controladoria — consegue vê-las.</p>
+    <form method="post" action="/notas/nova" class="mt-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-primary btn-toque" type="submit">{{ icone('plus') }} Nova nota</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<!-- ===== lista agrupada abaixo ===== -->
+<div class="notas-abaixo">
+  <form method="get" action="/notas" class="notas-busca" role="search">
+    {{ icone('search') }}
+    <input type="search" name="q" value="{{ busca }}" placeholder="Buscar nas notas…"
+           aria-label="Buscar nas notas"/>
+    {% if busca %}<a href="/notas" class="btn btn-outline btn-sm">Limpar</a>{% endif %}
+  </form>
+
+  {% if total == 0 %}
+  <div class="empty-box" style="margin-top:1rem;">
+    <p><strong>{{ 'Nada encontrado.' if busca else 'Nenhuma nota ainda.' }}</strong></p>
+    <p class="text-muted text-sm">{{ 'Tente outro termo.' if busca else 'Crie a primeira para anotar o que surgir na reunião.' }}</p>
+  </div>
+  {% endif %}
+
+  {% macro cartao(n) %}
+  <a href="/notas?n={{ n.id }}{{ '&q=' ~ busca if busca }}"
+     class="nota-card cor-{{ n.color }} {{ 'sel' if atual and atual.id == n.id }}">
+    <div class="ni-topo">
+      <span class="ni-titulo">{{ n.titulo_exibicao }}</span>
+      {% if n.pinned %}<span class="ni-pin" title="Fixada">{{ icone('pin') }}</span>{% endif %}
+    </div>
+    {% if n.preview %}<div class="ni-preview">{{ n.preview }}</div>{% endif %}
+    <div class="ni-data">{{ n.updated_at.strftime('%d/%m/%Y %H:%M') }}</div>
+  </a>
+  {% endmacro %}
+
+  {% if fixadas %}
+  <div class="notas-grupo">
+    <div class="notas-grupo-h">{{ icone('pin') }} Fixadas <span class="tl-n">{{ fixadas|length }}</span></div>
+    <div class="notas-grade">{% for n in fixadas %}{{ cartao(n) }}{% endfor %}</div>
+  </div>
+  {% endif %}
+
+  {% for g in grupos %}
+  <div class="notas-grupo">
+    <div class="notas-grupo-h"><span class="cor-ponto cor-{{ g.cor }}"></span>{{ g.label }} <span class="tl-n">{{ g.itens|length }}</span></div>
+    <div class="notas-grade">{% for n in g.itens %}{{ cartao(n) }}{% endfor %}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if atual %}
+<script>
+(function(){
+  var form=document.getElementById('form-nota');
+  var status=document.getElementById('ne-status');
+  var editor=document.getElementById('notas-editor');
+  var campos=form.querySelectorAll('.ne-titulo, .ne-corpo');
+  var timer=null, sujo=false;
+
+  function salvar(){
+    var dados=new FormData(form);
+    dados.append('ajax','1');
+    status.textContent='Salvando…';
+    fetch(form.action,{method:'POST',body:dados})
+      .then(function(r){return r.json();})
+      .then(function(d){ sujo=false; status.textContent='Salvo às '+d.quando; })
+      .catch(function(){ status.textContent='Não foi possível salvar — tente o botão Salvar.'; });
+  }
+  campos.forEach(function(c){
+    c.addEventListener('input',function(){
+      sujo=true; status.textContent='Editando…';
+      clearTimeout(timer); timer=setTimeout(salvar,1200);
+    });
+  });
+  window.addEventListener('beforeunload',function(e){ if(sujo){ e.preventDefault(); e.returnValue=''; } });
+  form.addEventListener('submit',function(){ sujo=false; });
+
+  // trocar a cor: aplica na hora no editor (visual) e salva
+  var CORES=['padrao','amarelo','verde','azul','rosa'];
+  document.querySelectorAll('.ne-cor').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.ne-cor').forEach(function(o){o.classList.remove('sel');});
+      b.classList.add('sel');
+      document.getElementById('nota-cor').value=b.dataset.cor;
+      CORES.forEach(function(c){ editor.classList.remove('cor-'+c); });
+      editor.classList.add('cor-'+b.dataset.cor);   // feedback visual imediato
+      salvar();
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

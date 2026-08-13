@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Atas de Reunião{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Atas de Reunião</h1>
+    <div class="sub">Cole o JSON estruturado gerado pelo prompt. As ações viram atividades (com sua conferência);
+      as reuniões de resultado guardam o qualitativo por empresa × competência.</div></div>
+  <a href="/atas/nova" class="btn btn-primary">{{ icone('plus') }} Nova ata</a>
+</div>
+
+<details class="card" style="padding:0;">
+  <summary style="cursor:pointer;padding:1rem 1.2rem;font-weight:700;">Importar histórico (várias atas de uma vez)</summary>
+  <div style="padding:0 1.2rem 1.2rem;">
+    <p class="text-muted text-sm mb-2">Cole um <strong>array JSON</strong> (<code>[ {…}, {…} ]</code>) com as atas
+      de janeiro pra cá. Elas são arquivadas para dar contexto — <strong>não</strong> criam atividades.</p>
+    <form method="post" action="/atas/importar">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <textarea class="input" name="json" rows="6" placeholder='[ { "meta": {...}, "qualitativo": {...} }, ... ]' style="font-family:ui-monospace,monospace;font-size:.82rem;"></textarea>
+      <button class="btn btn-outline mt-1" type="submit">{{ icone('upload') }} Importar</button>
+    </form>
+  </div>
+</details>
+
+<div class="card">
+  <form method="get" class="flex gap-1 items-center mb-2" style="flex-wrap:wrap;">
+    <select class="input" name="tipo" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todos os tipos</option>
+      <option value="resultado" {{ 'selected' if f_tipo=='resultado' }}>Resultado</option>
+      <option value="geral" {{ 'selected' if f_tipo=='geral' }}>Geral</option>
+    </select>
+    <select class="input" name="company_id" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todas as empresas</option>
+      {% for e in empresas %}<option value="{{ e.id }}" {{ 'selected' if f_emp==e.id }}>{{ e.name }}</option>{% endfor %}
+    </select>
+  </form>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Reunião</th><th scope="col">Tipo</th><th scope="col">Empresa</th><th scope="col">Competência</th><th scope="col">Data</th><th class="num">Ações</th><th></th></tr></thead>
+    <tbody>
+    {% for a in atas %}
+    <tr class="row-link" onclick="location.href='/ata/{{ a.id }}'" title="Abrir ata">
+      <td><a href="/ata/{{ a.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ a.titulo }}</a></td>
+      <td><span class="kind-chip">{{ 'Resultado' if a.tipo=='resultado' else 'Geral' }}</span></td>
+      <td>{{ a.company.name if a.company else '—' }}</td>
+      <td>{{ a.comp_label }}</td>
+      <td class="text-sm">{{ a.data_reuniao.strftime('%d/%m/%Y') if a.data_reuniao else '—' }}</td>
+      <td class="num">{{ a.acoes|length }}</td>
+      <td class="text-right"><a href="/ata/{{ a.id }}" class="btn btn-outline btn-sm">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted" style="text-align:center;padding:1.5rem;">Nenhuma ata ainda. Clique em “Nova ata” e cole o JSON do prompt.</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

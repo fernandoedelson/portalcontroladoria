@@ -1,0 +1,52 @@
+{# Renderiza os achados do validador em linguagem de negócio.
+   Uso: {% with findings=..., mostrar_tecnico=true %}{% include "_achados.html" %}{% endwith %} #}
+{% set errs = findings|selectattr('severity','equalto','erro')|list %}
+{% set warns = findings|selectattr('severity','equalto','alerta')|list %}
+
+{% if errs %}
+<div class="card">
+  <h2 style="color:var(--danger);">O que precisa ser corrigido ({{ errs|length }})</h2>
+  <p class="text-muted text-sm mb-2">Cada item abaixo diz o que está errado, por que
+    isso é um problema e o que fazer no arquivo.</p>
+  {% for f in errs %}
+  {% set a = f|amigavel %}
+  <div class="achado erro">
+    <div class="achado-num">{{ loop.index }}</div>
+    <div class="achado-body">
+      <div class="achado-titulo">{{ a.titulo }}</div>
+      {% if a.porque %}<div class="achado-porque">{{ a.porque }}</div>{% endif %}
+      {% if a.acao %}<div class="achado-acao"><strong>O que fazer:</strong> {{ a.acao }}</div>{% endif %}
+      <details class="achado-tec">
+        <summary>Detalhe técnico</summary>
+        <div class="f-meta">
+          <span class="f-code">{{ f.code }}</span>
+          {% if f.label %}<span>Linha: {{ f.label }}</span>{% endif %}
+          {% if f.scenario %}<span>Período: {{ f.scenario }}</span>{% endif %}
+          {% if f.expected is not none %}<span>Esperado: {{ '%.2f'|format(f.expected) }}</span>{% endif %}
+          {% if f.got is not none %}<span>Encontrado: {{ '%.2f'|format(f.got) }}</span>{% endif %}
+          {% if f.diff is not none %}<span>Diferença: {{ '%.2f'|format(f.diff) }}</span>{% endif %}
+        </div>
+      </details>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if warns %}
+<div class="card">
+  <h2 style="color:var(--warning);">Pontos de atenção ({{ warns|length }})</h2>
+  <p class="text-muted text-sm mb-2">Não impedem o aceite, mas vale conferir.</p>
+  {% for f in warns %}
+  {% set a = f|amigavel %}
+  <div class="achado alerta">
+    <div class="achado-num">!</div>
+    <div class="achado-body">
+      <div class="achado-titulo">{{ a.titulo }}</div>
+      {% if a.porque %}<div class="achado-porque">{{ a.porque }}</div>{% endif %}
+      {% if a.acao %}<div class="achado-acao"><strong>O que fazer:</strong> {{ a.acao }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

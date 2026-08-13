@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Carteira do Time{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Carteira do Time</h1>
+    <div class="sub">Quais empresas cada profissional atende e o que cada uma exige.</div></div>
+  {% if not escopo %}<a href="/export/carteira.xlsx" class="btn btn-outline btn-sm">{{ icone("download") }} Excel</a>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Carga por pessoa</h2>
+  <div class="board-grid">
+    {% for m in members %}
+    {% set l = load.get(m.id) %}
+    <div class="board-card">
+      <div class="bc-head"><span class="mini-av" style="background:{{ m.color }}">{{ m.initials }}</span>
+        <div><div class="bc-name">{{ m.name }}</div></div></div>
+      {% if l %}
+      <div class="board-stat"><span><b>{{ l.n }}</b> empresas</span>
+        <span title="Suporte real vs ideal"><b>{{ l.real }}</b>/{{ l.ideal }} carga</span></div>
+      {% else %}<div class="text-sm text-muted">Sem empresas atribuídas.</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  {% if not escopo %}
+  <form method="get" class="flex gap-1 items-center mb-2" style="flex-wrap:wrap;">
+    <select class="input" name="member_id" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todos os profissionais</option>{% for m in members %}<option value="{{ m.id }}" {{ 'selected' if f_member==m.id }}>{{ m.name }}</option>{% endfor %}</select>
+    <select class="input" name="segment" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todos os segmentos</option>{% for s in segments %}<option value="{{ s }}" {{ 'selected' if f_seg==s }}>{{ s }}</option>{% endfor %}</select>
+  </form>
+  {% endif %}
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Empresa</th><th scope="col">Segmento</th><th scope="col">Fluxo</th><th scope="col">Entregas</th><th class="num">Carga</th><th scope="col">Profissional</th></tr></thead>
+    <tbody>
+    {% for a in rows %}
+    <tr>
+      <td>
+        <div class="ent-nome">{{ a.company.name }}</div>
+        <div class="ent-cod">{{ a.company.code }}</div>
+      </td>
+      <td>{{ a.segment or '—' }}</td>
+      <td><span class="badge-soft">{{ a.flow or '—' }}</span></td>
+      <td>{% for d in a.deliverables %}<span class="kind-chip">{{ d }}</span> {% endfor %}{% if not a.deliverables %}—{% endif %}</td>
+      <td class="num">{{ a.load_real }}/{{ a.load_ideal }}</td>
+      <td>
+        {% if escopo %}
+          <span class="member-cell"><span class="mini-av" style="width:22px;height:22px;font-size:.62rem;background:{{ a.member.color if a.member else 'var(--text-soft)' }}">{{ a.member.initials if a.member else '?' }}</span>{{ a.member.name if a.member else '—' }}</span>
+        {% else %}
+        <form method="post" action="/carteira/{{ a.id }}/atribuir" class="flex gap-1 items-center">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <select class="input" name="member_id" style="width:auto;min-width:150px;" onchange="this.form.submit()">
+            <option value="">— a definir —</option>
+            {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+          </select>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhuma empresa para os filtros.</td></tr>{% endfor %}
+    </tbody></table></div>
+  <p class="help-txt mt-1">{{ rows|length }} empresa(s).{% if not escopo %} Trocar o profissional de uma linha é imediato.{% endif %}</p>
+</div>
+{% endblock %}

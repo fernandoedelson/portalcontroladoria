@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Férias e ausências{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Férias e ausências</h1>
+    <div class="sub">{{ 'Controle das férias e das ausências do time.' if eu_gestor else 'Solicite suas férias — o gestor aprova.' }}</div></div>
+</div>
+
+{% if risco %}
+<div class="alert alert-warning">
+  <strong>Atenção ao prazo do fechamento ({{ comp.deadline.strftime('%d/%m/%Y') }}):</strong>
+  <ul style="margin:.4rem 0 0 1.1rem;">
+    {% for r in risco %}
+    <li>{{ r.a.member.name }} estará fora ({{ r.a.kind_pt|lower }}) e tem
+      <strong>{{ r.n }}</strong> atividade(s) em aberto — considere repassar.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- ===== solicitar / registrar ===== -->
+<div class="card">
+  <h2>{{ 'Registrar ausência' if eu_gestor else 'Solicitar férias' }}</h2>
+  {% if not eu_gestor and not meu_membro %}
+  <div class="alert alert-warning">Seu usuário ainda não está vinculado a uma pessoa do time.
+    Peça ao gestor para vincular em Administração › Time.</div>
+  {% else %}
+  <form method="post" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    {% if eu_gestor %}
+    <div class="form-row"><label class="field-label">Pessoa</label>
+      <select class="input" name="member_id" required>
+        {% for m in membros %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+      </select></div>
+    {% endif %}
+    <div class="form-row"><label class="field-label">Tipo</label>
+      <select class="input" name="kind">
+        <option value="ferias">Férias</option><option value="licenca">Licença</option>
+        <option value="treinamento">Treinamento</option><option value="outro">Outro</option>
+      </select></div>
+    <div class="form-row"><label class="field-label">De</label>
+      <input class="input" type="date" name="start_date" required/></div>
+    <div class="form-row"><label class="field-label">Até</label>
+      <input class="input" type="date" name="end_date" required/></div>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Observação</label>
+      <input class="input" name="note" placeholder="opcional"/></div>
+    <div class="form-row"><label class="field-label">Quem aprova na ausência</label>
+      <select class="input" name="aprova_delegado_id"><option value="">— gestor do time (padrão) —</option>
+        {% for m in membros %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+      <div class="help-txt">Importante para quem tem cargo de gestão: aprova realinhamentos no seu lugar.</div></div>
+    <div class="form-row"><label class="field-label">Quem toca o andamento</label>
+      <select class="input" name="andamento_delegado_id"><option value="">— gestor do time (padrão) —</option>
+        {% for m in membros %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+      <div class="help-txt">Responsável por conduzir a área/os projetos durante a ausência.</div></div>
+    <div class="form-row" style="align-self:end;">
+      <button class="btn btn-primary" type="submit">{{ 'Registrar (aprovada)' if eu_gestor else 'Solicitar' }}</button></div>
+  </form>
+  {% endif %}
+</div>
+
+<!-- ===== solicitações pendentes ===== -->
+{% if pendentes %}
+<div class="card">
+  <h2>{{ 'Solicitações a aprovar' if eu_gestor else 'Minhas solicitações pendentes' }} ({{ pendentes|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Pessoa</th><th scope="col">Tipo</th><th scope="col">Período</th><th class="num">Dias</th><th scope="col">Obs.</th><th scope="col">Ação</th></tr></thead>
+    <tbody>{% for a in pendentes %}
+      <tr>
+        <td><span class="member-cell"><span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name }}</span></td>
+        <td>{{ a.kind_pt }}</td>
+        <td>{{ a.start_date.strftime('%d/%m/%y') }} a {{ a.end_date.strftime('%d/%m/%y') }}</td>
+        <td class="num">{{ a.dias }}</td>
+        <td class="text-sm text-muted">{{ a.note or '' }}</td>
+        <td>
+          {% if eu_gestor %}
+          <div class="flex gap-1">
+            <form method="post" action="/ausencia/{{ a.id }}/decidir">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <input type="hidden" name="decisao" value="aprovada"/>
+              <button class="btn btn-primary btn-sm" type="submit">{{ icone('check') }} Aprovar</button>
+            </form>
+            <form method="post" action="/ausencia/{{ a.id }}/decidir"
+                  onsubmit="return confirm('Recusar a solicitação de {{ a.member.name }}?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <input type="hidden" name="decisao" value="recusada"/>
+              <button class="btn btn-outline btn-danger btn-sm" type="submit">{{ icone('x') }} Recusar</button>
+            </form>
+          </div>
+          {% else %}
+          <form method="post" action="/ausencia/{{ a.id }}/excluir"
+                onsubmit="return confirm('Cancelar sua solicitação?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button class="btn btn-outline btn-sm" type="submit">Cancelar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}</tbody></table></div>
+</div>
+{% endif %}
+
+<!-- ===== aguardando confirmação de retorno (gestor) ===== -->
+{% if eu_gestor and aguardando_retorno %}
+<div class="card">
+  <h2>Confirmar retorno ({{ aguardando_retorno|length }})</h2>
+  <p class="text-muted text-sm mb-2">Ausências aprovadas que já terminaram. Confirme que a
+    pessoa saiu de fato e registre a <strong>data real de retorno</strong>.</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Pessoa</th><th scope="col">Período previsto</th><th scope="col">Retorno real</th><th scope="col"></th></tr></thead>
+    <tbody>{% for a in aguardando_retorno %}
+      <tr>
+        <td>{{ a.member.name }}</td>
+        <td>{{ a.start_date.strftime('%d/%m/%y') }} a {{ a.end_date.strftime('%d/%m/%y') }}</td>
+        <td colspan="2">
+          <form method="post" action="/ausencia/{{ a.id }}/retorno" class="flex gap-1 items-center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input class="input" type="date" name="real_return" value="{{ a.end_date.isoformat() }}" style="width:160px;"/>
+            <button class="btn btn-primary btn-sm" type="submit">{{ icone('check') }} Confirmar retorno</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}</tbody></table></div>
+</div>
+{% endif %}
+
+<!-- ===== em vigor e futuras (aprovadas) ===== -->
+<div class="card">
+  <h2>Em vigor e futuras ({{ futuras|length }})</h2>
+  {% if futuras %}
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Pessoa</th><th scope="col">Tipo</th><th scope="col">De</th><th scope="col">Até</th><th class="num">Dias</th><th scope="col">Obs.</th>{% if eu_gestor %}<th scope="col"></th>{% endif %}</tr></thead>
+    <tbody>{% for a in futuras %}
+      <tr>
+        <td><span class="member-cell"><span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name }}</span></td>
+        <td>{{ a.kind_pt }}{% if a.vigente %} <span class="st st-aberta">agora</span>{% endif %}</td>
+        <td>{{ a.start_date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ a.end_date.strftime('%d/%m/%Y') }}</td>
+        <td class="num">{{ a.dias }}</td>
+        <td class="text-sm text-muted">{{ a.note or '' }}</td>
+        {% if eu_gestor %}
+        <td class="text-right">
+          <form method="post" action="/ausencia/{{ a.id }}/excluir" onsubmit="return confirm('Remover esta ausência?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button class="btn btn-outline btn-sm btn-danger" type="submit">{{ icone("x") }}</button></form></td>
+        {% endif %}
+      </tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}
+  <div class="empty-box"><div class="empty-ico">🌴</div>
+    <p><strong>Nenhuma ausência aprovada no período.</strong></p></div>
+  {% endif %}
+</div>
+
+{% if descobertas %}
+<div class="card">
+  <h2>Atividades descobertas nas férias {{ icone('alert') }}</h2>
+  <p class="text-muted text-sm mb-2">Atividades com vencimento <strong>dentro do período de
+    ausência</strong> do responsável. Realoque antes das férias para não ficarem sem dono.</p>
+  {% for a in futuras %}
+    {% set acts = descobertas.get(a.id) %}
+    {% if acts %}
+    <div class="cobertura-bloco">
+      <div class="cobertura-h">
+        <span class="member-cell"><span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name }}</span>
+        <span class="badge-soft">{{ a.kind_pt }} · {{ a.start_date.strftime('%d/%m') }} a {{ a.end_date.strftime('%d/%m') }}</span>
+        <span class="st st-atrasada">{{ acts|length }} descoberta(s)</span>
+      </div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th scope="col">Atividade</th><th scope="col">Empresa</th><th scope="col">Vence</th><th scope="col">Realocar para</th></tr></thead>
+        <tbody>{% for act in acts %}
+          <tr>
+            <td><a href="/atividade/{{ act.id }}" style="text-decoration:none;color:var(--text);font-weight:500;">{{ act.title }}</a></td>
+            <td class="text-sm text-muted">{{ act.company.name if act.company else '—' }}</td>
+            <td class="text-sm">{{ act.due_date.strftime('%d/%m/%Y') }}</td>
+            <td>
+              <form method="post" action="/atividade/{{ act.id }}/reatribuir" class="flex gap-1 items-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <select class="input" name="member_id" style="width:auto;min-width:150px;" onchange="this.form.submit()">
+                  <option value="">— escolher —</option>
+                  {% for m in membros %}{% if m.id != a.member_id %}<option value="{{ m.id }}">{{ m.name }}</option>{% endif %}{% endfor %}
+                </select>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}</tbody></table></div>
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if passadas %}
+<div class="card">
+  <h2>Histórico</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Pessoa</th><th scope="col">Tipo</th><th scope="col">Período previsto</th><th scope="col">Retorno real</th><th class="num">Dias</th></tr></thead>
+    <tbody>{% for a in passadas %}
+      <tr><td>{{ a.member.name }}</td><td>{{ a.kind_pt }}</td>
+        <td>{{ a.start_date.strftime('%d/%m/%y') }} a {{ a.end_date.strftime('%d/%m/%y') }}</td>
+        <td>{{ a.real_return.strftime('%d/%m/%y') if a.real_return else '—' }}</td>
+        <td class="num">{{ a.dias }}</td></tr>
+    {% endfor %}</tbody></table></div>
+</div>
+{% endif %}
+{% endblock %}

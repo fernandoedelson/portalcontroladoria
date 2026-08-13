@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Alertas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Alertas</h1>
+    <div class="sub">Matriz evento × canal. Uma linha por evento — quem recebe, por onde.</div></div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi {{ 'ok' if email_on else 'warn' }}"><div class="kpi-label">Canal E-mail</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if email_on else 'Simulado' }}</div>
+    <div class="kpi-foot">Outlook local (COM)</div></div>
+  <div class="kpi {{ 'ok' if whatsapp_on else 'warn' }}"><div class="kpi-label">Canal WhatsApp</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if whatsapp_on else 'Simulado' }}</div>
+    <div class="kpi-foot">Twilio · só mensagem genérica</div></div>
+  <div class="kpi ok"><div class="kpi-label">Canal Painel</div>
+    <div class="kpi-value" style="font-size:1.2rem;">Ativo</div>
+    <div class="kpi-foot">notificações internas</div></div>
+  <div class="kpi accent"><div class="kpi-label">Envios registrados</div>
+    <div class="kpi-value">{{ (stats.get('enviado',0) + stats.get('simulado',0)) }}</div>
+    <div class="kpi-foot">{{ stats.get('enviado',0) }} enviados · {{ stats.get('simulado',0) }} simulados</div></div>
+</div>
+
+<div class="card">
+  <h2>Matriz de canais</h2>
+  <form method="post" action="/alertas/salvar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="tbl-wrap"><table class="matrix-check">
+      <thead><tr><th>Evento</th><th>E-mail</th><th>WhatsApp</th><th>Painel</th><th>Escalar ao gestor</th><th>Antecedência (d.u.)</th></tr></thead>
+      <tbody>
+      {% for key, lbl, s in ordered %}
+      <tr>
+        <td><strong>{{ lbl }}</strong></td>
+        <td><input type="checkbox" name="{{ key }}__email" {{ 'checked' if s and s.email }}/></td>
+        <td><input type="checkbox" name="{{ key }}__whatsapp" {{ 'checked' if s and s.whatsapp }}/></td>
+        <td><input type="checkbox" name="{{ key }}__painel" {{ 'checked' if s and s.painel }}/></td>
+        <td>{% if key == 'atraso' %}<input type="checkbox" name="{{ key }}__escalate" {{ 'checked' if s and s.escalate_manager }}/>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+        <td>{% if key == 'lembrete_previo' %}<input class="input" type="number" name="{{ key }}__lead" value="{{ s.lead_days if s else 1 }}" style="width:70px;margin:0 auto;"/>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    <div class="flex gap-1 mt-2"><button class="btn btn-primary" type="submit">Salvar matriz</button></div>
+  </form>
+  <p class="help-txt mt-1">WhatsApp passa pela Twilio (terceiro): por sigilo, envia sempre mensagem genérica — "você tem N atividades pendentes, veja no portal" — sem nome de atividade ou projeto. E-mail e painel ficam na rede interna e podem detalhar.</p>
+</div>
+
+<div class="card">
+  <h2>Rodar ciclo de cobrança</h2>
+  <div class="flex gap-1" style="flex-wrap:wrap;">
+    <form method="post" action="/alertas/rodar" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="dry_run" value="1"/>
+      <button class="btn btn-outline" type="submit">Simular (dry-run)</button></form>
+    <form method="post" action="/alertas/rodar" onsubmit="return confirm('Disparar o ciclo de alertas agora?');" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-primary" type="submit">Rodar ciclo agora</button></form>
+  </div>
+  <p class="help-txt mt-1">O ciclo varre as atividades abertas e dispara lembretes, vencimentos e atrasos conforme a matriz. É idempotente: cada evento por atividade/pessoa/dia sai uma única vez.</p>
+</div>
+
+<div class="card">
+  <h2>Últimos envios</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Quando</th><th>Evento</th><th>Canal</th><th>Destino</th><th>Assunto</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for lg in recent %}
+    <tr>
+      <td class="text-sm text-muted">{{ lg.created_at.strftime('%d/%m %H:%M') }}</td>
+      <td>{{ lg.event_key }}</td>
+      <td><span class="kind-chip">{{ lg.channel }}</span></td>
+      <td>{{ mm.get(lg.member_id).name if lg.member_id and mm.get(lg.member_id) else '—' }}</td>
+      <td class="text-sm">{{ lg.subject or '—' }}</td>
+      <td><span class="st st-{{ 'aprovado' if lg.status=='enviado' else ('validando' if lg.status=='simulado' else 'reprovado') }}">{{ lg.status }}</span></td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhum envio ainda.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

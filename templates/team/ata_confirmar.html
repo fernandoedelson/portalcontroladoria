@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Conferir ata{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Conferir e salvar</h1>
+    <div class="sub">Revise antes de salvar. Marque quais ações viram atividade e ajuste responsável/prazo.</div></div>
+  <a href="/atas/nova" class="btn btn-outline">← Refazer</a>
+</div>
+
+<form method="post" action="/atas/nova">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+  <input type="hidden" name="etapa" value="salvar"/>
+  <input type="hidden" name="raw" value="{{ raw|e }}"/>
+  <input type="hidden" name="n_acoes" value="{{ acoes|length }}"/>
+
+  <div class="card">
+    <h2>Cabeçalho</h2>
+    <div class="adm-grid">
+      <div class="form-row"><label class="field-label">Título</label>
+        <input class="input" name="titulo" value="{{ meta.titulo or '' }}"/></div>
+      <div class="form-row"><label class="field-label">Tipo</label>
+        <input class="input" value="{{ 'Resultado' if meta.tipo=='resultado' else 'Geral' }}" disabled/>
+        <input type="hidden" name="tipo" value="{{ meta.tipo or 'geral' }}"/></div>
+      {% if meta.tipo == 'resultado' %}
+      <div class="form-row"><label class="field-label">Empresa</label>
+        <select class="input" name="company_id">
+          <option value="">— não vincular —</option>
+          {% for e in empresas %}<option value="{{ e.id }}" {{ 'selected' if comp_match and comp_match.id==e.id }}>{{ e.name }}</option>{% endfor %}
+        </select>
+        <div class="help-txt">Sugerido: {{ comp_match.name if comp_match else 'nenhuma correspondência para “' ~ (meta.empresa or '') ~ '”' }}</div></div>
+      <div class="form-row"><label class="field-label">Competência</label>
+        <input class="input" value="{{ meta.competencia or '—' }}" disabled/></div>
+      {% endif %}
+    </div>
+    {% if dados.resumo_executivo %}<div class="mt-2"><div class="field-label">Resumo</div><p class="text-sm">{{ dados.resumo_executivo }}</p></div>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Ações → atividades ({{ acoes|length }})</h2>
+    {% if acoes %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th style="width:36px;">Criar</th><th scope="col">Tarefa</th><th scope="col">Responsável</th><th scope="col">Prazo</th><th scope="col">Prioridade</th></tr></thead>
+      <tbody>
+      {% for a in acoes %}
+      <tr>
+        <td><input type="checkbox" name="criar_{{ loop.index0 }}" value="1" checked/></td>
+        <td><input class="input" name="tarefa_{{ loop.index0 }}" value="{{ a.tarefa }}" style="min-width:220px;"/></td>
+        <td><select class="input" name="member_{{ loop.index0 }}" style="min-width:150px;">
+          <option value="">— a definir{{ ' (dito: ' ~ a.responsavel ~ ')' if a.responsavel and not a.member_id else '' }} —</option>
+          {% for m in membros %}<option value="{{ m.id }}" {{ 'selected' if a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+        </select></td>
+        <td><input class="input" type="date" name="prazo_{{ loop.index0 }}" value="{{ a.prazo }}" style="width:150px;"/>
+          {% if not a.prazo and a.prazo_texto %}<div class="help-txt">dito: {{ a.prazo_texto }}</div>{% endif %}</td>
+        <td><select class="input" name="prio_{{ loop.index0 }}" style="width:auto;">
+          {% for p in ['baixa','media','alta','critica'] %}<option value="{{ p }}" {{ 'selected' if a.prioridade==p }}>{{ p|capitalize }}</option>{% endfor %}
+        </select></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% else %}<p class="text-muted">Nenhuma ação nesta ata.</p>{% endif %}
+  </div>
+
+  {% if meta.tipo == 'resultado' and dados.qualitativo %}
+  <div class="card">
+    <h2>Leitura qualitativa (vai para o repositório)</h2>
+    {% set q = dados.qualitativo %}
+    <dl class="doc-dl">
+      {% if q.drivers_do_mes %}<dt>Drivers do mês</dt><dd>{{ q.drivers_do_mes|join('; ') }}</dd>{% endif %}
+      {% if q.nao_recorrentes %}<dt>Não-recorrentes</dt><dd>{{ q.nao_recorrentes|join('; ') }}</dd>{% endif %}
+      {% if q.pontos_atencao_riscos %}<dt>Pontos de atenção / riscos</dt><dd>{{ q.pontos_atencao_riscos|join('; ') }}</dd>{% endif %}
+      {% if q.compromissos_promessas %}<dt>Compromissos assumidos</dt><dd>{{ q.compromissos_promessas|join('; ') }}</dd>{% endif %}
+      {% if q.outlook %}<dt>Outlook</dt><dd>{{ q.outlook }}</dd>{% endif %}
+      {% if q.temas %}<dt>Temas</dt><dd>{% for t in q.temas %}<span class="kind-chip">{{ t }}</span> {% endfor %}</dd>{% endif %}
+    </dl>
+  </div>
+  {% endif %}
+
+  <div class="flex gap-1">
+    <button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar ata e criar atividades</button>
+    <a href="/atas/nova" class="btn btn-outline">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

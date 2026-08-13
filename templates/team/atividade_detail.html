@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ a.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ a.title }}</h1>
+    <div class="sub"><span class="kind-chip">{{ a.kind_pt() }}</span>
+      <span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span>
+      <span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'}.get(a.effective_status(today), a.effective_status(today)) }}</span></div></div>
+  <div class="flex gap-1">
+    <a href="/atividade/{{ a.id }}/editar" class="btn btn-outline">Editar</a>
+    <form method="post" action="/atividade/{{ a.id }}/excluir" onsubmit="return confirm('Excluir esta atividade?');" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-danger" type="submit">Excluir</button></form>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Detalhes</h2>
+    <table class="tbl">
+      <tr><th style="width:40%;">Responsável</th><td>{% if a.member %}<span class="member-cell"><span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name }}</span>{% else %}—{% endif %}</td></tr>
+      <tr><th>Empresa</th><td>{{ a.company.name if a.company else '—' }}</td></tr>
+      <tr><th>Competência</th><td>{{ a.competency.label if a.competency else '—' }}</td></tr>
+      <tr><th>Projeto</th><td>{% if a.project %}<a href="/projeto/{{ a.project_id }}">{{ a.project.name }}</a>{% else %}—{% endif %}</td></tr>
+      <tr><th>Início</th><td>{{ a.start_date.strftime('%d/%m/%Y') if a.start_date else '—' }}</td></tr>
+      <tr><th>Prazo</th><td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">provisório (aguarda insumo)</span>{% endif %}</td></tr>
+      <tr><th>Origem</th><td>{{ {'manual':'Manual','template':'Agenda de fechamento','indicador':'Indicador'}.get(a.origin, a.origin) }}{% if a.auto_metric %} · <span class="badge-soft">auto-métrica</span>{% endif %}</td></tr>
+      <tr><th>Concluída em</th><td>{{ a.done_at.strftime('%d/%m/%Y %H:%M') if a.done_at else '—' }}</td></tr>
+    </table>
+    {% if a.description %}<div class="mt-2"><div class="field-label">Descrição</div><p>{{ a.description }}</p></div>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Mudar status</h2>
+    <div class="flex gap-1" style="flex-wrap:wrap;">
+      {% for s, lbl in [('pendente','Pendente'),('em_andamento','Em andamento'),('bloqueada','Bloqueada'),('concluida','Concluir'),('cancelada','Cancelar')] %}
+      <form method="post" action="/atividade/{{ a.id }}/status" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="status" value="{{ s }}"/>
+        <button class="btn {{ 'btn-primary' if s=='concluida' else 'btn-outline' }} btn-sm" type="submit" {{ 'disabled' if a.status==s }}>{{ lbl }}</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% if a.auto_metric %}
+    <div class="help-txt mt-2">Esta atividade conclui automaticamente quando a submissão da empresa é aceita no fechamento — a própria submissão é a evidência.</div>
+    {% endif %}
+    <div class="mt-2"><a href="/atividades" class="btn btn-outline btn-sm">← Voltar às atividades</a></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Prazo da atividade <span class="muted">· realinhe com justificativa (mantém histórico)</span></h2>
+  {% if not pode_aprovar %}
+  <p class="help-txt">Você pode <strong>solicitar</strong> o realinhamento; ele passa pela
+    aprovação do <strong>líder do projeto</strong> ou do <strong>gestor</strong>.</p>
+  {% endif %}
+  <form method="post" action="/atividade/{{ a.id }}/revisar-prazo" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">Prazo atual</label>
+      <input class="input" type="date" value="{{ a.due_date.isoformat() if a.due_date else '' }}" disabled/></div>
+    <div class="form-row"><label class="field-label">Novo prazo *</label>
+      <input class="input" type="date" name="new_date" required/></div>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Justificativa *</label>
+      <input class="input" name="reason" placeholder="Ex.: depende da conclusão da etapa anterior" required/></div>
+    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('calendar') }} {{ 'Realinhar prazo' if pode_aprovar else 'Solicitar realinhamento' }}</button></div>
+  </form>
+
+  {% if pendentes %}
+  <h3 style="margin-top:1rem;">Solicitações pendentes ({{ pendentes|length }})</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">De → Para</th><th scope="col">Justificativa</th><th scope="col">Quem pediu</th><th scope="col">Ação</th></tr></thead>
+    <tbody>{% for r in pendentes %}
+      <tr>
+        <td class="text-sm">{{ r.old_date.strftime('%d/%m/%y') if r.old_date else '—' }} → <strong>{{ r.new_date.strftime('%d/%m/%Y') }}</strong></td>
+        <td class="text-sm">{{ r.reason }}</td>
+        <td class="text-sm text-muted">{{ users[r.requested_by].display_name if r.requested_by and users.get(r.requested_by) else '—' }}</td>
+        <td>{% if pode_aprovar %}<div class="flex gap-1">
+          <form method="post" action="/revisao/{{ r.id }}/aprovar"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-primary btn-sm" type="submit">{{ icone('check') }} Aprovar</button></form>
+          <form method="post" action="/revisao/{{ r.id }}/recusar" onsubmit="return confirm('Recusar?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-outline btn-danger btn-sm" type="submit">{{ icone('x') }}</button></form>
+        </div>{% else %}<span class="badge-soft">aguardando líder/gestor</span>{% endif %}</td>
+      </tr>
+    {% endfor %}</tbody></table></div>
+  {% endif %}
+
+  {% if revisoes %}
+  <div class="tbl-wrap mt-2"><table class="tbl">
+    <thead><tr><th scope="col">Quando</th><th scope="col">De</th><th scope="col">Para</th><th scope="col">Movimento</th><th scope="col">Justificativa</th><th scope="col">Por</th></tr></thead>
+    <tbody>{% for r in revisoes %}
+      <tr>
+        <td class="text-sm">{{ r.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td class="text-sm">{{ r.old_date.strftime('%d/%m/%Y') if r.old_date else '—' }}</td>
+        <td class="text-sm">{{ r.new_date.strftime('%d/%m/%Y') if r.new_date else '—' }}</td>
+        <td><span class="badge-soft">{{ r.sentido }}{% if r.dias %} {{ r.dias }}d{% endif %}</span></td>
+        <td class="text-sm">{{ r.reason }}</td>
+        <td class="text-sm text-muted">{{ users[r.created_by].display_name if r.created_by and users.get(r.created_by) else '—' }}</td>
+      </tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}<p class="help-txt mt-1">Nenhuma revisão ainda. A primeira mudança já cria o histórico.</p>{% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Andamento ({{ a.notes|length }})</h2>
+    <form method="post" action="/atividade/{{ a.id }}/nota">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="form-row">
+        <textarea class="input" name="body" rows="2" required
+          placeholder="O que aconteceu? Ex.: aguardando a Âmbar responder sobre a conta corrente."></textarea></div>
+      <div class="flex gap-1" style="flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" type="submit" name="kind" value="comentario">{{ icone("message") }} Comentar</button>
+        {% if a.status != 'bloqueada' %}
+        <button class="btn btn-outline btn-sm btn-danger" type="submit" name="kind" value="bloqueio">{{ icone("block") }} Registrar bloqueio</button>
+        {% else %}
+        <button class="btn btn-outline btn-sm" type="submit" name="kind" value="desbloqueio">{{ icone("ok-circle") }} Destravar</button>
+        {% endif %}
+      </div>
+      <div class="help-txt mt-1">Registrar um bloqueio muda a situação da atividade e avisa o gestor.</div>
+    </form>
+
+    <div class="mt-2">
+      {% for n in a.notes %}
+      <div class="nota {{ n.kind }}">
+        <div class="nota-ico">{{ n.icone }}</div>
+        <div class="nota-body">
+          <div class="nota-txt">{{ n.body }}</div>
+          <div class="nota-meta">{{ n.user.display_name if n.user else 'sistema' }} ·
+            {{ n.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-muted text-sm">Nenhum registro ainda. Use este espaço para dizer
+        onde a atividade está — assim ninguém precisa perguntar.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Anexos ({{ a.files|length }})</h2>
+    {% for f in a.files %}
+    <div class="anexo">
+      <span>{{ icone("paperclip") }}</span>
+      <a href="/anexo/{{ f.id }}">{{ f.filename }}</a>
+      <span class="anexo-meta">{{ f.size_label }} · {{ f.uploaded_at.strftime('%d/%m/%y') }}</span>
+      <form method="post" action="/anexo/{{ f.id }}/excluir" onsubmit="return confirm('Remover este anexo?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button class="btn btn-outline btn-sm btn-danger" type="submit">{{ icone("x") }}</button></form>
+    </div>
+    {% else %}
+    <p class="text-muted text-sm mb-2">Sem anexos. Guarde aqui a evidência — o e-mail,
+      o print, a conciliação — para a resposta morar junto da tarefa.</p>
+    {% endfor %}
+    <form method="post" action="/atividade/{{ a.id }}/anexo" enctype="multipart/form-data" class="flex gap-1 items-center mt-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input class="input" type="file" name="arquivo" required/>
+      <button class="btn btn-primary btn-sm" type="submit">Anexar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

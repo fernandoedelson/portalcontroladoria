@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Resumo{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Resumo do fechamento</h1>
+    <div class="sub">Como está o cumprimento do cronograma de fechamento — sem precisar abrir cada tela.</div></div>
+</div>
+
+<div class="card">
+  <h2>Situação agora</h2>
+  <pre class="resumo-box">{{ texto }}</pre>
+  <form method="post" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button class="btn btn-primary" type="submit">{{ icone("send") }} Enviar para a controladoria</button>
+  </form>
+  <p class="help-txt mt-1">O envio automático (semanal) é feito pelo agendador —
+    configure o dia e o horário em <a href="/admin?tab=sistema">Administração › Sistema</a>.</p>
+</div>
+{% endblock %}

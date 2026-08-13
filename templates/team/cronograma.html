@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Cronograma de Fechamento{% endblock %}
+{% block content %}
+{% set MESES = [(1,'Jan'),(2,'Fev'),(3,'Mar'),(4,'Abr'),(5,'Mai'),(6,'Jun'),(7,'Jul'),(8,'Ago'),(9,'Set'),(10,'Out'),(11,'Nov'),(12,'Dez')] %}
+<div class="page-head">
+  <div><h1>Cronograma de Fechamento</h1>
+    <div class="sub">Cadastre as atividades recorrentes, seus responsáveis e o dia útil de vencimento.
+      Depois gere as atividades do mês, de um período ou do ano inteiro.</div></div>
+</div>
+
+<!-- ===== gerar ===== -->
+<div class="card">
+  <h2>Gerar / atualizar atividades</h2>
+  <p class="text-muted text-sm mb-2">Cria as atividades de cada competência a partir dos itens ativos abaixo.
+    Não duplica o que já existe — pode rodar quantas vezes quiser. Competências que faltarem são criadas automaticamente.</p>
+  <form method="post" action="/cronograma/gerar" class="flex gap-1 items-center" style="flex-wrap:wrap;" id="form-gerar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <select class="input" name="modo" id="cg-modo" style="width:auto;" onchange="cgModo()">
+      <option value="mes">Um mês</option>
+      <option value="periodo">Período</option>
+      <option value="ano">Ano inteiro</option>
+    </select>
+    <select class="input" name="ano" style="width:110px;">
+      {% for y in [ano_atual-1, ano_atual, ano_atual+1] %}<option value="{{ y }}" {{ 'selected' if y==ano_atual }}>{{ y }}</option>{% endfor %}
+    </select>
+    <span class="cg-mes"><select class="input" name="mes" style="width:auto;">
+      {% for i,mes in MESES %}<option value="{{ i }}" {{ 'selected' if i==mes_atual }}>{{ mes }}</option>{% endfor %}</select></span>
+    <span class="cg-periodo" hidden>de
+      <select class="input" name="mes_ini" style="width:auto;">{% for i,mes in MESES %}<option value="{{ i }}" {{ 'selected' if i==1 }}>{{ mes }}</option>{% endfor %}</select>
+      a <select class="input" name="mes_fim" style="width:auto;">{% for i,mes in MESES %}<option value="{{ i }}" {{ 'selected' if i==12 }}>{{ mes }}</option>{% endfor %}</select>
+    </span>
+    <button class="btn btn-primary" type="submit">{{ icone('refresh') }} Gerar atividades</button>
+  </form>
+</div>
+
+<!-- ===== nova atividade ===== -->
+<div class="card">
+  <h2>Nova atividade do cronograma</h2>
+  <form method="post" action="/cronograma/item" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Atividade</label>
+      <input class="input input-lg" name="title" placeholder="Ex.: Consolidar eliminações" required/></div>
+    <div class="form-row"><label class="field-label">Escopo / empresa</label>
+      <select class="input" name="escopo">
+        <option value="geral">Geral — uma atividade no mês</option>
+        <option value="todas">★ Todas as empresas da carteira ({{ n_empresas }})</option>
+        <optgroup label="Empresa específica">
+          {% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </optgroup>
+      </select>
+      <div class="help-txt">“Todas” replica no responsável de cada empresa; “empresa específica” usa o responsável dela na carteira.</div></div>
+    <div class="form-row"><label class="field-label">Responsável (geral / fallback)</label>
+      <select class="input" name="member_id"><option value="">— a definir —</option>
+        {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
+    <div class="form-row"><label class="field-label">Vencimento — Nº dia útil do mês seguinte</label>
+      <input class="input" type="number" name="due_offset" min="1" max="23" value="5" style="width:110px;"/>
+      <div class="help-txt">Ex.: 5 = 5º dia útil do mês seguinte à competência.</div></div>
+    <div class="form-row"><label class="field-label">Prioridade</label>
+      <select class="input" name="priority">{% for p in priorities %}<option value="{{ p }}" {{ 'selected' if p=='media' }}>{{ p|capitalize }}</option>{% endfor %}</select></div>
+    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('plus') }} Adicionar</button></div>
+  </form>
+</div>
+
+<!-- ===== lista ===== -->
+<div class="card">
+  <h2>Atividades do cronograma ({{ items|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col" style="min-width:280px;">Atividade</th><th scope="col">Escopo / empresa</th><th scope="col">Responsável</th>
+      <th class="num">Venc. (DU)</th><th scope="col">Prioridade</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
+    <tbody>
+    {% for it in items %}
+    <tr class="{{ '' if it.active else 'row-inativa' }}">
+      <td><input class="input" form="cri-{{ it.id }}" name="title" value="{{ it.title }}" style="width:100%;min-width:260px;"/></td>
+      <td><select class="input" form="cri-{{ it.id }}" name="escopo" style="min-width:150px;">
+        <option value="geral" {{ 'selected' if not it.per_company and not it.company_id }}>Geral</option>
+        <option value="todas" {{ 'selected' if it.per_company }}>Todas as empresas</option>
+        <optgroup label="Empresa específica">
+          {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if it.company_id==c.id }}>{{ c.name }}</option>{% endfor %}
+        </optgroup>
+      </select></td>
+      <td><select class="input" form="cri-{{ it.id }}" name="member_id" style="min-width:130px;"><option value="">— a definir —</option>
+        {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if it.member_id==m.id }}>{{ m.name }}</option>{% endfor %}</select></td>
+      <td class="num"><input class="input" form="cri-{{ it.id }}" type="number" name="due_offset" min="1" max="23" value="{{ it.due_offset }}" style="width:70px;"/></td>
+      <td><select class="input" form="cri-{{ it.id }}" name="priority" style="width:auto;">{% for p in priorities %}<option value="{{ p }}" {{ 'selected' if it.priority==p }}>{{ p|capitalize }}</option>{% endfor %}</select></td>
+      <td>
+        <form method="post" action="/cronograma/item/{{ it.id }}/toggle" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-outline btn-sm" type="submit" title="{{ 'Desativar' if it.active else 'Ativar' }}">{{ 'Ativo' if it.active else 'Inativo' }}</button>
+        </form>
+      </td>
+      <td><div class="flex gap-1">
+        <button class="btn btn-outline btn-sm" type="submit" form="cri-{{ it.id }}">Salvar</button>
+        <button class="btn btn-outline btn-sm btn-danger" type="submit" form="crd-{{ it.id }}" title="Remover">{{ icone('trash') }}</button>
+      </div></td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhuma atividade cadastrada ainda. Adicione acima.</td></tr>{% endfor %}
+    </tbody></table></div>
+  <div hidden>
+    {% for it in items %}
+    <form id="cri-{{ it.id }}" method="post" action="/cronograma/item/{{ it.id }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
+    <form id="crd-{{ it.id }}" method="post" action="/cronograma/item/{{ it.id }}/excluir"
+          onsubmit="return confirm('Remover “{{ it.title }}” do cronograma?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
+    {% endfor %}
+  </div>
+  <p class="help-txt mt-1">“Todas as empresas” e “empresa específica” usam o responsável definido na Carteira do Time.</p>
+</div>
+
+<script>
+function cgModo(){
+  var v=document.getElementById('cg-modo').value;
+  document.querySelectorAll('.cg-mes').forEach(function(e){e.hidden=(v!=='mes');});
+  document.querySelectorAll('.cg-periodo').forEach(function(e){e.hidden=(v!=='periodo');});
+}
+cgModo();
+</script>
+{% endblock %}

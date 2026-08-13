@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if a else 'Nova' }} atividade{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ 'Editar atividade' if a else 'Nova atividade' }}</h1>
+  <div class="sub">Uma atividade tem dono, prazo, status e pode ligar-se a empresa, competência e projeto.</div></div></div>
+
+<div class="card" style="max-width:760px;">
+  <form method="post" action="{{ ('/atividade/' ~ a.id ~ '/editar') if a else '/atividade/nova' }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">Título *</label>
+      <input class="input" name="title" required value="{{ a.title if a else '' }}"/></div>
+    <div class="form-row"><label class="field-label">Descrição</label>
+      <textarea class="input" name="description" rows="3">{{ a.description if a and a.description else '' }}</textarea></div>
+
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Tipo</label>
+        <select class="input" name="kind" id="ativ-kind" onchange="ativTipo()">
+          {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if (a and a.kind==k) or (not a and preset_project and k=='projeto') }}>{{ {'fechamento':'Fechamento','recorrente':'Recorrente','transversal':'Transversal','spot':'Spot','projeto':'Projeto','indicador':'Indicador'}[k] }}</option>{% endfor %}
+        </select></div>
+      <div class="form-row"><label class="field-label">Prioridade</label>
+        <select class="input" name="priority">
+          {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if a and a.priority==p else ('selected' if not a and p=='media') }}>{{ p|capitalize }}</option>{% endfor %}
+        </select></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Responsável</label>
+        <select class="input" name="member_id"><option value="">—</option>
+          {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if a and a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+        </select></div>
+      <div class="form-row"><label class="field-label">Empresa</label>
+        <select class="input" name="company_id"><option value="">—</option>
+          {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if a and a.company_id==c.id }}>{{ c.name }}</option>{% endfor %}
+        </select></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-row" id="ativ-comp-row"><label class="field-label">Competência</label>
+        <select class="input" name="competency_id"><option value="">—</option>
+          {% for c in competencies %}<option value="{{ c.id }}" {{ 'selected' if a and a.competency_id==c.id }}>{{ c.label }}</option>{% endfor %}
+        </select>
+        <div class="help-txt">Só para atividades de fechamento.</div></div>
+      <div class="form-row"><label class="field-label">Projeto</label>
+        <select class="input" name="project_id" id="ativ-proj" onchange="ativProj()"><option value="">—</option>
+          {% for p in projects %}<option value="{{ p.id }}" {{ 'selected' if (a and a.project_id==p.id) or (not a and preset_project==p.id) }}>{{ p.name }}</option>{% endfor %}
+        </select>
+        <div class="help-txt">Ao escolher um projeto, o tipo vira “Projeto” e a competência é dispensada.</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Início</label>
+        <input class="input" type="date" name="start_date" value="{{ a.start_date.isoformat() if a and a.start_date else '' }}"/></div>
+      <div class="form-row"><label class="field-label">Prazo</label>
+        <input class="input" type="date" name="due_date" value="{{ a.due_date.isoformat() if a and a.due_date else '' }}"/></div>
+    </div>
+
+    {% if a %}
+    <div class="form-row"><label class="field-label">Status</label>
+      <select class="input" name="status">
+        {% for s in ['pendente','em_andamento','bloqueada','concluida','cancelada'] %}
+        <option value="{{ s }}" {{ 'selected' if a.status==s }}>{{ {'pendente':'Pendente','em_andamento':'Em andamento','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'}[s] }}</option>{% endfor %}
+      </select></div>
+    {% endif %}
+
+    <div class="flex gap-1 mt-2">
+      <button class="btn btn-primary" type="submit">{{ 'Salvar' if a else 'Criar atividade' }}</button>
+      <a href="{{ ('/atividade/' ~ a.id) if a else '/atividades' }}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+<script>
+function ativTipo(){
+  var proj=document.getElementById('ativ-kind').value==='projeto';
+  document.getElementById('ativ-comp-row').style.display=proj?'none':'';
+}
+function ativProj(){
+  if(document.getElementById('ativ-proj').value){ document.getElementById('ativ-kind').value='projeto'; }
+  ativTipo();
+}
+ativTipo();
+</script>
+{% endblock %}

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="csrf-token" content="{{ csrf_token() }}"/>
+  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/jf-favicon.svg"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="stylesheet" href="/static/css/portal.css"/>
+  <link rel="stylesheet" href="/static/css/responsivo.css"/>
+  <script>
+  (function(){var s=localStorage.getItem('cp-theme');
+   var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
+   document.documentElement.setAttribute('data-theme',t);})();
+  (function(){var M=document.querySelector('meta[name=csrf-token]').content;var _f=window.fetch;
+   window.fetch=function(i,o){o=o||{};var m=(o.method||'GET').toUpperCase();
+   if(m!=='GET'&&m!=='HEAD'){o.headers=Object.assign({'X-CSRFToken':M},o.headers||{});}return _f.call(this,i,o);};})();
+  </script>
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<a href="#conteudo" class="skip-link">Ir para o conteúdo</a>
+<div class="app-shell" id="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a href="/" class="sb-brand">
+      <span class="sb-logo"><img src="/static/img/jf-logo.svg" alt="J&amp;F"/></span>
+      <span class="sb-title">Controladoria J&amp;F S.A.</span>
+    </a>
+    <nav class="sb-nav">
+      {% set cur = request.path %}
+      {# Os grupos sempre iniciam fechados. A classe ja vem no HTML para nao
+         haver piscada de menu aberto antes do JS rodar. #}
+      {% if consolidacao_ativa %}
+      <div class="sb-group" data-g="consolidacao">
+        <button type="button" class="sb-group-head" onclick="toggleGrupo(this)" aria-expanded="true">
+          <span class="sb-label">Consolidação</span>
+          <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="sb-group-items">
+      <a href="/" class="sb-link {{ 'active' if cur=='/' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="sb-label">Dashboard</span></a>
+
+      {% if current_user.is_empresa %}
+      <a href="/conferir" class="sb-link {{ 'active' if cur=='/conferir' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m8 11 2 2 4-4"/></svg>
+        <span class="sb-label">Conferir Arquivo</span></a>
+      <a href="/upload" class="sb-link {{ 'active' if cur=='/upload' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        <span class="sb-label">Enviar Arquivo</span></a>
+      {% endif %}
+
+      {% if current_user.is_controladoria %}
+      <a href="/fechamento" class="sb-link {{ 'active' if cur=='/fechamento' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+        <span class="sb-label">Fechamento</span></a>
+      <a href="/gestao" class="sb-link {{ 'active' if cur=='/gestao' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="sb-label">Gestão de Fechamento</span></a>
+      {% endif %}
+
+      <a href="/intercompany" class="sb-link {{ 'active' if cur=='/intercompany' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+        <span class="sb-label">Conta Corrente</span></a>
+
+      {% if current_user.is_controladoria %}
+      <a href="/forecast" class="sb-link {{ 'active' if cur=='/forecast' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span class="sb-label">Forecast x Real</span></a>
+      <a href="/restatement" class="sb-link {{ 'active' if cur=='/restatement' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+        <span class="sb-label">Restatement</span></a>
+      <a href="/historico" class="sb-link {{ 'active' if cur=='/historico' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg>
+        <span class="sb-label">Histórico</span></a>
+      <a href="/exceptions" class="sb-link {{ 'active' if cur=='/exceptions' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        <span class="sb-label">Exceções</span></a>
+      {% endif %}
+
+      <a href="/template/download" class="sb-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        <span class="sb-label">Baixar Template</span></a>
+
+        </div>
+      </div>
+      {% endif %}
+
+      {% if current_user.is_team %}
+      <div class="sb-group" data-g="area">
+        <button type="button" class="sb-group-head" onclick="toggleGrupo(this)" aria-expanded="true">
+          <span class="sb-label">Gestão da Área</span>
+          <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="sb-group-items">
+      <a href="/time" class="sb-link {{ 'active' if cur=='/time' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <span class="sb-label">Painel do Dia</span></a>
+      <a href="/atividades" class="sb-link {{ 'active' if cur=='/atividades' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg>
+        <span class="sb-label">Atividades</span></a>
+      {% if current_user.is_controladoria %}
+      <a href="/atas" class="sb-link {{ 'active' if cur=='/atas' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h4M9 9h1"/></svg>
+        <span class="sb-label">Atas de Reunião</span></a>
+      {% endif %}
+      {% if consolidacao_ativa %}
+      <a href="/agenda" class="sb-link {{ 'active' if cur=='/agenda' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5.5M16 2v4M8 2v4M3 10h18M18 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 16.5V18l1 1"/></svg>
+        <span class="sb-label">Agenda de Fechamento</span></a>
+      {% endif %}
+      <a href="/indicadores" class="sb-link {{ 'active' if cur=='/indicadores' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <span class="sb-label">Indicadores &amp; Metas</span></a>
+      <a href="/projetos" class="sb-link {{ 'active' if cur=='/projetos' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M8 10v6M12 10v3M16 10v8"/></svg>
+        <span class="sb-label">Projetos</span></a>
+      {% if current_user.is_controladoria %}
+      <a href="/capacidade" class="sb-link {{ 'active' if cur=='/capacidade' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/><path d="M13 13h4M13 17h4"/></svg>
+        <span class="sb-label">Capacidade</span></a>
+      {% endif %}
+      <a href="/ausencias" class="sb-link {{ 'active' if cur=='/ausencias' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
+        <span class="sb-label">Férias e Ausências</span></a>
+      <a href="/carteira" class="sb-link {{ 'active' if cur=='/carteira' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span class="sb-label">Carteira do Time</span></a>
+      <a href="/alertas" class="sb-link {{ 'active' if cur=='/alertas' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326z"/></svg>
+        <span class="sb-label">Alertas</span></a>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="sb-group" data-g="pessoal">
+        <button type="button" class="sb-group-head" onclick="toggleGrupo(this)" aria-expanded="true">
+          <span class="sb-label">Pessoal</span>
+          <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="sb-group-items">
+      {% if current_user.is_team %}
+      <a href="/tarefas" class="sb-link {{ 'active' if cur=='/tarefas' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3M16 6H3M16 18H3M18 9l3 3-3 3"/></svg>
+        <span class="sb-label">Minhas Tarefas</span></a>
+      {% endif %}
+      <a href="/notas" class="sb-link {{ 'active' if cur=='/notas' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+        <span class="sb-label">Minhas Notas</span></a>
+        </div>
+      </div>
+
+      <div class="sb-group" data-g="sistema">
+        <button type="button" class="sb-group-head" onclick="toggleGrupo(this)" aria-expanded="true">
+          <span class="sb-label">Sistema</span>
+          <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="sb-group-items">
+      {% if current_user.is_controladoria %}
+      <a href="/cronograma" class="sb-link {{ 'active' if cur=='/cronograma' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m9 16 2 2 4-4"/></svg>
+        <span class="sb-label">Cronograma</span></a>
+      {% endif %}
+      {% if current_user.is_controladoria %}
+      <a href="/resumo" class="sb-link {{ 'active' if cur=='/resumo' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        <span class="sb-label">Resumo</span></a>
+      <a href="/admin" class="sb-link {{ 'active' if cur=='/admin' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sb-label">Administração</span></a>
+      {% endif %}
+      <a href="/ajuda" class="sb-link {{ 'active' if cur=='/ajuda' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        <span class="sb-label">Como Usar</span></a>
+        </div>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <span class="sb-version sb-label">J&amp;F S.A. · v{{ app_version }}</span>
+      <button type="button" class="sb-collapse" onclick="toggleSbMini()" title="Recolher menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="sidebar-scrim" onclick="closeSb()"></div>
+
+  <div class="content-area">
+    <header class="topbar">
+      <button type="button" class="nav-burger" onclick="openSb()" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+      </button>
+      <span class="topbar-crumb" id="topbar-crumb"></span>
+      <form class="search-box" action="/buscar" method="get" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" name="q" placeholder="Buscar…" aria-label="Buscar no portal"
+               value="{{ request.args.get('q','') if request.path == '/buscar' }}"/>
+      </form>
+      <div class="nav-tools">
+        <span class="role-chip role-{{ current_user.role }}">
+          {{ {'admin':'Administrador','controladoria':'Controladoria','empresa':'Empresa'}[current_user.role] }}
+          {% if current_user.company %}· {{ current_user.company.name }}{% endif %}
+        </span>
+        <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+          <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <span class="nav-user" onclick="toggleUserMenu(event)" role="button" tabindex="0" aria-label="Menu do usuário" onkeydown="if(event.key==='Enter')toggleUserMenu(event)">
+          <span class="avatar">{{ (current_user.display_name or '?')[:1]|upper }}</span>
+          <span class="user-label">{{ current_user.display_name }}</span>
+        </span>
+      </div>
+    </header>
+    <main class="main-content" id="conteudo" tabindex="-1">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div id="user-menu" class="user-menu" style="display:none;">
+  <div class="user-menu-head">{{ current_user.email }}</div>
+  <a href="/change-password">🔐 Alterar senha</a>
+  <a href="/logout" class="danger">🚪 Sair</a>
+</div>
+<script>
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('cp-theme',t);}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
+function toggleSbMini(){var s=document.getElementById('app-shell');s.classList.toggle('sb-mini');localStorage.setItem('cp-sb-mini',s.classList.contains('sb-mini')?'1':'0');}
+// Menu lateral em telas pequenas. O deslocamento e' aplicado por JS com
+// prioridade porque, dependendo do navegador, a regra em cascata do tema
+// sobrescrevia a posicao e o menu nao abria.
+// Menu lateral em telas pequenas. O tema esconde/mostra via transform; o JS
+// espelha a mesma tecnica em estilo inline como rede de seguranca, caso a
+// regra em cascata seja sobrescrita em algum navegador.
+function _telaPequena(){ return window.matchMedia('(max-width:900px)').matches; }
+function openSb(){
+  document.getElementById('app-shell').classList.add('sb-open');
+  if(_telaPequena()) document.querySelector('.sidebar').style.setProperty('transform','translateX(0)','important');
+}
+function closeSb(){
+  document.getElementById('app-shell').classList.remove('sb-open');
+  if(_telaPequena()) document.querySelector('.sidebar').style.setProperty('transform','translateX(-100%)','important');
+}
+window.addEventListener('resize', function(){
+  var sb=document.querySelector('.sidebar');
+  if(sb && !_telaPequena()) sb.style.removeProperty('transform');  // volta ao normal
+});
+
+// ===== Grupos recolhiveis do menu =====
+// Abertos por padrao (poucos itens no menu agora). Clicar no titulo recolhe/expande.
+function toggleGrupo(btn){
+  var g=btn.closest('.sb-group');
+  var fechado=g.classList.toggle('fechado');
+  btn.setAttribute('aria-expanded', fechado?'false':'true');
+}
+(function(){
+  var g=document.querySelector('.sb-group .sb-link.active');
+  if(!g) return;
+  var grupo=g.closest('.sb-group');
+  grupo.classList.remove('fechado');
+  var b=grupo.querySelector('.sb-group-head');
+  if(b) b.setAttribute('aria-expanded','true');
+})();
+try{ localStorage.removeItem('cp-grupos'); }catch(e){}
+if(localStorage.getItem('cp-sb-mini')==='1')document.getElementById('app-shell').classList.add('sb-mini');
+(function(){var t=(document.title||'').split('·')[0].trim();var c=document.getElementById('topbar-crumb');if(c)c.textContent=t;})();
+var _um=false;
+function toggleUserMenu(e){e.stopPropagation();_um=!_um;document.getElementById('user-menu').style.display=_um?'block':'none';}
+document.addEventListener('click',function(e){if(_um&&!e.target.closest('#user-menu')){document.getElementById('user-menu').style.display='none';_um=false;}});
+</script>
+{% else %}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

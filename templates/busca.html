@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Busca{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Busca</h1>
+    <div class="sub">{% if q %}{{ total }} resultado(s) para <strong>“{{ q }}”</strong>{% else %}Digite ao menos 2 caracteres.{% endif %}</div></div>
+</div>
+
+<div class="card">
+  <form method="get" action="/buscar" class="flex gap-1">
+    <input class="input" name="q" value="{{ q }}" autofocus placeholder="Empresa, atividade, projeto, indicador, pessoa…"/>
+    <button class="btn btn-primary" type="submit">Buscar</button>
+  </form>
+</div>
+
+{% if q and not grupos %}
+<div class="empty-box">
+  <div class="empty-ico">🔍</div>
+  <p><strong>Nada encontrado para “{{ q }}”.</strong></p>
+  <p class="text-muted text-sm">Tente parte do nome da empresa, do projeto ou da atividade.</p>
+</div>
+{% endif %}
+
+{% for nome, itens in grupos %}
+<div class="res-group">
+  <h2 style="font-size:.95rem;font-weight:700;margin-bottom:.6rem;">
+    {{ nome }} <span class="text-muted text-sm">({{ itens|length }})</span></h2>
+  {% for it in itens %}
+  <a class="res-item" href="{{ it.url }}">
+    <span class="res-kind">{{ nome[:-1] if nome.endswith('s') else nome }}</span>
+    <span>{{ it.titulo }}</span>
+    {% if it.sub %}<span class="res-sub">{{ it.sub }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

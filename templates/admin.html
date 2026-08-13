@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+{% block title %}Administração{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% macro perfil(r) %}{{ {'admin':'Administrador','controladoria':'Controladoria','profissional':'Profissional','empresa':'Empresa'}.get(r, r) }}{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Administração</h1>
+    <div class="sub">Cadastro dos dados-mestre: time, carteira, empresas, usuários e template.</div></div>
+</div>
+
+<div class="adm-tabs" id="adm-tabs">
+  <button class="adm-tab" data-tab="time">Time <span class="cnt">{{ members|length }}</span></button>
+  <button class="adm-tab" data-tab="carteira">Entidades <span class="cnt">{{ assignments|length }}</span></button>
+  <button class="adm-tab" data-tab="org">Organização <span class="cnt">{{ companies|length }}</span></button>
+  <button class="adm-tab" data-tab="sistema">Sistema</button>
+</div>
+
+<!-- Formularios das linhas editaveis (HTML nao permite <form> dentro de <tr>;
+     usamos o atributo form= dos campos apontando para estes) -->
+<div hidden>
+  {% for m in members %}
+    <form id="mem-{{ m.id }}" method="post" action="/admin/member/{{ m.id }}">{{ csrf() }}</form>
+    <form id="memdel-{{ m.id }}" method="post" action="/admin/member/{{ m.id }}/excluir"
+          onsubmit="return confirm('Remover {{ m.name }}? Se tiver empresas na carteira, será apenas inativado.');">{{ csrf() }}</form>
+  {% endfor %}
+  {# a carteira agora salva em lote (form-carteira); aqui fica so o excluir #}
+  {% for a in assignments %}
+    <form id="asgdel-{{ a.id }}" method="post" action="/admin/assignment/{{ a.id }}/excluir"
+          onsubmit="return confirm('Remover {{ a.company.name }} da carteira?');">{{ csrf() }}</form>
+  {% endfor %}
+  {% for c in companies %}
+    <form id="emp-{{ c.id }}" method="post" action="/admin/company/{{ c.id }}">{{ csrf() }}</form>
+    <form id="empdel-{{ c.id }}" method="post" action="/admin/company/{{ c.id }}/excluir"
+          onsubmit="return confirm('Excluir {{ c.name }}? Se houver envios, será apenas inativada.');">{{ csrf() }}</form>
+  {% endfor %}
+  {% for u in users %}
+    <form id="usr-{{ u.id }}" method="post" action="/admin/user/{{ u.id }}">{{ csrf() }}</form>
+    <form id="usrpw-{{ u.id }}" method="post" action="/admin/user/{{ u.id }}/senha"
+          onsubmit="return confirm('Redefinir a senha de {{ u.email }} para {{ default_password }}?');">
+      {{ csrf() }}<input type="hidden" name="password" value="{{ default_password }}"/></form>
+  {% endfor %}
+</div>
+
+<!-- =================== TIME =================== -->
+<section class="adm-pane" data-pane="time">
+  <div class="card">
+    <h2>Novo membro do time</h2>
+    <form method="post" action="/admin/member" class="adm-grid">
+      {{ csrf() }}
+      <div class="form-row"><label class="field-label">Nome</label>
+        <input class="input" name="name" required placeholder="Ex.: Maria Souza"/></div>
+      <div class="form-row"><label class="field-label">Login vinculado</label>
+        <select class="input" name="user_id"><option value="">— sem login ainda —</option>
+          {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}">{{ u.display_name }} — {{ perfil(u.role) }}</option>{% endif %}{% endfor %}
+        </select>
+        <div class="help-txt">Somente contas de Administrador e Controladoria.</div></div>
+      <div class="form-row"><label class="field-label">Painel</label>
+        <select class="input" name="panel_id"><option value="">— painel próprio —</option>
+          {% for p in panels %}{% if p.active %}<option value="{{ p.id }}">{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
+        </select>
+        <div class="help-txt">O trabalho deste membro entra no painel escolhido.</div></div>
+      <div class="form-row"><label class="field-label">Ordem</label>
+        <input class="input" type="number" name="sort_order" value="100"/></div>
+      <div class="form-row"><label class="field-label">Cor</label>
+        <input class="input" type="color" name="color" value="#1d5da8" style="height:42px;padding:.2rem;"/></div>
+      <div class="form-row"><label class="field-label">Papel</label>
+        <label class="chk"><input type="checkbox" name="is_manager" value="1"/> É gestor (pilota os painéis)</label></div>
+      <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">Cadastrar membro</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Membros ({{ members|length }})</h2>
+    {% if members %}
+    <div class="tbl-wrap"><table class="tbl tbl-cartao">
+      <thead><tr><th scope="col">Membro</th><th scope="col">Login</th><th scope="col">Painel</th><th scope="col">Gestor</th><th scope="col">Ativo</th><th scope="col"></th></tr></thead>
+      <tbody>
+      {% for m in members %}
+      {% set F = 'mem-' ~ m.id %}
+      <tr>
+        <td><div class="flex gap-1 items-center">
+          <span class="avatar-sm" style="background:{{ m.color }}">{{ m.initials }}</span>
+          <input class="input" form="{{ F }}" name="name" value="{{ m.name }}" style="min-width:150px;"/>
+          <input type="hidden" form="{{ F }}" name="sort_order" value="{{ m.sort_order }}"/>
+          <input type="hidden" form="{{ F }}" name="color" value="{{ m.color }}"/>
+        </div></td>
+        <td data-rot="Login"><select class="input" form="{{ F }}" name="user_id"><option value="">—</option>
+          {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}" {{ 'selected' if m.user_id==u.id }}>{{ u.display_name }} — {{ perfil(u.role) }}</option>{% endif %}{% endfor %}
+        </select></td>
+        <td data-rot="Painel"><select class="input" form="{{ F }}" name="panel_id"><option value="">— próprio —</option>
+          {% for p in panels %}{% if p.active %}<option value="{{ p.id }}" {{ 'selected' if m.panel_id==p.id }}>{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
+        </select></td>
+        <td class="text-center"><input type="checkbox" form="{{ F }}" name="is_manager" value="1" {{ 'checked' if m.is_manager }}/></td>
+        <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if m.active }}/></td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
+          <button class="btn btn-outline btn-sm btn-danger" type="submit" form="memdel-{{ m.id }}" title="Remover {{ m.name }}"
+                  onclick="return confirm('Remover {{ m.name }}? Se tiver empresas na carteira, será apenas inativado.');">{{ icone("x") }}</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% else %}
+      <div class="empty-box"><div class="empty-ico">👥</div>
+        <p><strong>Nenhum membro cadastrado.</strong></p>
+        <p class="text-muted text-sm">Cadastre o time acima para distribuir a carteira e as atividades de fechamento.</p></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Painéis ({{ panels|length }})</h2>
+    <p class="text-muted text-sm mb-2">Um painel agrupa metas e carga. <strong>Pessoal</strong> pertence a uma pessoa; <strong>Equipe</strong> é compartilhado (ex.: Controladoria). As metas em <a href="/indicadores">Indicadores</a> são organizadas por painel.</p>
+    <form method="post" action="/admin/painel" class="adm-grid">
+      {{ csrf() }}
+      <div class="form-row"><label class="field-label">Nome do painel</label>
+        <input class="input" name="name" required placeholder="Ex.: Controladoria"/></div>
+      <div class="form-row"><label class="field-label">Tipo</label>
+        <select class="input" name="kind" onchange="var o=this.closest('form').querySelector('.pnl-dono');o.style.display=this.value==='pessoal'?'':'none';">
+          <option value="pessoal">Pessoal</option>
+          <option value="equipe">Equipe (compartilhado)</option></select></div>
+      <div class="form-row pnl-dono"><label class="field-label">Dono (se pessoal)</label>
+        <select class="input" name="owner_member_id"><option value="">—</option>
+          {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
+      <div class="form-row"><label class="field-label">Cor</label>
+        <input class="input" type="color" name="color" value="#16324f" style="height:44px;padding:.2rem;"/></div>
+      <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">Criar painel</button></div>
+    </form>
+
+    {% if panels %}
+    <div class="hidden-forms" hidden>
+      {% for p in panels %}
+        <form id="pnldel-{{ p.id }}" method="post" action="/admin/painel/{{ p.id }}/excluir"
+              onsubmit="return confirm('Remover o painel {{ p.name }}?');">{{ csrf() }}</form>
+      {% endfor %}
+    </div>
+    <div class="tbl-wrap mt-2"><table class="tbl">
+      <thead><tr><th scope="col">Painel</th><th scope="col">Tipo</th><th scope="col">Dono</th><th scope="col" style="width:78px;">Ativo</th><th scope="col" style="width:150px;"></th></tr></thead>
+      <tbody>
+      {% for p in panels %}
+      {% set PF = 'pnl-' ~ p.id %}
+      <tr>
+        <td><div class="flex gap-1 items-center">
+          <span class="avatar-sm" style="background:{{ p.color }}">{{ p.initials }}</span>
+          <input class="input" form="{{ PF }}" name="name" value="{{ p.name }}" style="min-width:150px;"/>
+          <input type="hidden" form="{{ PF }}" name="color" value="{{ p.color }}"/>
+          <input type="hidden" form="{{ PF }}" name="sort_order" value="{{ p.sort_order }}"/>
+        </div></td>
+        <td><select class="input" form="{{ PF }}" name="kind" style="min-width:120px;">
+          <option value="pessoal" {{ 'selected' if p.kind=='pessoal' }}>Pessoal</option>
+          <option value="equipe" {{ 'selected' if p.kind=='equipe' }}>Equipe</option></select></td>
+        <td><select class="input" form="{{ PF }}" name="owner_member_id" style="min-width:150px;"><option value="">—</option>
+          {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if p.owner_member_id==m.id }}>{{ m.name }}</option>{% endfor %}</select></td>
+        <td class="text-center"><input type="checkbox" form="{{ PF }}" name="active" value="1" {{ 'checked' if p.active }}/></td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          <form id="{{ PF }}" method="post" action="/admin/painel/{{ p.id }}">{{ csrf() }}</form>
+          <button class="btn btn-outline btn-sm" type="submit" form="{{ PF }}">Salvar</button>
+          <button class="btn btn-outline btn-danger btn-sm" type="submit" form="pnldel-{{ p.id }}"
+                  aria-label="Excluir {{ p.name }}">{{ icone('trash') }}</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Adicionar indicador a um painel</h2>
+    <p class="text-muted text-sm mb-2">Escolha um indicador do
+      <a href="/indicadores/catalogo">catálogo</a> e defina a <strong>meta deste
+      painel</strong>. O mesmo indicador pode entrar em vários painéis com metas
+      diferentes. Os indicadores cadastrados aparecem em <a href="/indicadores">Indicadores &amp; Metas</a>.</p>
+    <form method="post" action="/indicador/nova" class="adm-grid">
+      {{ csrf() }}
+      <input type="hidden" name="next" value="/admin?tab=time"/>
+      <div class="form-row"><label class="field-label">Painel</label>
+        <select class="input" name="panel_id" required>
+          <option value="">— selecione —</option>
+          {% for p in panels %}{% if p.active %}<option value="{{ p.id }}">{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
+        </select></div>
+      <div class="form-row"><label class="field-label">Indicador (do catálogo)</label>
+        <select class="input" name="indicator_def_id" id="adm-ind-def" onchange="admIndDef()">
+          <option value="">➕ Cadastrar um novo indicador…</option>
+          {% for d in defs %}<option value="{{ d.id }}">{{ d.title }} · {{ d.dimension }}</option>{% endfor %}
+        </select></div>
+      <div class="form-row adm-ind-novo"><label class="field-label">Novo indicador — nome</label>
+        <input class="input" name="new_title" placeholder="Ex.: Prazo de entrega do painel"/></div>
+      <div class="form-row adm-ind-novo"><label class="field-label">Dimensão</label>
+        <select class="input" name="dimension">
+          <option value="RESULTADO">RESULTADO</option><option value="PROCESSO">PROCESSO</option>
+          <option value="PRAZO">PRAZO</option><option value="QUALIDADE">QUALIDADE</option></select></div>
+      <div class="form-row adm-ind-novo"><label class="field-label">Tipo de avaliação</label>
+        <select class="input" name="target_type">
+          <option value="manual">Manual</option>
+          <option value="prazo_du">Prazo em dia útil</option>
+          <option value="data_marco">Data / marco</option>
+          <option value="contagem">Contagem</option>
+          <option value="projeto">Projeto</option></select></div>
+      <div class="form-row"><label class="field-label">Meta neste painel</label>
+        <input class="input" name="target_label" placeholder="D+2, 5, 95%, OUT/26..."/></div>
+      <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('plus') }} Adicionar ao painel</button></div>
+    </form>
+    <script>
+    function admIndDef(){
+      var novo=document.getElementById('adm-ind-def').value==='';
+      document.querySelectorAll('.adm-ind-novo').forEach(function(e){e.style.display=novo?'':'none';});
+    }
+    admIndDef();
+    </script>
+  </div>
+</section>
+
+<!-- =================== CARTEIRA =================== -->
+<section class="adm-pane" data-pane="carteira">
+  {% if orphan_companies %}
+  <div class="alert alert-warning">
+    <strong>{{ orphan_companies|length }} empresa(s) fora do grupo:</strong>
+    {{ orphan_companies|map(attribute='name')|join(', ') }}.
+    Elas não aparecem no painel do time até entrarem.
+    <form method="post" action="/admin/assignment/criar-faltantes" style="display:inline-block;margin-left:.6rem;">
+      {{ csrf() }}<button class="btn btn-primary btn-sm" type="submit">Incluir todas</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Incluir empresa no grupo J&amp;F</h2>
+    <form method="post" action="/admin/assignment" class="adm-grid">
+      {{ csrf() }}
+      <div class="form-row"><label class="field-label">Empresa</label>
+        <select class="input" name="company_id" required>
+          <option value="">— selecione —</option>
+          {% for c in orphan_companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select></div>
+      <div class="form-row"><label class="field-label">Responsável</label>
+        <select class="input" name="member_id"><option value="">— a definir —</option>
+          {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+        </select></div>
+      <div class="form-row"><label class="field-label">Assento</label>
+        <input class="input" type="number" name="seat" min="1" placeholder="1"/></div>
+      <div class="form-row"><label class="field-label">Segmento</label>
+        <select class="input" name="segment"><option value="">— selecione —</option>
+          {% for s in segments %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+        <div class="help-txt">Gerencie a lista na aba Organização.</div></div>
+      <div class="form-row"><label class="field-label">Fluxo</label>
+        <select class="input" name="flow"><option value="">—</option>
+          {% for f in flows %}<option value="{{ f }}">{{ f }}</option>{% endfor %}</select></div>
+      <div class="form-row"><label class="field-label">Responsabilidade</label>
+        <select class="input" name="responsibility"><option value="">—</option>
+          {% for r in responsibilities %}<option value="{{ r }}">{{ r }}</option>{% endfor %}</select></div>
+      <div class="form-row"><label class="field-label">Carga real / ideal</label>
+        <div class="flex gap-1"><input class="input" type="number" name="load_real" value="0"/>
+          <input class="input" type="number" name="load_ideal" value="4"/></div></div>
+      <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Entregas exigidas</label>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          {% for d in deliverables %}<label class="chk"><input type="checkbox" name="deliverables" value="{{ d }}"/> {{ d }}</label>{% endfor %}
+        </div></div>
+      <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">Incluir no grupo</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Entidades ({{ assignments|length }})</h2>
+    {% if assignments %}
+    <form method="post" action="/admin/carteira/salvar" id="form-carteira">
+      {{ csrf() }}
+      <div class="barra-salvar" id="barra-carteira">
+        <span id="cont-carteira">Nenhuma alteração pendente</span>
+        <button class="btn btn-primary btn-toque" type="submit">
+          {{ icone('check') }} Salvar alterações</button>
+      </div>
+      <div class="tbl-wrap"><table class="tbl tbl-ancora">
+        <thead><tr>
+          <th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Assento</th>
+          <th scope="col">Segmento</th><th scope="col">Fluxo</th><th scope="col">Resp.</th>
+          <th scope="col">Entregas</th><th scope="col">Real/Ideal</th><th scope="col">Remover</th>
+        </tr></thead>
+        <tbody>
+        {% for a in assignments %}
+        {% set P = 'a' ~ a.id ~ '_' %}
+        <tr data-linha="{{ a.id }}">
+          <th scope="row" class="col-ancora">
+            <div class="ent-nome">{{ a.company.name }}</div>
+            <div class="ent-cod">{{ a.company.code }}</div></th>
+          <td data-rot="Responsável"><select class="input" name="{{ P }}member_id" style="min-width:150px;"><option value="">— a definir —</option>
+            {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+          </select></td>
+          <td data-rot="Assento"><input class="input" type="number" name="{{ P }}seat" value="{{ a.seat or '' }}" style="width:72px;"/></td>
+          <td data-rot="Segmento"><select class="input" name="{{ P }}segment" style="min-width:140px;">
+            <option value="">—</option>
+            {% for s in segments %}<option value="{{ s }}" {{ 'selected' if a.segment==s }}>{{ s }}</option>{% endfor %}
+            {% if a.segment and a.segment not in segments %}<option value="{{ a.segment }}" selected>{{ a.segment }} (inativo)</option>{% endif %}
+          </select></td>
+          <td data-rot="Fluxo"><select class="input" name="{{ P }}flow" style="min-width:118px;"><option value="">—</option>
+            {% for f in flows %}<option value="{{ f }}" {{ 'selected' if a.flow==f }}>{{ f }}</option>{% endfor %}</select></td>
+          <td data-rot="Responsabilidade"><select class="input" name="{{ P }}responsibility" style="min-width:110px;"><option value="">—</option>
+            {% for r in responsibilities %}<option value="{{ r }}" {{ 'selected' if a.responsibility==r }}>{{ r }}</option>{% endfor %}</select></td>
+          <td data-rot="Entregas"><div class="chk-col">
+            {% for d in deliverables %}<label class="chk chk-sm"><input type="checkbox" name="{{ P }}deliverables" value="{{ d }}" {{ 'checked' if d in a.deliverables }}/> {{ d }}</label>{% endfor %}
+          </div></td>
+          <td data-rot="Carga real / ideal"><div class="flex gap-1">
+            <input class="input" type="number" name="{{ P }}load_real" value="{{ a.load_real or 0 }}" style="width:66px;" aria-label="Carga real"/>
+            <input class="input" type="number" name="{{ P }}load_ideal" value="{{ a.load_ideal or 0 }}" style="width:66px;" aria-label="Carga ideal"/></div></td>
+          <td data-rot="Remover" class="col-perigo">
+            <button class="btn btn-outline btn-danger btn-toque" type="submit"
+                    form="asgdel-{{ a.id }}" title="Remover {{ a.company.name }} do grupo"
+                    aria-label="Remover {{ a.company.name }} do grupo">{{ icone('trash') }}</button>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody></table></div>
+    </form>
+    <p class="help-txt mt-1">Edite quantas linhas quiser e salve tudo de uma vez —
+      as linhas alteradas ficam destacadas.</p>
+    {% else %}
+      <div class="empty-box"><div class="empty-ico">{{ icone('table', 30) }}</div>
+        <p><strong>Nenhuma entidade cadastrada.</strong></p>
+        <p class="text-muted text-sm">Inclua as empresas acima para distribuir os painéis entre o time.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- =================== ORGANIZAÇÃO =================== -->
+<section class="adm-pane" data-pane="org">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Nova empresa</h2>
+      <form method="post" action="/admin/company">
+        {{ csrf() }}
+        <div class="form-row"><label class="field-label">Código</label>
+          <input class="input" name="code" required placeholder="ELDORADO"/></div>
+        <div class="form-row"><label class="field-label">Nome</label>
+          <input class="input" name="name" required placeholder="Eldorado Brasil Celulose"/></div>
+        <div class="form-row"><label class="field-label">Rótulo canônico (contraparte intercompany)</label>
+          <input class="input" name="canonical_label" placeholder="igual ao nome, se vazio"/>
+          <div class="help-txt">Usado para casar a contraparte na conta corrente.</div></div>
+        <div class="form-row"><label class="chk"><input type="checkbox" name="add_to_carteira" value="1" checked/> Já incluir na carteira do time</label></div>
+        <button class="btn btn-primary" type="submit">Cadastrar empresa</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Novo usuário</h2>
+      <form method="post" action="/admin/user">
+        {{ csrf() }}
+        <div class="form-row"><label class="field-label">Nome</label>
+          <input class="input" name="display_name" required/></div>
+        <div class="form-row"><label class="field-label">E-mail</label>
+          <input class="input" type="email" name="email" required placeholder="nome@jfsa.com.br"/></div>
+        <div class="grid-2">
+          <div class="form-row"><label class="field-label">Perfil</label>
+            <select class="input" name="role">
+              <option value="empresa">Empresa</option>
+              <option value="profissional">Profissional (vê só o que é dele)</option>
+              <option value="controladoria">Controladoria</option>
+              <option value="admin">Administrador</option></select></div>
+          <div class="form-row"><label class="field-label">Empresa vinculada</label>
+            <select class="input" name="company_id"><option value="">—</option>
+              {% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="form-row"><label class="field-label">Senha inicial</label>
+          <input class="input" name="password" value="{{ default_password }}"/></div>
+        <button class="btn btn-primary" type="submit">Cadastrar usuário</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Empresas ({{ companies|length }})</h2>
+    <div class="tbl-wrap"><table class="tbl tbl-cartao">
+      <thead><tr><th scope="col">Código</th><th scope="col">Nome</th><th scope="col">Rótulo canônico</th><th class="num">ROL LTM (R$mi)</th><th scope="col">Tol. rel.</th><th scope="col">Tol. abs.</th><th scope="col">Ativa</th><th scope="col"></th></tr></thead>
+      <tbody>
+      {% for c in companies %}
+      {% set F = 'emp-' ~ c.id %}
+      <tr>
+        <td><input class="input" form="{{ F }}" name="code" value="{{ c.code }}" style="width:110px;"/></td>
+        <td><input class="input" form="{{ F }}" name="name" value="{{ c.name }}" style="min-width:170px;"/></td>
+        <td><input class="input" form="{{ F }}" name="canonical_label" value="{{ c.canonical_label or '' }}" style="min-width:150px;"/></td>
+        <td class="num">{{ '{:,.0f}'.format((c.rol_ltm or 0)/1e6) }}</td>
+        <td><input class="input" form="{{ F }}" name="tol_rel" value="{{ c.tol_rel if c.tol_rel is not none else '' }}" placeholder="0.0001" style="width:90px;"/></td>
+        <td><input class="input" form="{{ F }}" name="tol_abs" value="{{ c.tol_abs if c.tol_abs is not none else '' }}" placeholder="1000" style="width:95px;"/></td>
+        <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if c.active }}/></td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
+          <button class="btn btn-outline btn-sm btn-danger" type="submit" form="empdel-{{ c.id }}" title="Excluir">{{ icone("x") }}</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    <p class="help-txt mt-1">Tolerância efetiva = max(absoluta, relativa × ROL LTM). Vazio usa o padrão configurado em “Template &amp; regras”.</p>
+  </div>
+
+  <div class="card">
+    <h2>Usuários ({{ users|length }})</h2>
+    <div class="tbl-wrap"><table class="tbl tbl-cartao">
+      <thead><tr><th scope="col">Nome</th><th scope="col">E-mail</th><th scope="col">Perfil</th><th scope="col">Empresa</th><th scope="col">Ativo</th><th scope="col">Último acesso</th><th scope="col"></th></tr></thead>
+      <tbody>
+      {% for u in users %}
+      {% set F = 'usr-' ~ u.id %}
+      <tr>
+        <td><input class="input" form="{{ F }}" name="display_name" value="{{ u.display_name }}" style="min-width:140px;"/></td>
+        <td><input class="input" form="{{ F }}" type="email" name="email" value="{{ u.email }}" style="min-width:190px;"/></td>
+        <td><select class="input" form="{{ F }}" name="role">
+          <option value="empresa" {{ 'selected' if u.role=='empresa' }}>Empresa</option>
+          <option value="profissional" {{ 'selected' if u.role=='profissional' }}>Profissional</option>
+          <option value="controladoria" {{ 'selected' if u.role=='controladoria' }}>Controladoria</option>
+          <option value="admin" {{ 'selected' if u.role=='admin' }}>Admin</option></select></td>
+        <td><select class="input" form="{{ F }}" name="company_id"><option value="">—</option>
+          {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if u.company_id==c.id }}>{{ c.name }}</option>{% endfor %}</select></td>
+        <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if u.active }}/></td>
+        <td class="text-sm text-muted">{{ u.last_login.strftime('%d/%m/%y %H:%M') if u.last_login else 'nunca' }}</td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
+          <button class="btn btn-outline btn-sm" type="submit" form="usrpw-{{ u.id }}" title="Redefinir senha">{{ icone("key") }}</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    <p class="help-txt mt-1">Redefinir a senha aplica “{{ default_password }}” e força a troca no próximo acesso.</p>
+  </div>
+
+  <div class="card">
+    <h2>Segmentos ({{ seg_objs|length }})</h2>
+    <p class="text-muted text-sm mb-2">A lista de segmentos usada ao classificar as entidades (Energia, Agro…). Editar um nome atualiza todas as entidades que o usavam.</p>
+    <form method="post" action="/admin/segmento" class="flex gap-1 items-center mb-2" style="flex-wrap:wrap;">
+      {{ csrf() }}
+      <input class="input" name="name" required placeholder="Novo segmento" style="max-width:220px;"/>
+      <button class="btn btn-primary btn-sm" type="submit">Adicionar</button>
+    </form>
+    {% if seg_objs %}
+    <div class="hidden-forms" hidden>
+      {% for s in seg_objs %}
+        <form id="segdel-{{ s.id }}" method="post" action="/admin/segmento/{{ s.id }}/excluir"
+              onsubmit="return confirm('Remover o segmento {{ s.name }}?');">{{ csrf() }}</form>
+      {% endfor %}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th scope="col">Segmento</th><th scope="col" style="width:90px;">Ordem</th><th scope="col" style="width:80px;">Ativo</th><th scope="col" style="width:150px;"></th></tr></thead>
+      <tbody>
+      {% for s in seg_objs %}
+      {% set SF = 'seg-' ~ s.id %}
+      <tr>
+        <td><input class="input" form="{{ SF }}" name="name" value="{{ s.name }}"/></td>
+        <td><input class="input" form="{{ SF }}" type="number" name="sort_order" value="{{ s.sort_order }}"/></td>
+        <td class="text-center"><input type="checkbox" form="{{ SF }}" name="active" value="1" {{ 'checked' if s.active }}/></td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          <form id="{{ SF }}" method="post" action="/admin/segmento/{{ s.id }}">{{ csrf() }}</form>
+          <button class="btn btn-outline btn-sm" type="submit" form="{{ SF }}">Salvar</button>
+          <button class="btn btn-outline btn-danger btn-sm" type="submit" form="segdel-{{ s.id }}"
+                  aria-label="Excluir {{ s.name }}">{{ icone('trash') }}</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% else %}<p class="text-muted text-sm">Nenhum segmento cadastrado.</p>{% endif %}
+  </div>
+</section>
+
+<!-- =================== SISTEMA =================== -->
+<section class="adm-pane" data-pane="sistema">
+  <div class="card">
+    <h2>Competência atual (mês vigente)</h2>
+    <p class="text-muted text-sm mb-2">Diz à ferramenta <strong>em qual competência estamos
+      agora</strong>. É a base do Resumo do fechamento, do prazo e das telas do time.
+      Atualize no começo de cada mês.</p>
+    <form method="post" action="/admin/competencia-atual" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+      {{ csrf() }}
+      <select class="input" name="competencia_atual_id" style="width:auto;">
+        <option value="">— automático (aberta mais recente) —</option>
+        {% for c in competencies %}<option value="{{ c.id }}" {{ 'selected' if competencia_atual_id==c.id }}>{{ c.label }} ({{ c.status }})</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">Definir competência atual</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Competências ({{ competencies|length }})</h2>
+    <p class="text-muted text-sm mb-2">O período de referência dos indicadores. Enquanto
+      a Gestão de Fechamento está desligada, crie e controle as competências por aqui —
+      manualmente.</p>
+    <form method="post" action="/admin/competencia" class="flex gap-1 items-center mb-2" style="flex-wrap:wrap;">
+      {{ csrf() }}
+      <select class="input" name="month" style="width:auto;">
+        {% for i, mes in [(1,'Jan'),(2,'Fev'),(3,'Mar'),(4,'Abr'),(5,'Mai'),(6,'Jun'),(7,'Jul'),(8,'Ago'),(9,'Set'),(10,'Out'),(11,'Nov'),(12,'Dez')] %}
+        <option value="{{ i }}">{{ mes }}</option>{% endfor %}
+      </select>
+      <input class="input" type="number" name="year" min="2020" max="2100" value="2026" style="width:100px;"/>
+      <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Criar competência</button>
+    </form>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th scope="col">Competência</th><th scope="col">Prazo</th><th scope="col">Status</th><th scope="col">Ação</th></tr></thead>
+      <tbody>{% for c in competencies %}
+        <tr><td>{{ c.label }}</td>
+          <td>{{ c.deadline.strftime('%d/%m/%Y') if c.deadline else '—' }}</td>
+          <td><span class="st st-{{ 'aberta' if c.status=='aberta' else ('fechada' if c.status=='fechada' else 'planejada') }}">{{ c.status }}</span></td>
+          <td>
+            <form method="post" action="/admin/competencia/{{ c.id }}/status" class="flex gap-1 items-center">
+              {{ csrf() }}
+              <input type="hidden" name="status" value="{{ 'fechada' if c.status=='aberta' else 'aberta' }}"/>
+              <button class="btn btn-outline btn-sm" type="submit">{{ 'Fechar' if c.status=='aberta' else 'Reabrir' }}</button>
+            </form>
+          </td></tr>
+      {% else %}<tr><td colspan="4" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma competência cadastrada.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Agendador automático
+      <span class="st {{ 'st-aberta' if sched.status.ativo else 'st-reprovado' }}">
+        {{ 'em execução' if sched.status.ativo else 'parado' }}</span></h2>
+    <p class="text-muted text-sm mb-2">Uma vez por dia o portal dispara o ciclo de
+      alertas do time, cobra as empresas pendentes conforme a régua de avisos e, no dia
+      escolhido, envia o resumo à controladoria. Sem isso, nada sai daqui sozinho.</p>
+
+    <form method="post" action="/admin/agendador" class="adm-grid">
+      {{ csrf() }}
+      <div class="form-row"><label class="field-label">Situação</label>
+        <label class="chk"><input type="checkbox" name="scheduler_enabled" value="1"
+          {{ 'checked' if sched.enabled }}/> Executar automaticamente</label></div>
+      <div class="form-row"><label class="field-label">Horário do disparo diário</label>
+        <input class="input" type="number" name="scheduler_hour" min="0" max="23"
+               value="{{ sched.hour }}"/>
+        <div class="help-txt">Hora do dia (0–23). Roda na primeira verificação após esse horário.</div></div>
+      <div class="form-row"><label class="field-label">Dia do resumo semanal</label>
+        <select class="input" name="digest_weekday">
+          {% for i, d in [(0,'Segunda'),(1,'Terça'),(2,'Quarta'),(3,'Quinta'),(4,'Sexta'),(5,'Sábado'),(6,'Domingo')] %}
+          <option value="{{ i }}" {{ 'selected' if sched.weekday==i }}>{{ d }}</option>{% endfor %}
+        </select></div>
+      <div class="form-row" style="align-self:end;">
+        <button class="btn btn-primary" type="submit">Salvar</button></div>
+    </form>
+
+    <div class="tbl-wrap mt-2"><table class="tbl">
+      <thead><tr><th scope="col">Tarefa</th><th scope="col">Última execução</th></tr></thead>
+      <tbody>
+        <tr><td>Ciclo de alertas do time</td><td>{{ sched.last_alertas or 'nunca' }}</td></tr>
+        <tr><td>Cobrança das empresas</td><td>{{ sched.last_cobrancas or 'nunca' }}</td></tr>
+        <tr><td>Resumo do fechamento</td><td>{{ sched.last_resumo or 'nunca' }}</td></tr>
+      </tbody></table></div>
+
+    <form method="post" action="/admin/agendador/rodar" class="mt-2"
+          onsubmit="return confirm('Executar agora as tarefas do dia? Isso envia notificações de verdade.');">
+      {{ csrf() }}<button class="btn btn-outline" type="submit">{{ icone("play") }} Executar agora</button>
+    </form>
+    <p class="help-txt mt-1">O agendador roda dentro da aplicação — só funciona
+      enquanto o portal estiver aberto. Se ele ficar desligado à noite, as tarefas do
+      dia acontecem quando voltar a subir.</p>
+  </div>
+</section>
+
+<script>
+// ==== Carteira: marca linhas alteradas e avisa se sair sem salvar ====
+(function(){
+  var form=document.getElementById('form-carteira');
+  if(!form) return;
+  var barra=document.getElementById('barra-carteira');
+  var cont=document.getElementById('cont-carteira');
+  var inicial=new Map();
+  form.querySelectorAll('input,select').forEach(function(el){
+    if(el.type==='hidden') return;
+    inicial.set(el, el.type==='checkbox'?el.checked:el.value);
+  });
+  function revisar(){
+    var linhas=new Set();
+    inicial.forEach(function(v,el){
+      var atual = el.type==='checkbox'?el.checked:el.value;
+      var tr=el.closest('tr');
+      if(atual!==v && tr) linhas.add(tr);
+    });
+    form.querySelectorAll('tr').forEach(function(tr){tr.classList.remove('linha-alterada');});
+    linhas.forEach(function(tr){tr.classList.add('linha-alterada');});
+    var n=linhas.size;
+    barra.classList.toggle('ativa', n>0);
+    cont.textContent = n===0 ? 'Nenhuma alteração pendente'
+      : (n===1 ? '1 linha alterada — não esqueça de salvar'
+               : n+' linhas alteradas — não esqueça de salvar');
+    return n;
+  }
+  form.addEventListener('input', revisar);
+  form.addEventListener('change', revisar);
+  var salvando=false;
+  form.addEventListener('submit', function(){ salvando=true; });
+  window.addEventListener('beforeunload', function(e){
+    if(!salvando && revisar()>0){ e.preventDefault(); e.returnValue=''; }
+  });
+})();
+
+(function(){
+  var tabs=document.querySelectorAll('.adm-tab'), panes=document.querySelectorAll('.adm-pane');
+  function show(name){
+    var found=false;
+    panes.forEach(function(p){var on=(p.dataset.pane===name); if(on)found=true; p.style.display=on?'block':'none';});
+    if(!found){name=tabs[0].dataset.tab; panes.forEach(function(p){p.style.display=(p.dataset.pane===name)?'block':'none';});}
+    tabs.forEach(function(t){t.classList.toggle('active', t.dataset.tab===name);});
+    try{localStorage.setItem('adm-tab',name);}catch(e){}
+    history.replaceState(null,'','/admin?tab='+name);
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.dataset.tab);});});
+  var url=new URLSearchParams(location.search).get('tab');
+  var saved=null; try{saved=localStorage.getItem('adm-tab');}catch(e){}
+  show(url||saved||'{{ tab }}');
+})();
+</script>
+{% endblock %}

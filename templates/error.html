@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Erro {{ code }}{% endblock %}
+{% block content %}
+<div style="text-align:center;padding:4rem 1rem;">
+  <div style="font-size:3rem;font-weight:700;color:var(--text-soft);">{{ code }}</div>
+  <p class="text-muted mt-2">{{ msg }}</p>
+  <a href="/" class="btn btn-primary mt-2">Voltar ao início</a>
+</div>
+{% endblock %}
+{% block auth_content %}
+<div style="min-height:100vh;display:grid;place-items:center;">
+  <div style="text-align:center;">
+    <div style="font-size:3rem;font-weight:700;color:var(--text-soft);">{{ code }}</div>
+    <p class="text-muted mt-2">{{ msg }}</p>
+    <a href="/login" class="btn btn-primary mt-2">Ir para login</a>
+  </div>
+</div>
+{% endblock %}

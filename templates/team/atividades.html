@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Atividades{% endblock %}
+{% set stlabels = {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'} %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Atividades</h1>
+    <div class="sub">Motor único: fechamento, recorrentes, transversais, spot, projetos e indicadores.</div></div>
+  <div class="flex gap-1">
+    <a href="/time" class="btn btn-outline">← Painel do Dia</a>
+    <a href="/atividade/nova" class="btn btn-primary">+ Nova atividade</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    <input type="hidden" name="view" value="{{ view }}"/>
+    <select class="input" name="kind" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todos os tipos</option>
+      {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if f_kind==k }}>{{ {'fechamento':'Fechamento','recorrente':'Recorrente','transversal':'Transversal','spot':'Spot','projeto':'Projeto','indicador':'Indicador'}[k] }}</option>{% endfor %}
+    </select>
+    <select class="input" name="member_id" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todas as pessoas</option>
+      {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if f_member==m.id }}>{{ m.name }}</option>{% endfor %}
+    </select>
+    <select class="input" name="competency_id" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todas as competências</option>
+      {% for c in competencies %}<option value="{{ c.id }}" {{ 'selected' if f_comp==c.id }}>{{ c.label }}</option>{% endfor %}
+    </select>
+    <select class="input" name="status" style="width:auto;" onchange="this.form.submit()">
+      <option value="">Todos os status</option>
+      {% for k, lbl in stlabels.items() %}<option value="{{ k }}" {{ 'selected' if f_status==k }}>{{ lbl }}</option>{% endfor %}
+    </select>
+    <span style="flex:1;"></span>
+    {# base de filtros preservados nos toggles #}
+    {% set filtros %}{% if f_kind %}&kind={{ f_kind }}{% endif %}{% if f_member %}&member_id={{ f_member }}{% endif %}{% if f_comp %}&competency_id={{ f_comp }}{% endif %}{% if f_status %}&status={{ f_status }}{% endif %}{% endset %}
+    {% if view != 'kanban' %}
+    <a href="?view=tabela{{ filtros }}{{ '&group=status' if group != 'status' }}" class="btn btn-outline btn-sm {{ 'ativo' if group=='status' }}">
+      {{ icone('table') }} {{ 'Sem agrupar' if group=='status' else 'Agrupar por status' }}</a>
+    {% endif %}
+    <a href="?{{ 'view=kanban' if view!='kanban' else 'view=tabela' }}{{ filtros }}" class="btn btn-outline btn-sm">
+      {{ '📋 Tabela' if view=='kanban' else '🗂️ Kanban' }}</a>
+  </form>
+</div>
+
+{% if view == 'kanban' %}
+<div class="kanban">
+  {% for col, items in columns.items() %}{% if items or col in ['atrasada','vence_hoje','pendente','em_andamento','concluida'] %}
+  <div class="kan-col">
+    <h3>{{ stlabels.get(col, col) }} <span class="kan-count">{{ items|length }}</span></h3>
+    {% for a in items %}
+    <div class="kan-card kl-{{ a.priority }}">
+      <a href="/atividade/{{ a.id }}">{{ a.title }}</a>
+      <div class="kan-meta">
+        <span class="kind-chip">{{ a.kind_pt() }}</span>
+        {% if a.member %}<span class="mini-av" style="width:20px;height:20px;font-size:.6rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{% endif %}
+        {% if a.due_date %}<span>{{ a.due_date.strftime('%d/%m') }}</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>{% endif %}{% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <form method="post" action="/atividades/concluir-lote" id="lote">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="flex gap-1 items-center mb-2" id="barra-lote" style="display:none!important;">
+      <strong class="text-sm"><span id="n-sel">0</span> selecionada(s)</strong>
+      <button class="btn btn-primary btn-sm" type="submit"
+              onclick="return confirm('Concluir as atividades selecionadas?');">✓ Concluir selecionadas</button>
+      <button class="btn btn-outline btn-sm" type="button" onclick="limparSel()">Limpar</button>
+    </div>
+    {% macro linha(a, grp='') %}
+      <tr {% if grp %}class="row-grp" data-grp="{{ grp }}"{% endif %}>
+        <td>{% if a.status in ['pendente','em_andamento','bloqueada'] %}
+          <input type="checkbox" class="chk-act" name="ids" value="{{ a.id }}"/>{% endif %}</td>
+        <td><a href="/atividade/{{ a.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ a.title }}</a>
+          {% if a.company %}<div class="text-sm text-muted">{{ a.company.name }}</div>{% endif %}
+          {% if a.notes %}<span class="badge-soft" title="{{ a.notes[0].body[:120] }}">💬 {{ a.notes|length }}</span>{% endif %}
+          {% if a.files %}<span class="badge-soft">{{ icone("paperclip") }} {{ a.files|length }}</span>{% endif %}</td>
+        <td><span class="kind-chip">{{ a.kind_pt() }}</span></td>
+        <td>{% if a.member %}<span class="member-cell"><span class="mini-av" style="width:22px;height:22px;font-size:.62rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name.split()[0] }}</span>{% else %}—{% endif %}</td>
+        <td>{{ a.competency.label if a.competency else '—' }}</td>
+        <td><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
+        <td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">prov.</span>{% endif %}</td>
+        <td><span class="st st-{{ a.effective_status(today) }}">{{ stlabels.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+          {% if a.status in ['pendente','em_andamento','bloqueada'] %}
+          <button class="btn btn-primary btn-sm" type="submit"
+                  formaction="/atividade/{{ a.id }}/concluir" title="Concluir">{{ icone("check") }}</button>
+          {% endif %}
+          <a href="/atividade/{{ a.id }}" class="btn btn-outline btn-sm">Ver</a>
+        </div></td>
+      </tr>
+    {% endmacro %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr>
+        <th style="width:30px;"><input type="checkbox" id="chk-all" title="Selecionar todas"/></th>
+        <th scope="col">Atividade</th><th scope="col">Tipo</th><th scope="col">Responsável</th><th scope="col">Competência</th>
+        <th scope="col">Prioridade</th><th scope="col">Prazo</th><th scope="col">Status</th><th scope="col"></th></tr></thead>
+      <tbody>
+      {% if group == 'status' and grupos_status %}
+        {% for k, lbl, rows in grupos_status %}
+        <tr class="grp-status" data-grp="{{ k }}">
+          <td colspan="9">
+            <button type="button" class="grp-toggle" onclick="toggleGrupoAtiv(this)" aria-expanded="true">
+              <svg class="grp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="st st-{{ k }}">{{ lbl }}</span>
+              <span class="text-muted text-sm">{{ rows|length }} atividade(s)</span>
+            </button>
+          </td>
+        </tr>
+        {% for a in rows %}{{ linha(a, grp=k) }}{% endfor %}
+        {% endfor %}
+      {% elif acts %}
+        {% for a in acts %}{{ linha(a) }}{% endfor %}
+      {% else %}
+      <tr><td colspan="9" class="text-muted" style="text-align:center;padding:1.5rem;">Nenhuma atividade para os filtros selecionados.</td></tr>
+      {% endif %}
+      </tbody></table></div>
+  </form>
+  <p class="help-txt mt-1">{{ acts|length }} atividade(s). Use o ✓ para concluir na hora,
+    ou marque várias e conclua de uma vez.</p>
+</div>
+
+<script>
+function atualizaSel(){
+  var n=document.querySelectorAll('.chk-act:checked').length;
+  document.getElementById('n-sel').textContent=n;
+  document.getElementById('barra-lote').style.setProperty('display', n?'flex':'none','important');
+}
+function limparSel(){document.querySelectorAll('.chk-act').forEach(function(c){c.checked=false;});
+  var a=document.getElementById('chk-all'); if(a)a.checked=false; atualizaSel();}
+document.querySelectorAll('.chk-act').forEach(function(c){c.addEventListener('change',atualizaSel);});
+var all=document.getElementById('chk-all');
+if(all)all.addEventListener('change',function(){
+  document.querySelectorAll('.chk-act').forEach(function(c){c.checked=all.checked;});atualizaSel();});
+// recolher/expandir os grupos de status
+function toggleGrupoAtiv(btn){
+  var tr=btn.closest('tr'); var g=tr.getAttribute('data-grp');
+  var aberto=btn.getAttribute('aria-expanded')!=='false';
+  btn.setAttribute('aria-expanded', aberto?'false':'true');
+  document.querySelectorAll('.row-grp[data-grp="'+g+'"]').forEach(function(r){
+    r.style.display = aberto ? 'none' : '';
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

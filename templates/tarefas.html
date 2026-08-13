@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Minhas tarefas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Minhas tarefas</h1>
+    <div class="sub">Suas pendências do dia — privadas, só você vê. Marque o aviso 🔔 para ser lembrado no vencimento.</div></div>
+  <form method="post" action="/tarefas/lista/nova" class="flex gap-1 items-center">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input class="input" type="text" name="name" placeholder="Nome da lista" style="width:170px;"/>
+    <button class="btn btn-primary" type="submit">{{ icone('plus') }} Nova lista</button>
+  </form>
+</div>
+
+{% set buckets = [('atrasado','Atrasado'),('nao_iniciado','Não iniciado'),('em_andamento','Em andamento'),('concluido','Concluído')] %}
+
+<div class="tl-stack">
+  {% for l in listas %}
+  {% set pend = l.tasks | rejectattr('grupo','equalto','concluido') | list %}
+  <section class="tl-list">
+    <div class="tl-head">
+      <form method="post" action="/tarefas/lista/{{ l.id }}/renomear" style="flex:1;display:flex;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input class="tl-name" type="text" name="name" value="{{ l.name }}"
+               aria-label="Nome da lista" onblur="this.form.submit()"/>
+      </form>
+      <span class="badge-soft" title="Pendentes">{{ pend | length }} pendente(s)</span>
+      {% if listas | length > 1 %}
+      <form method="post" action="/tarefas/lista/{{ l.id }}/excluir"
+            onsubmit="return confirm('Excluir a lista “{{ l.name }}” e todas as suas tarefas?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button class="btn btn-outline btn-danger btn-sm" type="submit"
+                title="Excluir lista" aria-label="Excluir lista">{{ icone('trash') }}</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% set ns = namespace(total=0) %}
+    {% for bkey, blabel in buckets %}
+      {% set items = l.tasks | selectattr('grupo','equalto',bkey) | list %}
+      {% if items %}
+      {% set ns.total = ns.total + items|length %}
+      <div class="tl-grupo tl-g-{{ bkey }}">
+        <div class="tl-grupo-h"><span class="tl-dot"></span>{{ blabel }} <span class="tl-n">{{ items|length }}</span></div>
+        <ul class="tl-items">
+          {% for t in items %}
+          <li class="tl-item grupo-{{ t.grupo }}">
+            <form method="post" action="/tarefa/{{ t.id }}/toggle" class="tl-check">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <input class="tl-chk" type="checkbox" {{ 'checked' if t.grupo=='concluido' }}
+                     onchange="this.form.submit()" aria-label="Concluir tarefa"/>
+            </form>
+            <div class="tl-txt">
+              <div class="tl-titulo">{{ t.title }}</div>
+              <div class="tl-meta">
+                {% if t.due_date %}
+                <span class="tl-due {{ 'atras' if t.atrasada }}{{ ' hoje' if t.vence_hoje }}">
+                  {{ icone('calendar') }}
+                  {% if t.atrasada %}Venceu {{ t.due_date.strftime('%d/%m') }}
+                  {% elif t.vence_hoje %}Vence hoje
+                  {% else %}{{ t.due_date.strftime('%d/%m/%Y') }}{% endif %}
+                </span>
+                {% endif %}
+                {% if t.remind and t.grupo != 'concluido' %}<span class="tl-bell" title="Aviso de vencimento ativo">{{ icone('bell') }}</span>{% endif %}
+              </div>
+            </div>
+            {% if t.grupo != 'concluido' %}
+            <form method="post" action="/tarefa/{{ t.id }}/status" class="tl-statusform">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <select class="input tl-status-sel" name="status" onchange="this.form.submit()" title="Situação" aria-label="Situação">
+                {% for sv, sl in t.STATUSES %}{% if sv != 'concluido' %}<option value="{{ sv }}" {{ 'selected' if t.status==sv }}>{{ sl }}</option>{% endif %}{% endfor %}
+              </select>
+            </form>
+            {% endif %}
+            <form method="post" action="/tarefa/{{ t.id }}/excluir">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button class="btn-icone" type="submit" title="Excluir tarefa"
+                      aria-label="Excluir tarefa">{{ icone('x') }}</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    {% endfor %}
+    {% if ns.total == 0 %}<p class="text-muted text-sm" style="padding:.4rem .3rem;">Nenhuma tarefa nesta lista ainda.</p>{% endif %}
+
+    <form method="post" action="/tarefa/nova" class="tl-add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="list_id" value="{{ l.id }}"/>
+      <input type="text" name="title" placeholder="Nova tarefa…" required aria-label="Título da tarefa"/>
+      <input type="date" name="due_date" title="Vencimento (opcional)" aria-label="Vencimento"/>
+      <label class="chk" title="Avisar no vencimento" style="align-items:center;">
+        <input type="checkbox" name="remind" value="1"/> {{ icone('bell') }}
+      </label>
+      <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Adicionar</button>
+    </form>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

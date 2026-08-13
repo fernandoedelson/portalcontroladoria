@@ -1,0 +1,295 @@
+/* ==========================================================================
+   Acessibilidade, alvos de toque, bloco de notas e responsividade
+   Carregado DEPOIS de portal.css — o que estiver aqui prevalece.
+   ========================================================================== */
+
+/* ---------- atalho de teclado para o conteudo ---------- */
+.skip-link{position:absolute;left:-9999px;top:0;z-index:2000;padding:.7rem 1.1rem;
+  background:var(--primary);color:#fff;border-radius:0 0 8px 0;font-weight:600;font-size:.88rem;}
+.skip-link:focus{left:0;outline:3px solid var(--accent);outline-offset:-3px;}
+
+/* ---------- so para leitor de tela ---------- */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+/* ---------- icones SVG ---------- */
+.ico{display:inline-block;vertical-align:-.18em;flex-shrink:0;}
+.btn .ico{margin-right:.35rem;}
+.btn .ico:only-child{margin-right:0;}
+
+/* ---------- area de toque confortavel ---------- */
+.btn-toque{min-height:44px;min-width:44px;display:inline-flex;align-items:center;
+  justify-content:center;gap:.4rem;padding:.55rem .9rem;}
+
+/* ---------- barra de salvamento das tabelas editaveis ---------- */
+.barra-salvar{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  flex-wrap:wrap;padding:.7rem .9rem;margin-bottom:.8rem;border-radius:var(--radius-sm);
+  background:var(--surface-2);border:1px solid var(--border);font-size:.85rem;
+  color:var(--text-muted);position:sticky;top:.4rem;z-index:5;transition:var(--trans);}
+.barra-salvar.ativa{background:var(--warning-lt);border-color:var(--warning-border);
+  color:var(--warning-text);font-weight:600;}
+.linha-alterada > td,.linha-alterada > th{background:var(--warning-lt) !important;}
+.linha-alterada > th:first-child{box-shadow:inset 3px 0 0 var(--warning);}
+.col-perigo{border-left:1px solid var(--border);padding-left:.9rem !important;}
+
+/* ---------- bloco de notas ---------- */
+.notas-layout{display:grid;grid-template-columns:320px 1fr;gap:1.1rem;
+  align-items:start;min-height:60vh;}
+.notas-lista{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;position:sticky;top:1rem;
+  max-height:calc(100vh - 7rem);display:flex;flex-direction:column;}
+.notas-busca{display:flex;align-items:center;gap:.5rem;padding:.7rem .85rem;
+  border-bottom:1px solid var(--border);color:var(--text-soft);}
+.notas-busca input{flex:1;border:none;background:none;font-family:inherit;
+  font-size:.88rem;color:var(--text);min-height:32px;}
+.notas-busca input:focus{outline:none;}
+.notas-itens{list-style:none;margin:0;padding:0;overflow-y:auto;}
+.nota-item{display:block;padding:.85rem .95rem;border-bottom:1px solid var(--border);
+  text-decoration:none;color:var(--text);min-height:64px;transition:var(--trans);
+  border-left:3px solid transparent;}
+.nota-item:hover{background:var(--surface-2);}
+.nota-item.sel{background:var(--info-lt);border-left-color:var(--primary-lt);}
+.ni-topo{display:flex;align-items:center;gap:.4rem;}
+.ni-titulo{font-weight:600;font-size:.9rem;flex:1;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.ni-pin{color:var(--accent);display:inline-flex;}
+.ni-preview{font-size:.8rem;color:var(--text-muted);margin-top:.2rem;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ni-data{font-size:.72rem;color:var(--text-soft);margin-top:.3rem;}
+.nota-item.cor-amarelo{border-left-color:#e0b33a;}
+.nota-item.cor-verde{border-left-color:#4caf7d;}
+.nota-item.cor-azul{border-left-color:#4a90d9;}
+.nota-item.cor-rosa{border-left-color:#d9709b;}
+
+.notas-editor{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.1rem 1.2rem;display:flex;
+  flex-direction:column;min-height:60vh;}
+.ne-barra{display:flex;align-items:center;justify-content:space-between;gap:.8rem;
+  flex-wrap:wrap;margin-bottom:.9rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);}
+.ne-status{font-size:.78rem;color:var(--text-soft);}
+.ne-acoes{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.ne-cores{display:flex;gap:.3rem;margin-right:.3rem;}
+.ne-cor{width:30px;height:30px;border-radius:50%;border:2px solid var(--border-2);
+  cursor:pointer;padding:0;background:var(--surface-2);transition:var(--trans);}
+.ne-cor:hover{transform:scale(1.12);}
+.ne-cor.sel{border-color:var(--text);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--primary-lt);}
+.ne-cor.cor-amarelo{background:#e0b33a;}
+.ne-cor.cor-verde{background:#4caf7d;}
+.ne-cor.cor-azul{background:#4a90d9;}
+.ne-cor.cor-rosa{background:#d9709b;}
+.ne-titulo{width:100%;border:none;background:none;font-family:inherit;
+  font-size:1.25rem;font-weight:700;color:var(--text);padding:.3rem 0;margin-bottom:.4rem;}
+.ne-titulo:focus{outline:none;border-bottom:2px solid var(--primary-lt);}
+.ne-corpo{flex:1;width:100%;min-height:340px;border:none;background:none;resize:vertical;
+  font-family:inherit;font-size:1rem;line-height:1.75;color:var(--text);padding:.3rem 0;}
+.ne-corpo:focus{outline:none;}
+.ne-excluir{margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--border);}
+
+/* ---------- alternativa textual dos graficos ---------- */
+.alt-dados{margin-top:1rem;}
+.alt-dados > summary{cursor:pointer;font-size:.82rem;font-weight:600;
+  color:var(--primary-lt);padding:.6rem 0;list-style:none;display:flex;
+  align-items:center;gap:.4rem;min-height:44px;}
+.alt-dados > summary::-webkit-details-marker{display:none;}
+.alt-dados > summary:hover{text-decoration:underline;}
+.alt-dados[open] > summary{margin-bottom:.6rem;}
+
+/* ==========================================================================
+   MENU FORA DA TELA em telas pequenas
+   O tema ja tem uma regra assim, mas o transform estava sendo sobrescrito e o
+   menu ficava cobrindo o conteudo no celular. Aqui garantimos o off-canvas.
+   ========================================================================== */
+@media (max-width:900px){
+  /* O off-canvas em si vem do tema (translateX). Aqui so reforcamos o que
+     faltava: z-index, largura estavel e area de toque. Nao redefinimos o
+     transform para nao competir com a regra do tema. */
+  .sidebar{z-index:1200;}
+  .app-shell.sb-mini .sidebar{width:262px !important;}
+  .sidebar-scrim{display:none;}
+  .app-shell.sb-open .sidebar-scrim{display:block;position:fixed;inset:0;
+    background:rgba(8,16,28,.5);z-index:1100;}
+  .content-area{margin-left:0 !important;width:100% !important;}
+  .nav-burger{display:inline-flex !important;min-width:44px;min-height:44px;
+    align-items:center;justify-content:center;}
+  /* o menu aberto ocupa a tela: itens confortaveis para o dedo */
+  .sb-link{min-height:48px;}
+  .sb-group-head{min-height:44px;}
+}
+
+/* ==========================================================================
+   TABLET (<=1024px)
+   ========================================================================== */
+@media (max-width:1024px){
+  .notas-layout{grid-template-columns:1fr;}
+  .notas-lista{position:static;max-height:320px;}
+  .notas-editor{min-height:auto;}
+  .grid-2{grid-template-columns:1fr;}
+
+  /* 16px evita o zoom automatico do iOS ao focar um campo */
+  .input,select.input,textarea.input{min-height:44px;font-size:16px;}
+  .tbl td .input{min-height:40px;font-size:15px;padding:.5rem .6rem;}
+  .btn,.btn-sm{min-height:44px;padding:.55rem 1rem;}
+  .chk input,.tbl input[type=checkbox]{width:22px;height:22px;}
+  .adm-tab{min-height:44px;}
+  .sb-link{min-height:46px;}
+  .ne-corpo{font-size:1.05rem;line-height:1.85;}
+  .notas-busca input{min-height:44px;font-size:16px;}
+  .nota-item{min-height:72px;}
+  .ne-cor{width:34px;height:34px;}
+}
+
+/* ==========================================================================
+   CELULAR (<=640px)
+   ========================================================================== */
+@media (max-width:640px){
+  .main-content{padding:1rem .8rem 3rem;}
+  .page-head{flex-direction:column;align-items:stretch;gap:.7rem;}
+  .page-head h1{font-size:1.25rem;}
+  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;}
+  .kpi{padding:.85rem .95rem;}
+  .kpi .kpi-value{font-size:1.5rem;}
+  .card{padding:1rem .9rem;}
+  .adm-grid{grid-template-columns:1fr;}
+  .adm-tabs{overflow-x:auto;flex-wrap:nowrap;padding-bottom:.5rem;}
+  .adm-tab{white-space:nowrap;}
+  .so-desktop{display:none;}
+  .search-box input,.search-box input:focus{width:100%;}
+  .barra-salvar{position:sticky;bottom:0;top:auto;margin:0 -.9rem .8rem;
+    border-radius:0;border-left:none;border-right:none;}
+
+  /* tabelas de cadastro viram cartoes empilhados */
+  .tbl-cartao thead{position:absolute;left:-9999px;}
+  .tbl-cartao tr{display:block;border:1px solid var(--border);
+    border-radius:var(--radius-sm);margin-bottom:.7rem;padding:.3rem 0;
+    background:var(--surface);}
+  .tbl-cartao td,.tbl-cartao th{display:flex;justify-content:space-between;
+    align-items:center;gap:.8rem;border:none;padding:.5rem .8rem;text-align:right;}
+  .tbl-cartao td::before{content:attr(data-rot);font-size:.75rem;font-weight:600;
+    color:var(--text-muted);text-align:left;flex-shrink:0;}
+  .tbl-cartao th[scope=row]{background:var(--surface-2);border-radius:6px;
+    margin:.2rem .5rem .4rem;justify-content:flex-start;text-align:left;
+    flex-direction:column;align-items:flex-start;gap:.1rem;}
+  .tbl-cartao .col-perigo{border-left:none;justify-content:flex-end;}
+  .tbl-cartao .chk-col{align-items:flex-end;}
+
+  /* grade e Gantt mantem a rolagem propria: viram ilegiveis como cartao */
+  .cap .cap-name{min-width:120px;}
+  .g-label{width:120px;min-width:120px;}
+  .notas-lista{max-height:260px;}
+  .ne-corpo{min-height:260px;}
+}
+
+/* nome da empresa em destaque, codigo menor na linha de baixo */
+.ent-nome{font-weight:700;color:var(--text);line-height:1.2;}
+.ent-cod{font-size:.72rem;color:var(--text-soft);letter-spacing:.02em;margin-top:.1rem;font-weight:400;}
+
+/* linha desativada em tabelas de cadastro */
+.row-inativa{opacity:.5;}
+/* linha inteira clicável (abre o item ao clicar em qualquer lugar) */
+.tbl tr.row-link{cursor:pointer;transition:var(--trans);}
+.tbl tr.row-link:hover > td{background:var(--surface-2);}
+.input-lg{min-height:46px;font-size:1.02rem;padding:.6rem .8rem;}
+
+/* atividades: cabecalho de grupo por status (colapsavel) + botao agrupar ativo */
+.tbl tr.grp-status > td{background:var(--surface-2);padding:.35rem .5rem;
+  border-top:2px solid var(--border-2);}
+.grp-toggle{display:inline-flex;align-items:center;gap:.5rem;background:none;border:none;
+  cursor:pointer;font-family:inherit;padding:.3rem .2rem;width:100%;text-align:left;}
+.grp-chev{width:15px;height:15px;color:var(--text-muted);transition:transform .15s ease;flex-shrink:0;}
+.grp-toggle[aria-expanded="false"] .grp-chev{transform:rotate(-90deg);}
+.btn-outline.ativo{background:var(--primary);color:#fff;border-color:var(--primary);}
+.btn-outline.ativo .ico{color:#fff;}
+
+/* ausencias: blocos de atividades descobertas */
+.cobertura-bloco{border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:.7rem .8rem;margin-bottom:.8rem;background:var(--surface-2);}
+.cobertura-h{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.5rem;}
+
+/* selo de projeto confidencial (cadeado) */
+.lock-badge{display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.03em;vertical-align:middle;margin-left:.5rem;
+  padding:.15rem .5rem;border-radius:20px;background:var(--warning-lt);color:var(--warning-text);
+  border:1px solid var(--warning-border);}
+.lock-badge .ico{width:13px;height:13px;}
+
+/* ---------- Minhas Notas: editor full-width + lista agrupada abaixo ---------- */
+.notas-editor{border-top:4px solid var(--border-2);}
+.notas-editor.cor-amarelo{border-top-color:#e0b33a;}
+.notas-editor.cor-verde{border-top-color:#4caf7d;}
+.notas-editor.cor-azul{border-top-color:#4a90d9;}
+.notas-editor.cor-rosa{border-top-color:#d9709b;}
+.notas-editor.vazio{min-height:180px;display:flex;}
+.notas-abaixo{margin-top:1.2rem;}
+.notas-grupo{margin-top:1rem;}
+.notas-grupo-h{display:flex;align-items:center;gap:.45rem;margin-bottom:.5rem;
+  font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);}
+.notas-grupo-h .tl-n{background:var(--surface-hi);color:var(--text-muted);border-radius:20px;
+  padding:0 .45rem;font-size:.7rem;}
+.cor-ponto{width:10px;height:10px;border-radius:50%;background:var(--text-soft);display:inline-block;}
+.cor-ponto.cor-amarelo{background:#e0b33a;}
+.cor-ponto.cor-verde{background:#4caf7d;}
+.cor-ponto.cor-azul{background:#4a90d9;}
+.cor-ponto.cor-rosa{background:#d9709b;}
+.notas-grade{display:grid;grid-template-columns:repeat(3, 1fr);gap:.8rem;}
+@media (max-width:900px){.notas-grade{grid-template-columns:repeat(2, 1fr);}}
+@media (max-width:640px){.notas-grade{grid-template-columns:1fr;}}
+.nota-card{display:block;padding:1rem 1.1rem;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface);text-decoration:none;color:var(--text);border-left:3px solid transparent;
+  transition:var(--trans);min-height:110px;}
+.nota-card:hover{background:var(--surface-2);border-color:var(--border-2);}
+.nota-card.sel{border-color:var(--primary-lt);box-shadow:0 0 0 1px var(--primary-lt);}
+.nota-card.cor-amarelo{border-left-color:#e0b33a;}
+.nota-card.cor-verde{border-left-color:#4caf7d;}
+.nota-card.cor-azul{border-left-color:#4a90d9;}
+.nota-card.cor-rosa{border-left-color:#d9709b;}
+
+/* ---------- Minhas Tarefas (lista vertical, agrupada por situacao) ---------- */
+.btn-icone{background:none;border:none;padding:.2rem;cursor:pointer;color:var(--text-soft);
+  display:inline-flex;align-items:center;border-radius:6px;flex-shrink:0;transition:var(--trans);}
+.btn-icone:hover{color:var(--danger);background:var(--surface-2);}
+
+.tl-stack{display:flex;flex-direction:column;gap:1.1rem;}
+.tl-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;}
+.tl-head{display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;border-bottom:1px solid var(--border);
+  background:var(--surface-2);}
+.tl-head .tl-name{font-weight:700;font-size:1rem;flex:1;border:none;background:none;color:var(--text);font-family:inherit;}
+.tl-head .tl-name:focus{outline:none;border-bottom:1px solid var(--primary-lt);}
+
+.tl-grupo{padding:.2rem 0;}
+.tl-grupo-h{display:flex;align-items:center;gap:.45rem;padding:.5rem .9rem .3rem;
+  font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);}
+.tl-grupo-h .tl-n{background:var(--surface-hi);color:var(--text-muted);border-radius:20px;
+  padding:0 .45rem;font-size:.7rem;}
+.tl-dot{width:9px;height:9px;border-radius:50%;background:var(--text-soft);flex-shrink:0;}
+.tl-g-atrasado .tl-dot{background:var(--danger);}
+.tl-g-atrasado .tl-grupo-h{color:var(--danger);}
+.tl-g-nao_iniciado .tl-dot{background:var(--text-soft);}
+.tl-g-em_andamento .tl-dot{background:var(--primary-lt);}
+.tl-g-concluido .tl-dot{background:var(--success);}
+
+.tl-items{list-style:none;margin:0;padding:0;}
+.tl-item{display:flex;align-items:center;gap:.6rem;padding:.5rem .9rem;border-top:1px solid var(--border);}
+.tl-grupo-h + .tl-items .tl-item:first-child{border-top:none;}
+.tl-check{display:flex;}
+.tl-item .tl-chk{width:20px;height:20px;accent-color:var(--success);cursor:pointer;flex-shrink:0;}
+.tl-txt{flex:1;min-width:0;}
+.tl-titulo{font-size:.9rem;color:var(--text);line-height:1.35;}
+.grupo-concluido .tl-titulo{text-decoration:line-through;color:var(--text-soft);}
+.tl-meta{display:flex;gap:.6rem;align-items:center;margin-top:.15rem;font-size:.72rem;flex-wrap:wrap;}
+.tl-due{color:var(--text-muted);display:inline-flex;align-items:center;gap:.2rem;}
+.tl-due.atras{color:var(--danger);font-weight:600;}
+.tl-due.hoje{color:var(--warning-text);font-weight:600;}
+.tl-bell{color:var(--accent);display:inline-flex;}
+.tl-status-sel{width:auto;min-height:34px;padding:.25rem .5rem;font-size:.8rem;}
+.tl-statusform{flex-shrink:0;}
+
+.tl-add{display:flex;gap:.4rem;padding:.65rem .9rem;border-top:1px solid var(--border);
+  align-items:center;background:var(--surface-2);}
+.tl-add input[type=text]{flex:1;min-height:38px;}
+.tl-add input[type=date]{width:150px;}
+@media (max-width:640px){
+  .tl-status-sel{min-width:120px;}
+  .tl-add{flex-wrap:wrap;}
+  .tl-add input[type=text]{flex:1 1 100%;}
+}

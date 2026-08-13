@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Capacidade{% endblock %}
+{% block content %}
+{% set MESES = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] %}
+<div class="page-head">
+  <div><h1>Capacidade do time</h1>
+    <div class="sub">Onde a carga se concentra no calendário — para agir antes do atraso.</div></div>
+  <form method="get" class="flex gap-1 items-center">
+    <input class="input" type="month" name="mes" value="{{ '%04d-%02d'|format(ano, mes) }}"
+           onchange="this.form.submit()" style="width:auto;"/>
+    <a href="/export/atividades.xlsx{{ '?competency_id=' ~ comp.id if comp }}" class="btn btn-outline btn-sm">{{ icone("download") }} Excel</a>
+  </form>
+</div>
+
+<div class="kpi-grid">
+  {% set tot_atr = linhas|sum(attribute='atrasadas') + orfas.atrasadas %}
+  {% set tot_abr = linhas|sum(attribute='total') + orfas.total %}
+  {% set tot_sp  = linhas|sum(attribute='sem_prazo') + orfas.sem_prazo %}
+  <div class="kpi bad"><div class="kpi-label">Atrasadas</div>
+    <div class="kpi-value">{{ tot_atr }}</div>
+    <div class="kpi-foot">exigem ação hoje</div></div>
+  <div class="kpi accent"><div class="kpi-label">No mês</div>
+    <div class="kpi-value">{{ tot_abr }}</div>
+    <div class="kpi-foot">{{ MESES[mes] }}/{{ ano }}</div></div>
+  <div class="kpi warn"><div class="kpi-label">Pico num dia</div>
+    <div class="kpi-value">{{ pico }}</div>
+    <div class="kpi-foot">maior concentração</div></div>
+  <div class="kpi"><div class="kpi-label">Sem prazo</div>
+    <div class="kpi-value">{{ tot_sp }}</div>
+    <div class="kpi-foot">{{ 'ou aguardando insumo' if consolidacao_ativa else 'sem data definida' }}</div></div>
+</div>
+
+<div class="card">
+  <h2>{{ MESES[mes] }}/{{ ano }} <span class="muted">· dias úteis
+    {% if deadline and deadline.month == mes and deadline.year == ano %}
+    · prazo do fechamento em {{ deadline.strftime('%d/%m') }}{% endif %}</span></h2>
+
+  <div class="cap-legend">
+    <span>Carga por dia:</span>
+    <i class="cap-sw n0"></i><span>0</span>
+    <i class="cap-sw n1"></i><span>baixa</span>
+    <i class="cap-sw n2"></i><span>média</span>
+    <i class="cap-sw n3"></i><span>alta</span>
+    <i class="cap-sw n4"></i><span>pico</span>
+    <i class="cap-sw cap-off" style="margin-left:.8rem;"></i><span>ausente</span>
+  </div>
+
+  {% set conflitos = linhas|sum(attribute='conflitos') %}
+  {% if conflitos %}
+  <div class="alert alert-warning">
+    <strong>{{ conflitos }} atividade(s) marcada(s) para dias em que a pessoa estará fora.</strong>
+    Veja as células marcadas como ausência — vale repassar ou remarcar.
+    {% for l in linhas if l.conflitos %}<br>· {{ l.m.name }}: {{ l.conflitos }}{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="tbl-wrap">
+    <table class="cap">
+      <thead>
+        <tr>
+          <th class="cap-name">Pessoa</th>
+          <th class="cap-atr" title="Atividades em aberto com prazo vencido">Atras.</th>
+          {% for d in dias %}
+          <th class="{{ 'cap-today' if d == hoje }}{{ ' cap-dl' if deadline and d == deadline }}"
+              title="{{ d.strftime('%d/%m/%Y') }}{% if deadline and d == deadline %} — prazo do fechamento{% endif %}">
+            {{ d.day }}</th>
+          {% endfor %}
+          <th class="cap-tot">Mês</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td class="cap-name">
+            <span class="mini-av" style="background:{{ l.m.color }}">{{ l.m.initials }}</span>
+            <span>{{ l.m.name }}</span>
+          </td>
+          <td class="cap-atr {{ 'has' if l.atrasadas }}">{{ l.atrasadas or '' }}</td>
+          {% for c in l.celulas %}
+          {% set lvl = 0 if c.n == 0 else (1 if c.n <= 1 else (2 if c.n <= 3 else (3 if c.n <= 5 else 4))) %}
+          <td class="cap-cell n{{ lvl }} {{ 'cap-today' if c.hoje }}{{ ' cap-off' if c.ausente }}"
+              title="{{ c.dia.strftime('%d/%m') }}{% if c.ausente %} — {{ l.m.name }} está fora ({{ c.ausente|lower }}){% endif %}{% if c.n %} — {{ c.n }} atividade(s):&#10;{% for a in c.acts %}• {{ a.title[:60] }}&#10;{% endfor %}{% endif %}">
+            {{ c.n or ('·' if c.ausente else '') }}</td>
+          {% endfor %}
+          <td class="cap-tot">{{ l.total or '' }}</td>
+        </tr>
+        {% endfor %}
+
+        {% if orfas.total or orfas.atrasadas or orfas.sem_prazo %}
+        <tr class="cap-orfas">
+          <td class="cap-name"><span class="mini-av" style="background:var(--text-soft)">?</span>
+            <span>sem responsável</span></td>
+          <td class="cap-atr {{ 'has' if orfas.atrasadas }}">{{ orfas.atrasadas or '' }}</td>
+          {% for c in orfas.celulas %}
+          {% set lvl = 0 if c.n == 0 else (1 if c.n <= 1 else (2 if c.n <= 3 else (3 if c.n <= 5 else 4))) %}
+          <td class="cap-cell n{{ lvl }} {{ 'cap-today' if c.hoje }}">{{ c.n or '' }}</td>
+          {% endfor %}
+          <td class="cap-tot">{{ orfas.total or '' }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="cap-name">Total do dia</td>
+          <td class="cap-atr"></td>
+          {% for t in totais_dia %}
+          <td class="cap-cell cap-foot {{ 'cap-today' if t.hoje }}">{{ t.n or '' }}</td>
+          {% endfor %}
+          <td class="cap-tot"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <p class="help-txt mt-1">Passe o mouse numa célula para ver as atividades daquele dia.
+    Só entram atividades <strong>em aberto</strong>{% if consolidacao_ativa %}; as de prazo provisório (aguardando insumo) ficam em “sem prazo”{% endif %}.</p>
+
+  <details class="alt-dados">
+    <summary>{{ icone('table') }} Ver a carga como lista (sem depender do mapa de cores)</summary>
+    <div class="tbl-wrap"><table class="tbl">
+      <caption class="sr-only">Carga de cada pessoa por dia — mesma informação do mapa de calor</caption>
+      <thead><tr>
+        <th scope="col">Pessoa</th><th scope="col" class="num">Atrasadas</th>
+        <th scope="col" class="num">No mês</th><th scope="col" class="num">Sem prazo</th>
+        <th scope="col">Dias com atividade</th><th scope="col">Ausências</th>
+      </tr></thead>
+      <tbody>
+      {% for l in linhas %}
+        <tr>
+          <th scope="row">{{ l.m.name }}</th>
+          <td class="num {{ 'neg' if l.atrasadas }}">{{ l.atrasadas }}</td>
+          <td class="num">{{ l.total }}</td>
+          <td class="num">{{ l.sem_prazo }}</td>
+          <td class="text-sm">
+            {% for c in l.celulas if c.n %}
+              {{ c.dia.strftime('%d/%m') }}: {{ c.n }}{{ '; ' if not loop.last }}
+            {% else %}nenhum{% endfor %}
+          </td>
+          <td class="text-sm">
+            {% set fora = l.celulas|selectattr('ausente')|list %}
+            {% if fora %}{{ fora|length }} dia(s) — {{ fora[0].ausente }}{% else %}—{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody></table></div>
+  </details>
+</div>
+
+<div class="card">
+  <h2>Repassar atividades <span class="muted">· férias, saída ou redistribuição de carga</span></h2>
+  <form method="post" action="/atividades/reatribuir-lote" class="adm-grid"
+        onsubmit="return confirm('Repassar as atividades em aberto conforme os filtros?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">De</label>
+      <select class="input" name="de_member_id"><option value="">— sem responsável —</option>
+        {% for l in linhas %}<option value="{{ l.m.id }}">{{ l.m.name }}</option>{% endfor %}
+      </select></div>
+    <div class="form-row"><label class="field-label">Para</label>
+      <select class="input" name="para_member_id" required>
+        {% for l in linhas %}<option value="{{ l.m.id }}">{{ l.m.name }}</option>{% endfor %}
+      </select></div>
+    <div class="form-row"><label class="field-label">Prazo a partir de</label>
+      <input class="input" type="date" name="de_data"/></div>
+    <div class="form-row"><label class="field-label">Até</label>
+      <input class="input" type="date" name="ate_data"/></div>
+    <div class="form-row" style="align-self:end;">
+      <button class="btn btn-primary" type="submit">Repassar</button></div>
+  </form>
+  <p class="help-txt mt-1">Só atividades <strong>em aberto</strong> são repassadas.
+    Cada uma recebe um registro no histórico dizendo de quem para quem foi.
+    Deixe as datas em branco para repassar todas.</p>
+</div>
+
+{% if linhas %}
+<div class="card">
+  <h2>Distribuição por pessoa</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Pessoa</th><th class="num">Atrasadas</th><th class="num">No mês</th>
+      <th class="num">Sem prazo</th><th>Distribuição</th></tr></thead>
+    <tbody>
+      {% set maxtot = (linhas|map(attribute='total')|max) or 1 %}
+      {% for l in linhas %}
+      <tr>
+        <td><span class="member-cell"><span class="mini-av" style="background:{{ l.m.color }}">{{ l.m.initials }}</span>{{ l.m.name }}</span></td>
+        <td class="num {{ 'neg' if l.atrasadas }}">{{ l.atrasadas }}</td>
+        <td class="num">{{ l.total }}</td>
+        <td class="num text-muted">{{ l.sem_prazo }}</td>
+        <td><div class="mini-prog" style="max-width:220px;">
+          <span style="width:{{ (l.total / maxtot * 100)|round }}%;background:{{ l.m.color }};"></span></div></td>
+      </tr>
+      {% endfor %}
+    </tbody></table></div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Indicadores{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Catálogo de Indicadores</h1>
+    <div class="sub">A lista central de indicadores. Cadastre uma vez e reutilize em vários painéis —
+      cada painel define a sua própria meta.</div></div>
+  <a href="/indicadores" class="btn btn-outline">← Indicadores</a>
+</div>
+
+<div class="card">
+  <h2>Novo indicador no catálogo</h2>
+  <form method="post" action="/catalogo/indicador" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Nome do indicador *</label>
+      <input class="input" name="title" placeholder="Ex.: Prazo de entrega do painel" required/></div>
+    <div class="form-row"><label class="field-label">Dimensão</label>
+      <select class="input" name="dimension">{% for d in dimensions %}<option value="{{ d }}">{{ d }}</option>{% endfor %}</select></div>
+    <div class="form-row"><label class="field-label">Tipo de avaliação</label>
+      <select class="input" name="target_type">{% for v,l in target_types %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+    <div class="form-row"><label class="field-label">Unidade (opcional)</label>
+      <input class="input" name="unit" placeholder="dias úteis, %, un…"/></div>
+    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Racional padrão (opcional)</label>
+      <textarea class="input" name="rational" rows="2"></textarea></div>
+    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('plus') }} Cadastrar</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Indicadores cadastrados ({{ defs|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Indicador</th><th scope="col">Dimensão</th><th scope="col">Avaliação</th>
+      <th scope="col">Unidade</th><th class="num">Usos</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
+    <tbody>
+    {% for d in defs %}
+    <tr class="{{ '' if d.active else 'row-inativa' }}">
+      <td><input class="input" form="cd-{{ d.id }}" name="title" value="{{ d.title }}" style="min-width:190px;"/></td>
+      <td><select class="input" form="cd-{{ d.id }}" name="dimension" style="width:auto;">{% for dim in dimensions %}<option value="{{ dim }}" {{ 'selected' if d.dimension==dim }}>{{ dim }}</option>{% endfor %}</select></td>
+      <td><select class="input" form="cd-{{ d.id }}" name="target_type" style="width:auto;">{% for v,l in target_types %}<option value="{{ v }}" {{ 'selected' if d.target_type==v }}>{{ l }}</option>{% endfor %}</select></td>
+      <td><input class="input" form="cd-{{ d.id }}" name="unit" value="{{ d.unit or '' }}" style="width:110px;"/></td>
+      <td class="num">{{ d.usos }}</td>
+      <td>
+        <form method="post" action="/catalogo/indicador/{{ d.id }}/toggle" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-outline btn-sm" type="submit">{{ 'Ativo' if d.active else 'Inativo' }}</button>
+        </form>
+      </td>
+      <td><div class="flex gap-1">
+        <button class="btn btn-outline btn-sm" type="submit" form="cd-{{ d.id }}">Salvar</button>
+        <button class="btn btn-outline btn-sm btn-danger" type="submit" form="cdd-{{ d.id }}" title="Excluir">{{ icone('trash') }}</button>
+      </div></td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="text-muted" style="text-align:center;padding:1.2rem;">Catálogo vazio. Cadastre o primeiro indicador acima.</td></tr>{% endfor %}
+    </tbody></table></div>
+  <div hidden>
+    {% for d in defs %}
+    <form id="cd-{{ d.id }}" method="post" action="/catalogo/indicador/{{ d.id }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
+    <form id="cdd-{{ d.id }}" method="post" action="/catalogo/indicador/{{ d.id }}/excluir"
+          onsubmit="return confirm('Excluir “{{ d.title }}” do catálogo?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
+    {% endfor %}
+  </div>
+  <p class="help-txt mt-1">Editar o nome/dimensão aqui atualiza todos os painéis que usam o indicador. Só dá para excluir quando não há usos.</p>
+</div>
+{% endblock %}

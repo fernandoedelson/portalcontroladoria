@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Painel do Dia{% endblock %}
+{% macro act_row(a) %}
+  <tr>
+    <td>
+      <a href="/atividade/{{ a.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ a.title }}</a>
+      <div class="text-sm text-muted">
+        <span class="kind-chip">{{ a.kind_pt() }}</span>
+        {% if a.company %}· {{ a.company.name }}{% endif %}
+        {% if a.competency %}· {{ a.competency.label }}{% endif %}
+      </div>
+    </td>
+    <td>{% if a.member %}<span class="member-cell"><span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+    <td><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
+    <td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}
+      {% set d = a.days_to_due(today) %}
+      {% if d is not none %}<div class="text-sm {{ 'neg' if d < 0 else 'text-muted' }}">{{ 'D+' ~ (-d) ~ ' atraso' if d < 0 else ('hoje' if d == 0 else 'em ' ~ d ~ ' d.u.') }}</div>{% endif %}
+    </td>
+    <td><span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','bloqueada':'Bloqueada'}.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+    <td class="text-right">
+      <form method="post" action="/atividade/{{ a.id }}/status" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="status" value="concluida"/>
+        <button class="btn btn-outline btn-sm" type="submit" title="Concluir">{{ icone("check") }}</button>
+      </form>
+    </td>
+  </tr>
+{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Painel do Dia</h1>
+    <div class="sub">{{ today.strftime('%A, %d/%m/%Y') }} · visão de execução e cobrança do time.</div></div>
+  {% if comp %}<span class="deadline-pill">Competência aberta: {{ comp.label }}{% if comp.deadline %} · prazo {{ comp.deadline.strftime('%d/%m') }}{% endif %}</span>{% endif %}
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi bad"><div class="kpi-label">Atrasadas</div>
+    <div class="kpi-value">{{ panel.n_overdue }}</div><div class="kpi-foot">exigem ação imediata</div></div>
+  <div class="kpi warn"><div class="kpi-label">Vencem hoje</div>
+    <div class="kpi-value">{{ panel.n_today }}</div><div class="kpi-foot">no prazo do dia</div></div>
+  <div class="kpi accent"><div class="kpi-label">Próximas (3 d.u.)</div>
+    <div class="kpi-value">{{ panel.n_soon }}</div><div class="kpi-foot">planejar</div></div>
+  {% if farol %}
+  <div class="kpi ok"><div class="kpi-label">Fechamento {{ comp.label }}</div>
+    <div class="kpi-value">{{ farol.pct }}%</div>
+    <div class="progress"><span style="width:{{ farol.pct }}%"></span></div>
+    <div class="kpi-foot">{{ farol.concluida }} de {{ farol.total }} concluídas</div></div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Carga por pessoa <span class="muted">· atividades em aberto (todas as competências)</span></h2>
+  <div class="board-grid">
+    {% for b in board %}
+    <a class="board-card" href="/atividades?member_id={{ b.member.id }}" style="text-decoration:none;color:inherit;display:block;">
+      <div class="bc-head">
+        <span class="mini-av" style="background:{{ b.member.color }}">{{ b.member.initials }}</span>
+        <div><div class="bc-name">{{ b.member.name }}</div></div>
+      </div>
+      <div class="board-stat">
+        <span title="Atrasadas" class="{{ 'neg' if b.f.atrasada }}"><b>{{ b.f.atrasada }}</b> atr.</span>
+        <span title="Vencem hoje"><b>{{ b.f.vence_hoje }}</b> hoje</span>
+        <span title="Em aberto"><b>{{ b.f.aberta }}</b> aberta(s)</span>
+      </div>
+    </a>
+    {% else %}<p class="text-muted text-sm">Nenhum membro cadastrado ainda.</p>{% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="flex gap-2 items-center" style="justify-content:space-between;flex-wrap:wrap;">
+    <h2 style="margin:0;">Fila do dia</h2>
+    <form method="get" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+      <label class="field-label" style="margin:0;">Tipo:</label>
+      <select class="input" name="tipo" style="width:auto;" onchange="this.form.submit()">
+        <option value="">Fechamento e projetos</option>
+        <option value="fechamento" {{ 'selected' if tipo=='fechamento' }}>Só fechamento</option>
+        <option value="projeto" {{ 'selected' if tipo=='projeto' }}>Só projetos</option>
+      </select>
+      <label class="field-label" style="margin:0 0 0 .5rem;">Pessoa:</label>
+      <select class="input" name="member_id" style="width:auto;" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if sel==m.id }}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+
+  {% if panel.overdue %}
+  <div class="section-divider">🔴 Atrasadas ({{ panel.n_overdue }})</div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Atividade</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for a in panel.overdue %}{{ act_row(a) }}{% endfor %}</tbody></table></div>
+  {% endif %}
+
+  {% if panel.today %}
+  <div class="section-divider">🟠 Vencem hoje ({{ panel.n_today }})</div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Atividade</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for a in panel.today %}{{ act_row(a) }}{% endfor %}</tbody></table></div>
+  {% endif %}
+
+  {% if panel.soon %}
+  <div class="section-divider">🔵 Próximas (até 3 dias úteis)</div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Atividade</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for a in panel.soon %}{{ act_row(a) }}{% endfor %}</tbody></table></div>
+  {% endif %}
+
+  {% if not panel.overdue and not panel.today and not panel.soon %}
+  <div class="big-status ok"><span class="bs-ico">✅</span><div>
+    <div class="bs-title">Nada pendente para hoje</div>
+    <div class="bs-sub">Sem atrasos, vencimentos ou prazos nos próximos 3 dias úteis para este filtro.</div></div></div>
+  {% endif %}
+</div>
+{% endblock %}

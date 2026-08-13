@@ -1,0 +1,28 @@
+# Banco e dados locais
+instance/
+uploads/
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Segredos / ambiente
+.env
+
+# Planilhas de origem (dados sensíveis; ficam fora do versionamento)
+*.xlsm
+*.xlsx
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Scratch
+_verify.py
