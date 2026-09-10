@@ -68,7 +68,15 @@
     }
     try {
       var reg = await swPronto(8000);
-      var chave = (await (await fetch('/push/chave', {credentials: 'same-origin'})).json()).publicKey;
+      var rc = await fetch('/push/chave', {credentials: 'same-origin'});
+      var dc = null;
+      try { dc = await rc.json(); } catch (e) { dc = null; }       // pagina de erro/login em HTML
+      if (!rc.ok || !dc || !dc.publicKey) {
+        throw new Error((dc && dc.erro) || (rc.status === 401 || rc.redirected
+          ? 'sua sessão expirou — entre de novo no portal'
+          : 'o servidor não respondeu como esperado (' + rc.status + ')'));
+      }
+      var chave = dc.publicKey;
       var sub = await reg.pushManager.getSubscription() ||
         await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64ParaBytes(chave)});
       await enviaAoServidor(sub);

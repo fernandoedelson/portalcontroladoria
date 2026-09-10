@@ -234,8 +234,12 @@ def register_routes(app):
     @app.route("/push/chave")
     @login_required
     def push_chave():
-        from team import push
-        return jsonify(publicKey=push.chave_publica_b64())
+        try:
+            from team import push
+            return jsonify(publicKey=push.chave_publica_b64())
+        except Exception as e:                 # ex.: biblioteca de criptografia ausente
+            app.logger.error("Push indisponivel: %s", e)
+            return jsonify(erro="As notificações estão indisponíveis no servidor no momento."), 503
 
     @app.route("/push/assinar", methods=["POST"])
     @login_required
