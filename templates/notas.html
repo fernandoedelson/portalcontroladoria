@@ -555,9 +555,9 @@
   document.querySelectorAll('.ne-modo').forEach(function(b){
     b.addEventListener('click',function(){ aplicaModo(b.dataset.modo); });
   });
-  var pref=null; try{ pref=localStorage.getItem('nota-modo'); }catch(e){}
-  var inicial = doc.strokes.length && !corpo.value.trim() ? 'caneta'
-              : (!doc.strokes.length && corpo.value.trim() ? 'texto' : (pref||'texto'));
+  // Caneta e o padrao; so abre em Texto a nota que tem apenas texto digitado
+  // (para nao esconder o conteudo atras de uma folha em branco)
+  var inicial = (!doc.strokes.length && corpo.value.trim()) ? 'texto' : 'caneta';
   aplicaModo(inicial);
 
   var rt=null;
