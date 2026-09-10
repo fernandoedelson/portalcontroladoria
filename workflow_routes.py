@@ -482,12 +482,64 @@ def register_workflow_routes(app):
         cor = request.form.get("color")
         if cor and cor in dict(UserNote.CORES):
             n.color = cor
+        # escrita a mao: so atualiza quando o editor de caneta mandou os tracos
+        ink_raw = request.form.get("ink")
+        if ink_raw:
+            ink = _limpa_tinta(ink_raw)
+            if ink is None:
+                if request.form.get("ajax"):
+                    return jsonify(ok=False, erro="Traços inválidos ou grandes demais."), 400
+            else:
+                n.ink_json = json.dumps(ink, separators=(",", ":")) if ink["strokes"] else None
+                thumb = request.form.get("ink_thumb") or ""
+                n.ink_thumb = (thumb if (ink["strokes"] and thumb.startswith("data:image/png;base64,")
+                                         and len(thumb) < 400_000) else None)
         n.updated_at = datetime.utcnow()
         db.session.commit()
         if request.form.get("ajax"):
             return jsonify(ok=True, titulo=n.titulo_exibicao,
                            quando=n.updated_at.strftime("%H:%M"))
         return redirect(url_for("notas", n=n.id))
+
+    _COR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+    def _limpa_tinta(raw):
+        """Valida e reconstroi a pagina manuscrita so com numeros, cores #hex e
+        ferramentas conhecidas (nada vindo do navegador passa cru). None = invalido."""
+        if len(raw) > 6_000_000:
+            return None
+        try:
+            d = json.loads(raw)
+        except Exception:
+            return None
+        if not isinstance(d, dict) or not isinstance(d.get("strokes"), list):
+            return None
+        try:
+            h = min(max(float(d.get("h") or 1300), 400.0), 40000.0)
+        except (TypeError, ValueError):
+            h = 1300.0
+        tracos = []
+        for s in d["strokes"][:20000]:
+            if not isinstance(s, dict):
+                continue
+            cor = s.get("c") if isinstance(s.get("c"), str) and _COR_HEX.match(s.get("c")) else "#1f2937"
+            try:
+                w = min(max(float(s.get("w") or 2.6), 0.5), 40.0)
+            except (TypeError, ValueError):
+                w = 2.6
+            tool = s.get("t") if s.get("t") in ("pen", "hl") else "pen"
+            pts = []
+            for p in (s.get("p") or [])[:5000]:
+                if isinstance(p, (list, tuple)) and len(p) >= 2:
+                    try:
+                        x, y = round(float(p[0]), 1), round(float(p[1]), 1)
+                        pr = round(min(max(float(p[2]), 0.0), 1.0), 2) if len(p) > 2 else 0.5
+                    except (TypeError, ValueError):
+                        continue
+                    pts.append([x, y, pr])
+            if pts:
+                tracos.append({"c": cor, "w": w, "t": tool, "p": pts})
+        return {"h": h, "strokes": tracos}
 
     @app.route("/nota/<int:nid>/fixar", methods=["POST"])
     @login_required

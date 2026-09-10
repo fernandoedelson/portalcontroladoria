@@ -153,6 +153,9 @@ class UserNote(db.Model):
     body = db.Column(db.Text, default="")
     pinned = db.Column(db.Boolean, default=False, index=True)
     color = db.Column(db.String(20), default="padrao")
+    # escrita a mao (caneta): tracos vetoriais em JSON + miniatura PNG p/ a lista
+    ink_json = db.Column(db.Text)
+    ink_thumb = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow,
                            onupdate=datetime.utcnow)
@@ -163,10 +166,25 @@ class UserNote(db.Model):
              ("azul", "Azul"), ("rosa", "Rosa")]
 
     @property
+    def ink(self):
+        """Pagina manuscrita: {'h': altura, 'strokes': [...]} (ou None)."""
+        try:
+            return json.loads(self.ink_json) if self.ink_json else None
+        except Exception:
+            return None
+
+    @property
+    def tem_tinta(self):
+        d = self.ink
+        return bool(d and d.get("strokes"))
+
+    @property
     def titulo_exibicao(self):
         if (self.title or "").strip():
             return self.title.strip()
         primeira = (self.body or "").strip().split("\n")[0][:60]
+        if not primeira and self.tem_tinta:
+            return "Nota manuscrita"
         return primeira or "Sem título"
 
     @property
@@ -180,7 +198,8 @@ class UserNote(db.Model):
 
     @property
     def vazia(self):
-        return not (self.title or "").strip() and not (self.body or "").strip()
+        return (not (self.title or "").strip() and not (self.body or "").strip()
+                and not self.tem_tinta)
 
 
 class TaskList(db.Model):
