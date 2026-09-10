@@ -49,17 +49,17 @@
   <p class="text-muted text-sm mb-2">Envia uma mensagem de teste só para você — confere as credenciais
     sem esperar o ciclo diário.</p>
   <div class="flex gap-2" style="flex-wrap:wrap;">
-    <form method="post" action="/alertas/teste" class="flex gap-1 items-center">
+    <form method="post" action="/alertas/teste" class="flex gap-1 items-center" style="flex-wrap:wrap;max-width:100%;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="canal" value="email"/>
       <input class="input" type="email" name="destino" value="{{ meu_email }}"
-             placeholder="seu@email.com" aria-label="E-mail de destino do teste" style="width:240px;"/>
+             placeholder="seu@email.com" aria-label="E-mail de destino do teste" style="width:240px;max-width:100%;"/>
       <button class="btn btn-outline" type="submit">{{ icone('mail') }} Testar e-mail</button></form>
-    <form method="post" action="/alertas/teste" class="flex gap-1 items-center">
+    <form method="post" action="/alertas/teste" class="flex gap-1 items-center" style="flex-wrap:wrap;max-width:100%;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="canal" value="whatsapp"/>
       <input class="input" type="tel" name="destino" value="{{ meu_whatsapp or '' }}"
-             placeholder="(11) 99999-9999" aria-label="WhatsApp de destino do teste" style="width:190px;"/>
+             placeholder="(11) 99999-9999" aria-label="WhatsApp de destino do teste" style="width:190px;max-width:100%;"/>
       <button class="btn btn-outline" type="submit">{{ icone('bell') }} Testar WhatsApp</button></form>
   </div>
   <p class="help-txt mt-1">WhatsApp no <strong>sandbox</strong> da Twilio: cada pessoa precisa, uma vez, mandar a

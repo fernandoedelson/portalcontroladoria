@@ -202,10 +202,10 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
       {% endfor %}
     </div>
-    <form method="post" action="/projeto/{{ p.id }}/marco" class="flex gap-1 items-center mt-2">
+    <form method="post" action="/projeto/{{ p.id }}/marco" class="flex gap-1 items-center mt-2" style="flex-wrap:wrap;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <input class="input" name="title" placeholder="Novo marco" required/>
-      <input class="input" type="date" name="due_date" style="width:150px;"/>
+      <input class="input" name="title" placeholder="Novo marco" required style="flex:1 1 160px;min-width:0;"/>
+      <input class="input" type="date" name="due_date" style="width:150px;max-width:100%;"/>
       <button class="btn btn-primary btn-sm" type="submit">+</button>
     </form>
   </div>

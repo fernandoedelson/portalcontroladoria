@@ -128,7 +128,11 @@
   /* 16px evita o zoom automatico do iOS ao focar um campo */
   .input,select.input,textarea.input{min-height:44px;font-size:16px;}
   .tbl td .input{min-height:40px;font-size:15px;padding:.5rem .6rem;}
-  .btn,.btn-sm{min-height:44px;padding:.55rem 1rem;}
+  /* botoes proporcionais: confortaveis ao toque sem pesar a tela
+     (.btn-toque continua com 44px para as acoes principais) */
+  .btn{min-height:40px;padding:.45rem .9rem;}
+  .btn-sm{min-height:34px;padding:.3rem .65rem;font-size:.82rem;}
+  .tbl .btn-sm{min-height:32px;padding:.25rem .55rem;}
   .chk input,.tbl input[type=checkbox]{width:22px;height:22px;}
   .adm-tab{min-height:44px;}
   .sb-link{min-height:46px;}
@@ -292,4 +296,69 @@
   .tl-status-sel{min-width:120px;}
   .tl-add{flex-wrap:wrap;}
   .tl-add input[type=text]{flex:1 1 100%;}
+}
+
+/* itens de grade podem encolher: sem isso uma tabela interna empurra o cartao
+   para fora da tela no celular */
+.grid-2 > *,.grid-3 > *,.kpi-grid > *,.adm-grid > *{min-width:0;}
+
+/* ==========================================================================
+   LISTA DE ATIVIDADES em tablet e celular: cada atividade vira um bloco
+   (titulo + acoes na 1a linha; tipo, responsavel, prazo, prioridade e
+   situacao na 2a) — cabe na largura da tela, sem rolar para o lado
+   ========================================================================== */
+@media (max-width:1024px){
+  .tbl-ativ{font-size:.84rem;min-width:0 !important;}
+  .tbl-ativ thead tr{display:flex;align-items:center;}
+  .tbl-ativ thead th{display:none;}
+  .tbl-ativ thead th:first-child{display:flex;align-items:center;gap:.5rem;width:auto !important;
+    border:none;padding:.35rem .4rem;font-size:.74rem;text-transform:none;letter-spacing:0;}
+  .tbl-ativ thead th:first-child::after{content:"Selecionar todas";font-weight:600;color:var(--text-muted);}
+  .tbl-ativ tbody{display:block;}
+  /* recuo de 27px na linha inteira: o que quebrar para a 3a linha fica alinhado
+     sob o titulo; a caixinha de selecao volta para a margem com margem negativa */
+  .tbl-ativ tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .45rem;
+    padding:.6rem .4rem .6rem calc(.4rem + 27px);border-bottom:1px solid var(--border);}
+  .tbl-ativ tbody td{border:none !important;padding:0 !important;background:none !important;}
+  .tbl-ativ tbody td:first-child{order:0;flex:0 0 22px;margin-left:-27px;}
+  .tbl-ativ tbody td:nth-child(2){order:1;flex:1 1 calc(100% - 22px - 92px - .9rem + 27px);min-width:0;
+    font-size:.92rem;line-height:1.3;}
+  .tbl-ativ tbody td.ta-acoes{order:2;flex:0 0 92px;}
+  .tbl-ativ tbody td.ta-tipo{order:3;}
+  .tbl-ativ tbody td.ta-resp{order:4;}
+  .tbl-ativ tbody td.ta-prazo{order:5;color:var(--text-muted);}
+  .tbl-ativ tbody td.ta-prazo::before{content:"prazo ";color:var(--text-soft);}
+  .tbl-ativ tbody td.ta-prio{order:6;}
+  .tbl-ativ tbody td.ta-st{order:7;}
+  .tbl-ativ tbody td.ta-comp{display:none;}          /* ja esta no filtro */
+  .tbl-ativ .kind-chip,.tbl-ativ .st,.tbl-ativ .prio{font-size:.7rem;padding:.1rem .45rem;}
+  .tbl-ativ .mini-av{width:18px !important;height:18px !important;font-size:.55rem !important;}
+  .tbl-ativ .text-sm{font-size:.76rem;}
+  .tbl-ativ tbody tr.grp-status{display:block;padding:0;}
+  .tbl-ativ tbody tr.grp-status > td,.tbl-ativ tbody td[colspan]{display:block;flex:1 1 100%;}
+}
+@media (max-width:640px){
+  .tbl-ativ{font-size:.8rem;}
+  .tbl-ativ tbody td:nth-child(2){font-size:.86rem;}
+  .tbl-ativ tbody tr{padding:.55rem .15rem .55rem calc(.15rem + 27px);}
+  .filtros-ativ{display:grid !important;grid-template-columns:1fr 1fr;gap:.45rem;}
+  .filtros-ativ > span{display:none;}                /* espacador do layout de computador */
+  .filtros-ativ select.input{width:100% !important;min-height:38px;padding:.3rem .5rem;}
+  .filtros-ativ .btn{justify-content:center;}
+}
+
+/* ==========================================================================
+   BARRA DO TOPO em telas estreitas — nada pode vazar para a direita
+   ========================================================================== */
+.topbar{min-width:0;gap:.5rem;}
+@media (max-width:900px){
+  .topbar-crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:32vw;}
+}
+@media (max-width:640px){
+  .topbar{padding:0 .6rem;gap:.35rem;}
+  .topbar-crumb{display:none;}                /* o titulo grande ja esta na pagina */
+  .role-chip{display:none;}
+  .search-box{flex:1 1 auto;min-width:0;}
+  .search-box input,.search-box input:focus{width:100%;min-width:0;}
+  .nav-tools{gap:.35rem;flex-shrink:0;}
 }

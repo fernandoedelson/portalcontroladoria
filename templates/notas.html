@@ -180,6 +180,21 @@
   .ne-tinta.sel{box-shadow:0 0 0 3px #c9962e}
   .ne-sep{width:1px;height:26px;background:rgba(127,127,127,.35);margin:0 .2rem}
   .ne-socaneta{margin-left:auto;font-size:.85rem}
+  /* celular: ferramentas numa linha so, rolando para o lado (a folha ganha altura) */
+  @media (max-width:640px){
+    .ne-ferr{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:.5rem;
+             -webkit-overflow-scrolling:touch;
+             /* esmaece a borda direita: sinal de que ha mais ferramentas rolando */
+             -webkit-mask-image:linear-gradient(to right,#000 82%,transparent);
+                     mask-image:linear-gradient(to right,#000 82%,transparent)}
+    .ne-ferr.no-fim{-webkit-mask-image:none;mask-image:none}
+    .ne-cor{width:28px;height:28px}
+    .ne-acoes{gap:.35rem}
+    .ne-ferr::-webkit-scrollbar{display:none}
+    .ne-ferr > *{flex-shrink:0}
+    .ne-socaneta{margin-left:.3rem;white-space:nowrap}
+    .ne-caderno{height:62vh}
+  }
   .ne-zoom{display:inline-flex;align-items:center;gap:.25rem}
   .ne-zoom-val{min-width:58px;height:38px;border:1px solid rgba(127,127,127,.35);border-radius:8px;
                background:transparent;color:inherit;font:inherit;font-size:.85rem;cursor:pointer;
@@ -619,8 +634,14 @@
   var inicial = (!doc.strokes.length && corpo.value.trim()) ? 'texto' : 'caneta';
   aplicaModo(inicial);
 
+  // celular: tira o esmaecido da barra de ferramentas quando ja rolou ate o fim
+  var ferrBar=document.querySelector('.ne-ferr');
+  function fimFerr(){ if(ferrBar) ferrBar.classList.toggle('no-fim',
+      ferrBar.scrollLeft+ferrBar.clientWidth>=ferrBar.scrollWidth-2); }
+  if(ferrBar){ ferrBar.addEventListener('scroll',fimFerr,{passive:true}); fimFerr(); }
+
   var rt=null;
-  window.addEventListener('resize',function(){ if(painel.hidden) return; clearTimeout(rt); rt=setTimeout(dimensiona,150); });
+  window.addEventListener('resize',function(){ fimFerr(); if(painel.hidden) return; clearTimeout(rt); rt=setTimeout(dimensiona,150); });
 })();
 </script>
 {% endif %}

@@ -12,7 +12,7 @@
 </div>
 
 <div class="card">
-  <form method="get" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+  <form method="get" class="flex gap-1 items-center filtros-ativ" style="flex-wrap:wrap;">
     <input type="hidden" name="view" value="{{ view }}"/>
     <select class="input" name="kind" style="width:auto;" onchange="this.form.submit()">
       <option value="">Todos os tipos</option>
@@ -77,13 +77,13 @@
           {% if a.company %}<div class="text-sm text-muted">{{ a.company.name }}</div>{% endif %}
           {% if a.notes %}<span class="badge-soft" title="{{ a.notes[0].body[:120] }}">💬 {{ a.notes|length }}</span>{% endif %}
           {% if a.files %}<span class="badge-soft">{{ icone("paperclip") }} {{ a.files|length }}</span>{% endif %}</td>
-        <td><span class="kind-chip">{{ a.kind_pt() }}</span></td>
-        <td>{% if a.member %}<span class="member-cell"><span class="mini-av" style="width:22px;height:22px;font-size:.62rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name.split()[0] }}</span>{% else %}—{% endif %}</td>
-        <td>{{ a.competency.label if a.competency else '—' }}</td>
-        <td><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
-        <td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">prov.</span>{% endif %}</td>
-        <td><span class="st st-{{ a.effective_status(today) }}">{{ stlabels.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
-        <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+        <td class="ta-tipo"><span class="kind-chip">{{ a.kind_pt() }}</span></td>
+        <td class="ta-resp">{% if a.member %}<span class="member-cell"><span class="mini-av" style="width:22px;height:22px;font-size:.62rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name.split()[0] }}</span>{% else %}—{% endif %}</td>
+        <td class="ta-comp">{{ a.competency.label if a.competency else '—' }}</td>
+        <td class="ta-prio"><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
+        <td class="ta-prazo">{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">prov.</span>{% endif %}</td>
+        <td class="ta-st"><span class="st st-{{ a.effective_status(today) }}">{{ stlabels.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+        <td class="text-right ta-acoes"><div class="flex gap-1" style="justify-content:flex-end;">
           {% if a.status in ['pendente','em_andamento','bloqueada'] %}
           <button class="btn btn-primary btn-sm" type="submit"
                   formaction="/atividade/{{ a.id }}/concluir" title="Concluir">{{ icone("check") }}</button>
@@ -92,7 +92,7 @@
         </div></td>
       </tr>
     {% endmacro %}
-    <div class="tbl-wrap"><table class="tbl">
+    <div class="tbl-wrap"><table class="tbl tbl-ativ">
       <thead><tr>
         <th style="width:30px;"><input type="checkbox" id="chk-all" title="Selecionar todas"/></th>
         <th scope="col">Atividade</th><th scope="col">Tipo</th><th scope="col">Responsável</th><th scope="col">Competência</th>
