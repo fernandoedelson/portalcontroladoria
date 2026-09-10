@@ -94,35 +94,43 @@ def run_daily_tasks(app, force=False):
 
 
 def _avisar_tarefas(app, hoje):
-    """Notifica o dono de cada tarefa vencida/no vencimento com aviso ligado.
+    """Notifica o dono de cada tarefa com aviso ligado.
 
-    Dispara no maximo uma vez por dia por tarefa (reminded_on), entao continua
-    lembrando enquanto estiver em atraso, sem repetir no mesmo dia.
+    Comeca na data do aviso (vencimento - antecedencia escolhida) e continua
+    uma vez por dia (reminded_on) ate a tarefa ser concluida — inclusive em atraso.
     """
+    from datetime import timedelta
     from models import db, notify, User
     from team.models import TeamMember
     from team.models_workflow import PersonalTask
     from team import alerts as canais
 
-    pend = PersonalTask.query.filter(
+    maior_antecedencia = max(d for d, _ in PersonalTask.ANTECEDENCIAS)
+    candidatas = PersonalTask.query.filter(
         PersonalTask.remind.is_(True),
         PersonalTask.done.is_(False),
         PersonalTask.due_date.isnot(None),
-        PersonalTask.due_date <= hoje,
+        PersonalTask.due_date <= hoje + timedelta(days=maior_antecedencia),
         db.or_(PersonalTask.reminded_on.is_(None),
                PersonalTask.reminded_on < hoje)).all()
+    pend = [t for t in candidatas if t.data_do_aviso() <= hoje]
     enviados = 0
     for t in pend:
-        dias = (hoje - t.due_date).days
-        quando = ("vence hoje" if dias == 0 else f"venceu há {dias} dia(s)")
+        faltam = (t.due_date - hoje).days
+        if faltam > 0:
+            quando, titulo = f"vence em {faltam} dia(s)", "Tarefa a vencer"
+        elif faltam == 0:
+            quando, titulo = "vence hoje", "Tarefa vence hoje"
+        else:
+            quando, titulo = f"venceu há {-faltam} dia(s)", "Tarefa atrasada"
         texto = (f"“{t.title[:120]}” {quando} "
                  f"({t.due_date.strftime('%d/%m/%Y')}).")
-        notify(t.user_id, "Tarefa a vencer", texto, kind="tarefa", url="/tarefas")
+        notify(t.user_id, titulo, texto, kind="tarefa", url="/tarefas")
         # tarefa pessoal: o e-mail vai so para o dono, pode trazer o titulo
         u = db.session.get(User, t.user_id)
         if u and u.email:
             ok, err = canais.send_email(
-                u.email, "Tarefa a vencer — Portal Controladoria",
+                u.email, f"{titulo} — Portal Controladoria",
                 f"{texto}\n\nAbra suas tarefas: {canais.PORTAL_URL}/tarefas")
             if err and err != "email_desligado":
                 _log(app, f"aviso de tarefa por e-mail falhou ({u.email}): {err}")

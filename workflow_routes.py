@@ -637,14 +637,27 @@ def register_workflow_routes(app):
         if not titulo:
             return redirect(url_for("tarefas"))
         n = PersonalTask.query.filter_by(list_id=l.id).count()
+        raw = request.form.get("remind_days")
+        dias = _parse_dias(raw)
         t = PersonalTask(list_id=l.id, user_id=current_user.id,
                          title=titulo[:300],
                          due_date=_parse_due(request.form.get("due_date")),
-                         remind=bool(request.form.get("remind")),
+                         # escolher qualquer opcao que nao seja "Sem aviso" liga o aviso
+                         remind=bool(request.form.get("remind"))
+                                or (raw not in (None, "", "-1")),
+                         remind_days=dias,
                          sort_order=100 + n)
         db.session.add(t)
         db.session.commit()
         return redirect(url_for("tarefas"))
+
+    def _parse_dias(valor):
+        """Antecedencia do aviso: so os valores oferecidos na tela (0 = no dia)."""
+        try:
+            d = int(valor)
+        except (TypeError, ValueError):
+            return 0
+        return d if d in dict(PersonalTask.ANTECEDENCIAS) else 0
 
     def _aplica_status(t, novo):
         """Muda o status e mantém done/done_at em sincronia."""
@@ -667,14 +680,21 @@ def register_workflow_routes(app):
     @app.route("/tarefa/<int:tid>/lembrete", methods=["POST"])
     @login_required
     def tarefa_lembrete(tid):
-        """Liga/desliga o aviso de vencimento de uma tarefa já existente."""
+        """Liga/desliga o aviso de uma tarefa existente, ou muda a antecedencia.
+
+        Com `dias` no formulario: liga o aviso com essa antecedencia.
+        Sem `dias`: alterna ligado/desligado."""
         t = _minha_tarefa(tid)
-        t.remind = not t.remind
+        if "dias" in request.form:
+            t.remind = True
+            t.remind_days = _parse_dias(request.form.get("dias"))
+        else:
+            t.remind = not t.remind
         if t.remind:
-            t.reminded_on = None      # religou: volta a avisar no vencimento
+            t.reminded_on = None      # (re)ligou ou mudou: volta a avisar
         db.session.commit()
         if request.form.get("ajax"):
-            return jsonify(ok=True, remind=t.remind)
+            return jsonify(ok=True, remind=t.remind, dias=t.remind_days or 0)
         return redirect(url_for("tarefas"))
 
     @app.route("/tarefa/<int:tid>/status", methods=["POST"])
@@ -701,6 +721,9 @@ def register_workflow_routes(app):
                 t.reminded_on = None      # reabre o aviso se remarcou pra frente
         if "remind" in request.form:
             t.remind = bool(request.form.get("remind"))
+        if "remind_days" in request.form:
+            t.remind_days = _parse_dias(request.form.get("remind_days"))
+            t.reminded_on = None
         db.session.commit()
         if request.form.get("ajax"):
             return jsonify(ok=True)

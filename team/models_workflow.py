@@ -236,6 +236,7 @@ class PersonalTask(db.Model):
     status = db.Column(db.String(15), default="nao_iniciado", index=True)
     due_date = db.Column(db.Date, index=True)
     remind = db.Column(db.Boolean, default=False)   # avisar no vencimento
+    remind_days = db.Column(db.Integer, default=0)  # antecedencia do aviso (dias corridos)
     reminded_on = db.Column(db.Date)                # ultimo dia que avisou
     priority = db.Column(db.String(10), default="media")
     done_at = db.Column(db.DateTime)
@@ -246,10 +247,25 @@ class PersonalTask(db.Model):
 
     STATUSES = [("nao_iniciado", "Não iniciado"), ("em_andamento", "Em andamento"),
                 ("concluido", "Concluído")]
+    # antecedencia do aviso: (dias, rotulo)
+    ANTECEDENCIAS = [(0, "No dia"), (1, "1 dia antes"), (2, "2 dias antes"),
+                     (7, "1 semana antes")]
 
     @property
     def status_pt(self):
         return dict(self.STATUSES).get(self.status, self.status)
+
+    @property
+    def aviso_label(self):
+        d = self.remind_days or 0
+        return dict(self.ANTECEDENCIAS).get(d, f"{d} dias antes")
+
+    def data_do_aviso(self):
+        """Primeiro dia em que o aviso deve sair (vencimento - antecedencia)."""
+        from datetime import timedelta
+        if not self.due_date:
+            return None
+        return self.due_date - timedelta(days=self.remind_days or 0)
 
     @property
     def atrasada(self):

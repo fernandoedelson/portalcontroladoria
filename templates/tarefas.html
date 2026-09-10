@@ -71,6 +71,15 @@
                       title="{{ 'Aviso ativo — clique para desligar' if t.remind else 'Ativar aviso no vencimento' }}"
                       aria-label="{{ 'Desligar aviso de vencimento' if t.remind else 'Ativar aviso de vencimento' }}">{{ icone('bell') }}</button>
             </form>
+            {% if t.remind %}
+            <form method="post" action="/tarefa/{{ t.id }}/lembrete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <select class="input tl-aviso-sel" name="dias" onchange="this.form.submit()"
+                      title="Quando avisar" aria-label="Antecedência do aviso">
+                {% for d, lbl in t.ANTECEDENCIAS %}<option value="{{ d }}" {{ 'selected' if (t.remind_days or 0) == d }}>{{ lbl }}</option>{% endfor %}
+              </select>
+            </form>
+            {% endif %}
             {% else %}
             <span class="btn-icone tl-bell-btn off-dis" title="Defina um vencimento para poder ativar o aviso"
                   aria-label="Aviso indisponível: tarefa sem vencimento">{{ icone('bell') }}</span>
@@ -100,8 +109,15 @@
       <input type="hidden" name="list_id" value="{{ l.id }}"/>
       <input type="text" name="title" placeholder="Nova tarefa…" required aria-label="Título da tarefa"/>
       <input type="date" name="due_date" title="Vencimento (opcional)" aria-label="Vencimento"/>
-      <label class="chk" title="Avisar no vencimento" style="align-items:center;">
-        <input type="checkbox" name="remind" value="1"/> {{ icone('bell') }}
+      <label class="tl-aviso-novo" title="Quando avisar (precisa de vencimento)">
+        {{ icone('bell') }}
+        <select class="input tl-aviso-sel" name="remind_days" aria-label="Aviso da tarefa">
+          <option value="-1">Sem aviso</option>
+          <option value="0">No dia</option>
+          <option value="1">1 dia antes</option>
+          <option value="2">2 dias antes</option>
+          <option value="7">1 semana antes</option>
+        </select>
       </label>
       <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Adicionar</button>
     </form>
@@ -114,5 +130,7 @@
   .tl-bell-btn.on{opacity:1;color:#c9962e;}
   .tl-bell-btn.on svg{fill:currentColor;}
   .tl-bell-btn.off-dis{opacity:.18;cursor:not-allowed;}
+  .tl-aviso-sel{width:auto;min-width:0;padding:.2rem .4rem;font-size:.82rem;height:auto;}
+  .tl-aviso-novo{display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap;}
 </style>
 {% endblock %}
