@@ -33,8 +33,14 @@
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   }
 
+  // serviceWorker.ready nunca resolve se o registro falhar: limita a espera
+  function swPronto(ms) {
+    return Promise.race([navigator.serviceWorker.ready, new Promise(function (_, rej) {
+      setTimeout(function () { rej(new Error('o serviço de notificações não iniciou neste navegador')); }, ms || 4000);
+    })]);
+  }
   async function assinatura() {
-    var reg = await navigator.serviceWorker.ready;
+    var reg = await swPronto();
     return reg.pushManager.getSubscription();
   }
   async function estado() {
@@ -51,15 +57,17 @@
   }
 
   async function ativar() {
-    var st = await estado();
-    if (st === 'ios-instalar' || st === 'nao-suportado') { alert(TEXTO[st]); return false; }
+    if (!suportado()) { alert(TEXTO[(ehIOS() && !instalado()) ? 'ios-instalar' : 'nao-suportado']); return false; }
+    if (Notification.permission === 'denied') { alert(TEXTO.bloqueado); return false; }
+    // o pedido de permissao vem ANTES de qualquer outra espera: o navegador (sobretudo o
+    // Safari do iPhone) so aceita se estiver colado no toque da pessoa
     var perm = await Notification.requestPermission();
     if (perm !== 'granted') {
       alert('Sem a permissão do navegador não dá para enviar notificações.');
       await atualiza(); return false;
     }
     try {
-      var reg = await navigator.serviceWorker.ready;
+      var reg = await swPronto(8000);
       var chave = (await (await fetch('/push/chave', {credentials: 'same-origin'})).json()).publicKey;
       var sub = await reg.pushManager.getSubscription() ||
         await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64ParaBytes(chave)});
@@ -104,6 +112,37 @@
     return st;
   }
 
+  // ---- convite no primeiro uso (o pedido oficial so pode sair de um toque) ----
+  var ADIA_DIAS = 7;
+  function conviteAdiado() {
+    try { return Date.now() < (+localStorage.getItem('push-convite-adiado') || 0); } catch (e) { return false; }
+  }
+  function mostraConvite(st) {
+    if (st !== 'inativo' && st !== 'ios-instalar') return;           // ativo/bloqueado/sem suporte: nada
+    if (st === 'inativo' && Notification.permission !== 'default') return;
+    if (conviteAdiado() || document.getElementById('push-convite')) return;
+    var ios = st === 'ios-instalar';
+    var d = document.createElement('div');
+    d.id = 'push-convite'; d.className = 'push-convite';
+    d.setAttribute('role', 'dialog'); d.setAttribute('aria-label', 'Receber avisos no aparelho');
+    d.innerHTML =
+      '<img src="/static/icons/icon-192.png?v=2" alt="" width="44" height="44">' +
+      '<div class="pc-txt"><strong>Receber os avisos no aparelho?</strong><span>' +
+      (ios ? 'No iPhone/iPad: Compartilhar → Adicionar à Tela de Início, e abra o portal por esse ícone para ativar.'
+           : 'Atividades que vencem, atrasos e aprovações chegam como notificação, mesmo com o portal fechado.') +
+      '</span></div><div class="pc-acoes">' +
+      (ios ? '' : '<button type="button" class="btn btn-primary btn-sm" data-pc="sim">Ativar</button>') +
+      '<button type="button" class="btn btn-outline btn-sm" data-pc="nao">' + (ios ? 'Entendi' : 'Agora não') +
+      '</button></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-pc]'); if (!b) return;
+      d.remove();
+      if (b.dataset.pc === 'sim') { ativar(); return; }               // chamada direta: ainda no toque
+      try { localStorage.setItem('push-convite-adiado', String(Date.now() + ADIA_DIAS * 864e5)); } catch (e) {}
+    });
+  }
+
   // menu do usuario: alterna
   window.menuPush = function (ev) {
     ev.preventDefault();
@@ -120,6 +159,7 @@
 
   document.addEventListener('DOMContentLoaded', async function () {
     var st = await atualiza();
+    setTimeout(function () { mostraConvite(st); }, 1200);             // deixa a pagina carregar antes
     // re-sincroniza uma vez por sessao (se o banco do portal foi recriado, o aparelho volta)
     if (st === 'ativo') {
       try {

@@ -74,6 +74,69 @@
   window.addEventListener('resize',function(){ _ajustaDepois(150); });
   window.addEventListener('orientationchange',function(){ _ajustaDepois(250); });
   document.addEventListener('click',function(){ _ajustaDepois(80); });   // abas/grupos que mostram tabelas
+  // ---- janelas do portal no lugar dos avisos padrao do navegador (alert/confirm) ----
+  // confirm() do navegador e sincrono; a janela do portal nao. Truque: a 1a chamada
+  // mostra a janela e cancela; ao confirmar, a acao original (envio do formulario ou
+  // clique) e refeita e dessa vez o confirm() devolve "sim" uma unica vez.
+  (function(){
+    var ultimo=null, passe=false, aberto=null;
+    document.addEventListener('click',function(e){
+      var el=e.target && e.target.closest ? e.target.closest('a,button,input,label,[onclick]') : null;
+      if(el && !el.closest('.dlg-fundo')) ultimo={el:el};
+    },true);
+    document.addEventListener('submit',function(e){ ultimo={f:e.target, s:e.submitter||null}; },true);
+    function perigo(m){ return /excluir|remover|apagar|recusar|desativar|parar de|cancelar sua|limpar/i.test(m); }
+    function janela(msg,tipo,aoOk){
+      if(aberto) aberto.remove();
+      var f=document.createElement('div'); f.className='dlg-fundo';
+      var conf=(tipo==='confirma'), vermelho=conf && perigo(msg);
+      f.innerHTML='<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-m">'+
+        '<div class="dlg-cab"><img src="/static/icons/favicon-48.png?v=2" alt="" width="28" height="28">'+
+        '<strong id="dlg-t">'+(conf?(vermelho?'Confirmar exclusão':'Confirmar'):'Aviso')+'</strong></div>'+
+        '<p id="dlg-m"></p><div class="dlg-acoes">'+
+        (conf?'<button type="button" class="btn btn-outline" data-r="nao">Cancelar</button>':'')+
+        '<button type="button" class="btn '+(vermelho?'btn-danger dlg-perigo':'btn-primary')+'" data-r="sim">'+
+        (conf?(vermelho?'Sim, confirmar':'Confirmar'):'Ok')+'</button></div></div>';
+      f.querySelector('#dlg-m').textContent=msg;              // texto puro: sem injetar HTML
+      var foco=document.activeElement;
+      function fecha(ok){
+        f.remove(); aberto=null; document.removeEventListener('keydown',tecla,true);
+        try{ if(foco && foco.focus) foco.focus(); }catch(e){}
+        if(ok && aoOk) aoOk();
+      }
+      function tecla(e){
+        if(e.key==='Escape'){ e.preventDefault(); fecha(false); }
+        else if(e.key==='Enter' && !vermelho){ e.preventDefault(); fecha(true); }
+        else if(e.key==='Tab'){                               // foco preso na janela
+          var bs=f.querySelectorAll('button'); var i=Array.prototype.indexOf.call(bs,document.activeElement);
+          e.preventDefault(); bs[(i+(e.shiftKey?-1:1)+bs.length)%bs.length].focus();
+        }
+      }
+      f.addEventListener('click',function(e){
+        var b=e.target.closest('[data-r]'); if(b) fecha(b.dataset.r==='sim');
+        else if(e.target===f) fecha(false);                   // clicou fora = cancelar
+      });
+      document.addEventListener('keydown',tecla,true);
+      document.body.appendChild(f); aberto=f;
+      // exclusao: foco no "Cancelar" (Enter nao apaga sem querer)
+      (f.querySelector(vermelho?'[data-r="nao"]':'[data-r="sim"]')||f.querySelector('button')).focus();
+    }
+    window.alert=function(msg){ janela(String(msg==null?'':msg),'aviso'); };
+    window.confirm=function(msg){
+      if(passe){ passe=false; return true; }
+      var alvo=ultimo;
+      janela(String(msg==null?'':msg),'confirma',function(){
+        passe=true;
+        try{
+          if(alvo && alvo.f){
+            if(alvo.f.requestSubmit) alvo.f.requestSubmit(alvo.s && alvo.s.form===alvo.f ? alvo.s : undefined);
+            else alvo.f.submit();
+          } else if(alvo && alvo.el){ alvo.el.click(); }
+        } finally { setTimeout(function(){ passe=false; },0); }
+      });
+      return false;
+    };
+  })();
   function instalarApp(ev){
     ev.preventDefault();
     if(_convite){ _convite.prompt(); _convite.userChoice.then(function(){ _convite=null; _mostraInstalar(false); }); return; }

@@ -298,6 +298,45 @@
   .tl-add input[type=text]{flex:1 1 100%;}
 }
 
+/* ---------- janela de aviso/confirmacao do portal (substitui alert/confirm) ---------- */
+.dlg-fundo{position:fixed;inset:0;z-index:2000;background:rgba(8,16,28,.45);
+  display:flex;align-items:center;justify-content:center;padding:1rem;animation:dlg-fade .15s ease-out;}
+.dlg{width:100%;max-width:420px;background:var(--surface);color:var(--text);border-radius:14px;
+  border:1px solid var(--border);box-shadow:0 18px 48px rgba(8,16,28,.35);padding:1.1rem 1.2rem 1rem;
+  animation:dlg-entra .18s ease-out;}
+.dlg-cab{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem;}
+.dlg-cab img{border-radius:7px;}
+.dlg-cab strong{font-size:1rem;}
+.dlg p{margin:0 0 1rem;font-size:.92rem;line-height:1.5;color:var(--text-muted);white-space:pre-line;}
+.dlg-acoes{display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;}
+.dlg-acoes .btn{min-width:96px;justify-content:center;}
+.dlg-perigo{background:var(--danger) !important;border-color:var(--danger) !important;color:#fff !important;}
+@keyframes dlg-fade{from{opacity:0;}to{opacity:1;}}
+@keyframes dlg-entra{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.dlg-fundo,.dlg{animation:none;}}
+@media (max-width:640px){
+  .dlg-fundo{align-items:flex-end;padding:.6rem;}
+  .dlg{max-width:none;border-radius:16px;}
+  .dlg-acoes .btn{flex:1;}
+}
+
+/* ---------- convite para ativar as notificacoes (primeiro uso) ---------- */
+.push-convite{position:fixed;right:1.2rem;bottom:1.2rem;z-index:1300;max-width:390px;
+  display:flex;align-items:flex-start;gap:.8rem;padding:.9rem 1rem;border-radius:14px;
+  background:var(--surface);color:var(--text);border:1px solid var(--border);
+  box-shadow:0 12px 32px rgba(8,16,28,.22);animation:pc-entra .25s ease-out;}
+.push-convite img{border-radius:10px;flex-shrink:0;}
+.push-convite .pc-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:.2rem;}
+.push-convite .pc-txt strong{font-size:.92rem;}
+.push-convite .pc-txt span{font-size:.8rem;color:var(--text-muted);line-height:1.4;}
+.push-convite .pc-acoes{display:flex;flex-direction:column;gap:.35rem;flex-shrink:0;}
+@keyframes pc-entra{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.push-convite{animation:none;}}
+@media (max-width:640px){
+  .push-convite{left:.6rem;right:.6rem;bottom:.6rem;max-width:none;flex-wrap:wrap;}
+  .push-convite .pc-acoes{flex-direction:row;width:100%;justify-content:flex-end;}
+}
+
 /* ==========================================================================
    TABELAS QUE NAO CABEM viram cartoes (classe posta pelo script do base.html
    quando a tabela passaria da largura). Nada rola para o lado.
