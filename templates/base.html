@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="csrf-token" content="{{ csrf_token() }}"/>
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
-  <link rel="icon" type="image/svg+xml" href="/static/img/jf-favicon.svg"/>
+  <!-- app instalavel (PWA): icone J&F, manifesto e cores -->
+  <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png"/>
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png"/>
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <meta name="theme-color" content="#16324f"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="Controladoria"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <link rel="stylesheet" href="/static/css/style.css"/>
   <link rel="stylesheet" href="/static/css/portal.css"/>
   <link rel="stylesheet" href="/static/css/responsivo.css"/>
@@ -16,6 +25,61 @@
   (function(){var M=document.querySelector('meta[name=csrf-token]').content;var _f=window.fetch;
    window.fetch=function(i,o){o=o||{};var m=(o.method||'GET').toUpperCase();
    if(m!=='GET'&&m!=='HEAD'){o.headers=Object.assign({'X-CSRFToken':M},o.headers||{});}return _f.call(this,i,o);};})();
+  // ---- instalar como aplicativo ----
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+  }
+  var _convite=null;
+  function _mostraInstalar(v){ var a=document.getElementById('menu-instalar'); if(a) a.hidden=!v; }
+  window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); _convite=e; _mostraInstalar(true); });
+  window.addEventListener('appinstalled',function(){ _convite=null; _mostraInstalar(false); });
+  function _ehIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+                            (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+  function _jaInstalado(){ return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+                                  navigator.standalone===true; }
+  document.addEventListener('DOMContentLoaded',function(){ if(_ehIOS() && !_jaInstalado()) _mostraInstalar(true); });
+  // ---- tabelas que nao cabem na largura viram cartoes (nada rola para o lado) ----
+  function ajustaTabelas(){
+    document.querySelectorAll('.tbl-wrap table').forEach(function(t){
+      if(t.classList.contains('tbl-ativ')) return;             // tem layout proprio
+      var w=t.closest('.tbl-wrap'); if(!w || !w.offsetParent) return;   // escondida: decide ao aparecer
+      if(!t.dataset.rotulado){                                  // rotulos vindos do cabecalho
+        var nomes=[];
+        if(t.tHead && t.tHead.rows.length){
+          Array.prototype.forEach.call(t.tHead.rows[t.tHead.rows.length-1].cells,function(h){
+            var n=(h.innerText||'').replace(/\s+/g,' ').trim();
+            for(var i=0;i<(h.colSpan||1);i++) nomes.push(n);
+          });
+        }
+        Array.prototype.forEach.call(t.querySelectorAll('tbody tr, tfoot tr'),function(r){
+          var col=0;
+          Array.prototype.forEach.call(r.cells,function(c){
+            if(!c.hasAttribute('data-rot') && nomes[col]) c.setAttribute('data-rot',nomes[col]);
+            var ctrl=c.querySelector('input:not([type=hidden]),select,textarea,button,a,img,svg,.st,.kind-chip,.badge-soft,.mini-prog');
+            var txt=(c.innerText||'').trim();
+            if(!ctrl && (txt===''||txt==='—'||txt==='-'||txt==='·')) c.classList.add('vazio');
+            col+=c.colSpan||1;
+          });
+        });
+        t.dataset.rotulado='1';
+      }
+      t.classList.remove('tbl-empilha');
+      if(w.scrollWidth>w.clientWidth+2) t.classList.add('tbl-empilha');
+    });
+  }
+  var _tt=null;
+  function _ajustaDepois(ms){ clearTimeout(_tt); _tt=setTimeout(ajustaTabelas,ms||120); }
+  document.addEventListener('DOMContentLoaded',function(){ ajustaTabelas(); });
+  window.addEventListener('load',function(){ ajustaTabelas(); });
+  window.addEventListener('resize',function(){ _ajustaDepois(150); });
+  window.addEventListener('orientationchange',function(){ _ajustaDepois(250); });
+  document.addEventListener('click',function(){ _ajustaDepois(80); });   // abas/grupos que mostram tabelas
+  function instalarApp(ev){
+    ev.preventDefault();
+    if(_convite){ _convite.prompt(); _convite.userChoice.then(function(){ _convite=null; _mostraInstalar(false); }); return; }
+    if(_ehIOS()){ alert('Para instalar no iPhone/iPad (Safari): toque em Compartilhar (quadrado com seta) e depois em "Adicionar à Tela de Início".'); return; }
+    alert('No computador: clique no ícone de instalar na barra de endereço do Chrome ou do Edge (ou menu ⋮ > Instalar aplicativo).');
+  }
   </script>
 </head>
 <body>
@@ -224,6 +288,7 @@
 
 <div id="user-menu" class="user-menu" style="display:none;">
   <div class="user-menu-head">{{ current_user.email }}</div>
+  <a href="#" id="menu-instalar" hidden onclick="instalarApp(event)">📲 Instalar aplicativo</a>
   <a href="/change-password">🔐 Alterar senha</a>
   <a href="/logout" class="danger">🚪 Sair</a>
 </div>

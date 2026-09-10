@@ -154,7 +154,7 @@
   .kpi .kpi-value{font-size:1.5rem;}
   .card{padding:1rem .9rem;}
   .adm-grid{grid-template-columns:1fr;}
-  .adm-tabs{overflow-x:auto;flex-wrap:nowrap;padding-bottom:.5rem;}
+  .adm-tabs{flex-wrap:wrap;gap:.35rem;padding-bottom:.5rem;}   /* quebra linha, sem rolar */
   .adm-tab{white-space:nowrap;}
   .so-desktop{display:none;}
   .search-box input,.search-box input:focus{width:100%;}
@@ -296,6 +296,51 @@
   .tl-status-sel{min-width:120px;}
   .tl-add{flex-wrap:wrap;}
   .tl-add input[type=text]{flex:1 1 100%;}
+}
+
+/* ==========================================================================
+   TABELAS QUE NAO CABEM viram cartoes (classe posta pelo script do base.html
+   quando a tabela passaria da largura). Nada rola para o lado.
+   ========================================================================== */
+table.tbl-empilha{min-width:0 !important;width:100% !important;}
+table.tbl-empilha thead{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;}
+table.tbl-empilha,table.tbl-empilha tbody,table.tbl-empilha tfoot{display:block;}
+table.tbl-empilha tbody tr,table.tbl-empilha tfoot tr{display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.1rem 1rem;
+  border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.6rem;
+  padding:.5rem .75rem;background:var(--surface);}
+table.tbl-empilha td,table.tbl-empilha th{display:flex;flex-wrap:wrap;justify-content:space-between;
+  align-items:center;gap:.3rem .6rem;border:none !important;padding:.28rem 0 !important;text-align:right;
+  width:auto !important;min-width:0 !important;max-width:none !important;white-space:normal;}
+table.tbl-empilha td > *{max-width:100%;}                /* etiquetas/chips quebram linha, nao vazam */
+table.tbl-empilha td[data-rot]::before,table.tbl-empilha th[data-rot]::before{content:attr(data-rot);
+  font-size:.72rem;font-weight:600;color:var(--text-muted);text-align:left;flex-shrink:0;
+  text-transform:none;letter-spacing:0;}
+/* 1a celula = titulo do cartao, linha inteira */
+table.tbl-empilha tr > :first-child{grid-column:1/-1;justify-content:flex-start;text-align:left;
+  font-weight:600;border-bottom:1px solid var(--border) !important;padding-bottom:.4rem !important;
+  margin-bottom:.15rem;}
+table.tbl-empilha tr > :first-child::before{display:none;}
+table.tbl-empilha td[colspan],table.tbl-empilha th[colspan]{grid-column:1/-1;}
+table.tbl-empilha .vazio{display:none !important;}
+table.tbl-empilha .input,table.tbl-empilha select{max-width:64%;min-width:0;}
+table.tbl-empilha td > .flex{flex-wrap:wrap;justify-content:flex-end;}
+@media (max-width:640px){
+  table.tbl-empilha tbody tr,table.tbl-empilha tfoot tr{grid-template-columns:1fr;}
+}
+
+/* linha do tempo (Gantt): as barras ja sao em %, basta caber na largura */
+@media (max-width:1024px){
+  .gantt{min-width:0 !important;}
+  .g-track{min-width:0;flex:1 1 0;overflow:hidden;}      /* rotulo do ultimo mes nao escorre */
+  .g-label{box-sizing:border-box;}
+  .g-label{width:150px;min-width:0;flex:0 0 150px;}
+  .g-month{font-size:.64rem;}
+}
+@media (max-width:640px){
+  .g-label{width:36%;flex:0 0 36%;padding:.45rem .45rem;font-size:.74rem;}
+  .g-label a{white-space:normal;}
+  .g-month{font-size:.56rem;letter-spacing:-.02em;}
 }
 
 /* itens de grade podem encolher: sem isso uma tabela interna empurra o cartao

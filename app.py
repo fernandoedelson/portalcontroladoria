@@ -195,6 +195,63 @@ def register_routes(app):
     def ajuda():
         return render_template("ajuda.html")
 
+    # ---------------- App instalavel (PWA) ----------------
+    @app.route("/manifest.webmanifest")
+    def manifest():
+        dados = {
+            "name": "Gestão Controladoria J&F S.A.",
+            "short_name": "Controladoria",
+            "description": "Gestão da área de Controladoria da J&F",
+            "id": "/",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#16324f",
+            "theme_color": "#16324f",
+            "lang": "pt-BR",
+            "icons": [
+                {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                {"src": "/static/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+                {"src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+            ],
+            "shortcuts": [
+                {"name": "Painel do Dia", "url": "/time", "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]},
+                {"name": "Minhas Notas", "url": "/notas", "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]},
+                {"name": "Minhas Tarefas", "url": "/tarefas", "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192"}]},
+            ],
+        }
+        resp = jsonify(dados)
+        resp.mimetype = "application/manifest+json"
+        return resp
+
+    @app.route("/sw.js")
+    def service_worker():
+        """Service worker minimo: so a tela de 'sem conexao'.
+
+        Nao guarda paginas nem dados (o conteudo e autenticado e tem de estar
+        sempre atualizado) — so habilita a instalacao como aplicativo."""
+        js = r"""
+const OFFLINE = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+  + '<title>Sem conexão</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;'
+  + 'font-family:system-ui,sans-serif;background:#16324f;color:#fff;text-align:center;padding:1.5rem">'
+  + '<div><img src="/static/icons/icon-192.png" width="88" height="88" alt="" style="border-radius:20px">'
+  + '<h1 style="font-size:1.2rem;margin:1rem 0 .4rem">Sem conexão com a internet</h1>'
+  + '<p style="opacity:.8;font-size:.9rem">O portal da Controladoria precisa de conexão.<br>Assim que voltar, recarregue.</p>'
+  + '<button onclick="location.reload()" style="margin-top:1rem;padding:.6rem 1.2rem;border:0;border-radius:8px;'
+  + 'background:#c9962e;color:#fff;font-weight:600;font-size:.95rem">Tentar de novo</button></div></body>';
+self.addEventListener('install', e => { self.skipWaiting(); });
+self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', e => {
+  if (e.request.mode !== 'navigate') return;          // CSS/JS/imagens: navegador normal
+  e.respondWith(fetch(e.request).catch(() =>
+    new Response(OFFLINE, {headers: {'Content-Type': 'text/html; charset=utf-8'}})));
+});
+"""
+        resp = app.response_class(js, mimetype="application/javascript")
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
     # ---------------- Busca global ----------------
     @app.route("/buscar")
     @login_required
