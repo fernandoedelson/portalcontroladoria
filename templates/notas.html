@@ -269,7 +269,8 @@
   var corpo=document.getElementById('ne-corpo');
   var escala=1, dpr=window.devicePixelRatio||1, pronto=false;
   var ferramenta='pen', cor='#1f2937', esp=2.6, soCaneta=false;
-  var traco=null, tracoTipo=null, modo=null, pilha=[], removidos=[], rolagem=null, quadro=null;
+  // tracoOrigem: 'ferramenta' | 'botao' (botao lateral) | 'segurar' (borracha temporaria)
+  var traco=null, tracoTipo=null, tracoOrigem=null, modo=null, pilha=[], rolagem=null, quadro=null;
   // zoom: z=1 -> folha na largura da tela. Travado, a pinca so arrasta.
   var z=1, ZMIN=0.5, ZMAX=3, travaZoom=false, PIXMAX=16e6;
   var toques=new Map(), pinca=null, pincaAcabou=false, previa=null, tRoda=null;
@@ -278,14 +279,16 @@
        travaZoom=localStorage.getItem('nota-zoom-trava')==='1'; }catch(e){}
   document.getElementById('ink-socaneta').checked=soCaneta;
 
-  function larg(s,pr){ return s.t==='hl' ? s.w : s.w*(0.35+pr*1.1); }
+  function larg(s,pr){ return (s.t==='hl'||s.t==='er') ? s.w : s.w*(0.35+pr*1.1); }
   function desenha(c,s,e){
     var p=s.p; if(!p||!p.length) return;
     c.save(); c.lineCap='round'; c.lineJoin='round'; c.strokeStyle=s.c; c.fillStyle=s.c;
     if(s.t==='hl'){ c.globalAlpha=0.32; c.globalCompositeOperation='multiply'; }
+    // borracha: tira a tinta (pixels) por onde passa, do que foi escrito antes dela
+    if(s.t==='er'){ c.globalCompositeOperation='destination-out'; c.strokeStyle=c.fillStyle='#000'; }
     if(p.length===1){
       c.beginPath(); c.arc(p[0][0]*e,p[0][1]*e,Math.max(larg(s,p[0][2])*e/2,0.6),0,Math.PI*2); c.fill();
-    } else if(s.t==='hl'){                     // largura constante, um so caminho
+    } else if(s.t==='hl'||s.t==='er'){         // largura constante, um so caminho
       c.lineWidth=s.w*e; c.beginPath(); c.moveTo(p[0][0]*e,p[0][1]*e);
       for(var i=1;i<p.length;i++){
         var mx=(p[i-1][0]+p[i][0])/2, my=(p[i-1][1]+p[i][1])/2;
@@ -339,22 +342,22 @@
             Math.round(pr*100)/100];
   }
   function cresce(y){ if(y>doc.h-180){ doc.h+=GANHO; dimensiona(); } }
-  function distSeg(p,a,b){
-    var dx=b[0]-a[0], dy=b[1]-a[1], l2=dx*dx+dy*dy, t=l2 ? ((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l2 : 0;
-    t=Math.max(0,Math.min(1,t)); var x=a[0]+t*dx-p[0], y=a[1]+t*dy-p[1]; return Math.sqrt(x*x+y*y);
+  // tamanho da borracha acompanha os botoes de espessura (fina/media/grossa)
+  function largBorracha(){ return ({1.6:12, 2.6:22, 4.4:40})[esp] || 22; }
+  function novoTraco(tipo,pt){
+    if(tipo==='er') return {c:'#000000', w:largBorracha(), t:'er', p:[pt]};
+    if(tipo==='hl') return {c:cor, w:22, t:'hl', p:[pt]};
+    return {c:cor, w:esp, t:'pen', p:[pt]};
   }
-  function apagaEm(pt){
-    var raio=12, mudou=false;
-    for(var i=doc.strokes.length-1;i>=0;i--){
-      var s=doc.strokes[i], p=s.p, lim=raio+s.w/2, acerta=false;
-      for(var k=0;k<p.length && !acerta;k++){
-        if(k===0){ if(Math.hypot(p[0][0]-pt[0],p[0][1]-pt[1])<=lim) acerta=true; }
-        else if(distSeg(pt,p[k-1],p[k])<=lim) acerta=true;
-      }
-      if(acerta){ removidos.push([i,s]); doc.strokes.splice(i,1); mudou=true; }
+  // troca caneta <-> borracha no meio do mesmo contato (botao lateral apertado/solto)
+  function trocaTraco(tipo,origem,ev){
+    if(traco && (traco.p.length>1 || traco.t==='er')){
+      doc.strokes.push(traco); pilha.push({tipo:'add',s:traco}); redesenhaBase(); mudou();
     }
-    if(mudou){ redesenhaBase(); agenda(); }
+    traco=novoTraco(tipo,ponto(ev)); tracoOrigem=origem;
+    folha.classList.toggle('apagando', tipo==='er');
   }
+  function temTinta(){ return doc.strokes.some(function(s){ return s.t!=='er'; }); }
   function miniatura(){
     var tw=320, e=tw/W, th=Math.round(Math.min(doc.h,700)*e);
     var t=document.createElement('canvas'); t.width=tw; t.height=th;
@@ -364,7 +367,7 @@
   }
   function mudou(){
     document.getElementById('nota-ink').value=JSON.stringify(doc);
-    document.getElementById('nota-ink-thumb').value=doc.strokes.length ? miniatura() : '';
+    document.getElementById('nota-ink-thumb').value=temTinta() ? miniatura() : '';
     agendarSalvar(1500);
   }
 
@@ -399,10 +402,8 @@
     fixaZoom(z*fator,(cx-fr.left)/escala,(cy-fr.top)/escala,cx,cy);
   }
   function comecaPinca(){                      // 2o dedo encostou: vira gesto
-    if(modo==='desenhar' && tracoTipo==='touch'){ traco=null; modo=null; }   // descarta o risco do 1o dedo
-    if(modo==='apagar'){
-      folha.classList.remove('apagando'); modo=null;
-      if(removidos.length){ pilha.push({tipo:'del',itens:removidos.slice()}); removidos=[]; mudou(); }
+    if(modo==='desenhar' && tracoTipo==='touch'){      // descarta o risco do 1o dedo
+      traco=null; modo=null; folha.classList.remove('apagando');
     }
     rolagem=null;
     var ps=Array.from(toques.values()), mx=(ps[0].x+ps[1].x)/2, my=(ps[0].y+ps[1].y)/2;
@@ -446,8 +447,8 @@
   });
   aplicaTrava();
 
-  /* ---------- caneta: segurar 1,5 s alterna caneta/borracha ---------- */
-  var SEGURA_MS=1500, SEGURA_TOL=8;           // tempo e tolerancia de tremor (px de tela)
+  /* ---------- caneta: segurar 0,8 s = borracha ate levantar a caneta ---------- */
+  var SEGURA_MS=800, SEGURA_TOL=8;            // tempo e tolerancia de tremor (px de tela)
   var segura=null, tSegura=null, tAnel=null, tToast=null;
   var anel=document.getElementById('ne-segura'), toast=document.getElementById('ne-toast');
   function avisa(msg){
@@ -461,7 +462,7 @@
     anel.style.left=(ev.clientX-fr.left)+'px'; anel.style.top=(ev.clientY-fr.top)+'px';
     tAnel=setTimeout(function(){                // anel so aparece se a caneta ficar parada
       anel.hidden=false; anel.classList.remove('gira'); void anel.offsetWidth; anel.classList.add('gira');
-    },350);
+    },200);
     tSegura=setTimeout(segurou,SEGURA_MS);
   }
   function cancelaSegura(){
@@ -470,18 +471,12 @@
   }
   function segurou(){
     tSegura=null; segura=null; anel.hidden=true; anel.classList.remove('gira');
-    if(modo==='desenhar'){                      // caneta -> borracha
-      traco=null; agenda();                     // descarta o pontinho do "segurar"
-      document.querySelector('.ne-f[data-f="eraser"]').click();
-      modo='apagar'; removidos=[]; folha.classList.add('apagando');
-      avisa('Borracha — segure de novo para voltar à caneta');
-    } else if(modo==='apagar' && ferramenta==='eraser'){   // borracha -> caneta
-      folha.classList.remove('apagando');
-      if(removidos.length){ pilha.push({tipo:'del',itens:removidos.slice()}); removidos=[]; mudou(); }
-      document.querySelector('.ne-f[data-f="pen"]').click();
-      modo=null;                                // so volta a riscar ao encostar de novo
-      avisa('Caneta');
-    } else return;
+    if(modo!=='desenhar' || !traco || traco.t==='er') return;
+    // borracha TEMPORARIA: vale ate a caneta sair da tela (a ferramenta continua caneta)
+    var u=traco.p[traco.p.length-1];
+    traco=novoTraco('er',u); tracoOrigem='segurar';   // descarta o pontinho do "segurar"
+    folha.classList.add('apagando'); agenda();
+    avisa('Borracha — levante a caneta para voltar a escrever');
     try{ if(navigator.vibrate) navigator.vibrate(25); }catch(e){}
   }
   // o botao da caneta costuma virar "clique direito": sem menu sobre a folha
@@ -505,10 +500,11 @@
     // ponta-borracha (bit 32) ou botao lateral apertado (bit 2): apaga enquanto apertado
     var botaoCaneta=ev.pointerType==='pen' && ((ev.buttons & 32) || (ev.buttons & 2) || ev.button===2 || ev.button===5);
     var borracha=ferramenta==='eraser' || botaoCaneta;
-    if(ev.pointerType==='pen' && !botaoCaneta) comecaSegura(ev);
-    if(borracha){ modo='apagar'; removidos=[]; folha.classList.add('apagando'); apagaEm(pt); return; }
+    if(ev.pointerType==='pen' && !borracha) comecaSegura(ev);
     modo='desenhar'; tracoTipo=ev.pointerType;
-    traco = ferramenta==='hl' ? {c:cor,w:22,t:'hl',p:[pt]} : {c:cor,w:esp,t:'pen',p:[pt]};
+    traco=novoTraco(borracha ? 'er' : ferramenta, pt);
+    tracoOrigem=botaoCaneta ? 'botao' : 'ferramenta';
+    folha.classList.toggle('apagando', borracha);
     agenda();
   });
   cv.addEventListener('pointermove',function(ev){
@@ -523,23 +519,23 @@
     // mexeu de verdade: nao e "segurar", e escrita/apagamento normal
     if(segura && ev.pointerId===segura.id &&
        Math.hypot(ev.clientX-segura.x, ev.clientY-segura.y)>SEGURA_TOL) cancelaSegura();
-    if(!modo) return;
-    // apertou o botao da caneta no meio do traco: o traco fica e dali em diante apaga
-    if(modo==='desenhar' && ev.pointerType==='pen' && (ev.buttons & (2|32))){
-      cancelaSegura();
-      if(traco && traco.p.length>1){ doc.strokes.push(traco); pilha.push({tipo:'add',s:traco}); redesenhaBase(); mudou(); }
-      traco=null; modo='apagar'; removidos=[]; folha.classList.add('apagando');
+    if(!modo || !traco) return;
+    // botao lateral apertado no meio do contato: o que foi escrito fica e passa a apagar;
+    // soltou o botao: volta a escrever na hora
+    if(ev.pointerType==='pen'){
+      var apertado=!!(ev.buttons & (2|32));
+      if(apertado && traco.t!=='er'){ cancelaSegura(); trocaTraco('er','botao',ev); }
+      else if(!apertado && traco.t==='er' && tracoOrigem==='botao'){ trocaTraco(ferramenta==='hl'?'hl':'pen','ferramenta',ev); }
     }
     ev.preventDefault();
     var evs=(ev.getCoalescedEvents && ev.getCoalescedEvents().length) ? ev.getCoalescedEvents() : [ev];
     for(var i=0;i<evs.length;i++){
       var pt=ponto(evs[i]);
-      if(modo==='apagar'){ apagaEm(pt); continue; }
       var u=traco.p[traco.p.length-1];
       if(Math.abs(pt[0]-u[0])+Math.abs(pt[1]-u[1])<0.8) continue;
       traco.p.push(pt); cresce(pt[1]);
     }
-    if(modo==='desenhar') agenda();
+    agenda();
   });
   function fim(ev){
     if(segura && ev.pointerId===segura.id) cancelaSegura();
@@ -550,12 +546,11 @@
     }
     if(rolagem && ev.pointerId===rolagem.id){ rolagem=null; return; }
     if(modo==='desenhar' && traco){
-      doc.strokes.push(traco); pilha.push({tipo:'add',s:traco}); traco=null;
+      doc.strokes.push(traco); pilha.push({tipo:'add',s:traco});
       redesenhaBase(); compoe(); mudou();
-    } else if(modo==='apagar'){
-      folha.classList.remove('apagando');
-      if(removidos.length){ pilha.push({tipo:'del',itens:removidos.slice()}); removidos=[]; mudou(); }
     }
+    // levantou a caneta: acabou a borracha temporaria (a ferramenta continua a escolhida)
+    traco=null; tracoOrigem=null; folha.classList.remove('apagando'); compoe();
     modo=null;
   }
   cv.addEventListener('pointerup',fim);

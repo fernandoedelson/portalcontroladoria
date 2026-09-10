@@ -527,7 +527,7 @@ def register_workflow_routes(app):
                 w = min(max(float(s.get("w") or 2.6), 0.5), 40.0)
             except (TypeError, ValueError):
                 w = 2.6
-            tool = s.get("t") if s.get("t") in ("pen", "hl") else "pen"
+            tool = s.get("t") if s.get("t") in ("pen", "hl", "er") else "pen"   # er = borracha
             pts = []
             for p in (s.get("p") or [])[:5000]:
                 if isinstance(p, (list, tuple)) and len(p) >= 2:

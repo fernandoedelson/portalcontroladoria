@@ -175,8 +175,9 @@ class UserNote(db.Model):
 
     @property
     def tem_tinta(self):
+        """Ha escrita visivel? (tracos de borracha 'er' sozinhos nao contam)"""
         d = self.ink
-        return bool(d and d.get("strokes"))
+        return bool(d and any(s.get("t") != "er" for s in d.get("strokes") or []))
 
     @property
     def titulo_exibicao(self):
