@@ -90,9 +90,11 @@
       <label class="chk ne-socaneta" title="Com isto ligado, a mão/dedo não risca — o dedo rola a folha">
         <input type="checkbox" id="ink-socaneta"/> Só caneta</label>
     </div>
+    <div class="ne-toast" id="ne-toast" role="status" aria-live="polite" hidden></div>
     <div class="ne-caderno" id="ne-caderno">
       <div class="ne-folha" id="ne-folha">
         <canvas id="ne-canvas" aria-label="Folha de caderno para escrever com a caneta"></canvas>
+        <div class="ne-segura" id="ne-segura" hidden aria-hidden="true"></div>
       </div>
     </div>
   </div>
@@ -197,6 +199,15 @@
       linear-gradient(to right,transparent calc(var(--margem) - 1px),rgba(214,86,86,.55) calc(var(--margem) - 1px),rgba(214,86,86,.55) var(--margem),transparent var(--margem)),
       repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--pauta) - 1px),rgba(29,93,168,.2) calc(var(--pauta) - 1px),rgba(29,93,168,.2) var(--pauta))}
   .ne-folha canvas{position:absolute;left:0;top:0;display:block;touch-action:none;cursor:crosshair}
+  #ne-caneta{position:relative}
+  .ne-toast{position:absolute;left:50%;top:3.6rem;transform:translateX(-50%);z-index:5;
+            background:#16324f;color:#fff;padding:.4rem .9rem;border-radius:999px;font-size:.85rem;
+            box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap}
+  .ne-segura{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+             border:3px solid #c9962e;pointer-events:none;opacity:0;transform:scale(.3)}
+  .ne-segura.gira{animation:ne-segura 1.15s linear forwards}
+  @keyframes ne-segura{from{opacity:.25;transform:scale(.3)}to{opacity:.95;transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){.ne-segura.gira{animation:none;opacity:.9;transform:none}}
   .ne-folha.apagando canvas{cursor:cell}
   .ni-ink{display:block;width:100%;height:92px;object-fit:cover;object-position:top left;
           border-radius:6px;background:#fffef8;margin:.35rem 0;border:1px solid rgba(0,0,0,.06)}
@@ -435,6 +446,47 @@
   });
   aplicaTrava();
 
+  /* ---------- caneta: segurar 1,5 s alterna caneta/borracha ---------- */
+  var SEGURA_MS=1500, SEGURA_TOL=8;           // tempo e tolerancia de tremor (px de tela)
+  var segura=null, tSegura=null, tAnel=null, tToast=null;
+  var anel=document.getElementById('ne-segura'), toast=document.getElementById('ne-toast');
+  function avisa(msg){
+    toast.textContent=msg; toast.hidden=false;
+    clearTimeout(tToast); tToast=setTimeout(function(){ toast.hidden=true; },1800);
+  }
+  function comecaSegura(ev){
+    cancelaSegura();
+    var fr=folha.getBoundingClientRect();
+    segura={id:ev.pointerId, x:ev.clientX, y:ev.clientY};
+    anel.style.left=(ev.clientX-fr.left)+'px'; anel.style.top=(ev.clientY-fr.top)+'px';
+    tAnel=setTimeout(function(){                // anel so aparece se a caneta ficar parada
+      anel.hidden=false; anel.classList.remove('gira'); void anel.offsetWidth; anel.classList.add('gira');
+    },350);
+    tSegura=setTimeout(segurou,SEGURA_MS);
+  }
+  function cancelaSegura(){
+    clearTimeout(tSegura); clearTimeout(tAnel); tSegura=tAnel=null; segura=null;
+    anel.hidden=true; anel.classList.remove('gira');
+  }
+  function segurou(){
+    tSegura=null; segura=null; anel.hidden=true; anel.classList.remove('gira');
+    if(modo==='desenhar'){                      // caneta -> borracha
+      traco=null; agenda();                     // descarta o pontinho do "segurar"
+      document.querySelector('.ne-f[data-f="eraser"]').click();
+      modo='apagar'; removidos=[]; folha.classList.add('apagando');
+      avisa('Borracha — segure de novo para voltar à caneta');
+    } else if(modo==='apagar' && ferramenta==='eraser'){   // borracha -> caneta
+      folha.classList.remove('apagando');
+      if(removidos.length){ pilha.push({tipo:'del',itens:removidos.slice()}); removidos=[]; mudou(); }
+      document.querySelector('.ne-f[data-f="pen"]').click();
+      modo=null;                                // so volta a riscar ao encostar de novo
+      avisa('Caneta');
+    } else return;
+    try{ if(navigator.vibrate) navigator.vibrate(25); }catch(e){}
+  }
+  // o botao da caneta costuma virar "clique direito": sem menu sobre a folha
+  cv.addEventListener('contextmenu',function(ev){ ev.preventDefault(); });
+
   cv.addEventListener('pointerdown',function(ev){
     if(ev.pointerType==='touch'){
       toques.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
@@ -450,7 +502,10 @@
     if(ev.button!==0 && ev.button!==5 && ev.pointerType==='mouse') return;
     ev.preventDefault(); cv.setPointerCapture(ev.pointerId);
     var pt=ponto(ev);
-    var borracha=ferramenta==='eraser' || (ev.pointerType==='pen' && (ev.buttons & 32));
+    // ponta-borracha (bit 32) ou botao lateral apertado (bit 2): apaga enquanto apertado
+    var botaoCaneta=ev.pointerType==='pen' && ((ev.buttons & 32) || (ev.buttons & 2) || ev.button===2 || ev.button===5);
+    var borracha=ferramenta==='eraser' || botaoCaneta;
+    if(ev.pointerType==='pen' && !botaoCaneta) comecaSegura(ev);
     if(borracha){ modo='apagar'; removidos=[]; folha.classList.add('apagando'); apagaEm(pt); return; }
     modo='desenhar'; tracoTipo=ev.pointerType;
     traco = ferramenta==='hl' ? {c:cor,w:22,t:'hl',p:[pt]} : {c:cor,w:esp,t:'pen',p:[pt]};
@@ -465,7 +520,16 @@
       caderno.scrollLeft=rolagem.left-(ev.clientX-rolagem.x);
       caderno.scrollTop=rolagem.top-(ev.clientY-rolagem.y); return;
     }
+    // mexeu de verdade: nao e "segurar", e escrita/apagamento normal
+    if(segura && ev.pointerId===segura.id &&
+       Math.hypot(ev.clientX-segura.x, ev.clientY-segura.y)>SEGURA_TOL) cancelaSegura();
     if(!modo) return;
+    // apertou o botao da caneta no meio do traco: o traco fica e dali em diante apaga
+    if(modo==='desenhar' && ev.pointerType==='pen' && (ev.buttons & (2|32))){
+      cancelaSegura();
+      if(traco && traco.p.length>1){ doc.strokes.push(traco); pilha.push({tipo:'add',s:traco}); redesenhaBase(); mudou(); }
+      traco=null; modo='apagar'; removidos=[]; folha.classList.add('apagando');
+    }
     ev.preventDefault();
     var evs=(ev.getCoalescedEvents && ev.getCoalescedEvents().length) ? ev.getCoalescedEvents() : [ev];
     for(var i=0;i<evs.length;i++){
@@ -478,6 +542,7 @@
     if(modo==='desenhar') agenda();
   });
   function fim(ev){
+    if(segura && ev.pointerId===segura.id) cancelaSegura();
     if(ev.pointerType==='touch'){
       toques.delete(ev.pointerId);
       if(pinca){ if(toques.size<2) terminaPinca(); return; }
