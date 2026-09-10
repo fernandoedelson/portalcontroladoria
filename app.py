@@ -57,6 +57,14 @@ def create_app(config=Config):
                 fn()
             except Exception as e:
                 app.logger.warning("Nao foi possivel semear %s: %s", nome, e)
+        try:                          # paineis/indicadores/carteira do app original (1x)
+            from team import dados_iniciais
+            r = dados_iniciais.aplica()
+            if r:
+                app.logger.info("Dados iniciais cadastrados: %s", r)
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
 
     register_icons(app)
     register_routes(app)

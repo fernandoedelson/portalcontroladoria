@@ -96,6 +96,15 @@ def seed_all(with_team=True):
             ensure_panels_defaults()
     except Exception as e:
         print(f"[aviso] Nao foi possivel criar os paineis: {e}")
+    # paineis, catalogo, indicadores e carteira do app original (dados_iniciais/)
+    try:
+        from team import dados_iniciais
+        with app.app_context():
+            r = dados_iniciais.aplica(forcar=True)
+            if r:
+                print(f"  Dados iniciais: {r}")
+    except Exception as e:
+        print(f"[aviso] Nao foi possivel cadastrar os dados iniciais: {e}")
 
 
 if __name__ == "__main__":

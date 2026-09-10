@@ -1,0 +1,1539 @@
+{
+ "versao": "2026-09-11-paineis-v1",
+ "origem": "app original (consolidacao_portal)",
+ "segmentos": [
+  {
+   "name": "Acionista",
+   "sort_order": 10,
+   "active": 1
+  },
+  {
+   "name": "Agro",
+   "sort_order": 11,
+   "active": 1
+  },
+  {
+   "name": "Alimentos",
+   "sort_order": 12,
+   "active": 1
+  },
+  {
+   "name": "Celulose",
+   "sort_order": 13,
+   "active": 1
+  },
+  {
+   "name": "Comunicação",
+   "sort_order": 14,
+   "active": 1
+  },
+  {
+   "name": "Educação",
+   "sort_order": 15,
+   "active": 1
+  },
+  {
+   "name": "Empreendimento Urbano",
+   "sort_order": 16,
+   "active": 1
+  },
+  {
+   "name": "Energia",
+   "sort_order": 17,
+   "active": 1
+  },
+  {
+   "name": "Financeiro",
+   "sort_order": 18,
+   "active": 1
+  },
+  {
+   "name": "Higiene",
+   "sort_order": 19,
+   "active": 1
+  },
+  {
+   "name": "Investimentos",
+   "sort_order": 20,
+   "active": 1
+  },
+  {
+   "name": "Mineração",
+   "sort_order": 21,
+   "active": 1
+  },
+  {
+   "name": "Móveis",
+   "sort_order": 22,
+   "active": 1
+  },
+  {
+   "name": "Serviços",
+   "sort_order": 23,
+   "active": 1
+  },
+  {
+   "name": "Tecnologia",
+   "sort_order": 24,
+   "active": 1
+  }
+ ],
+ "empresas": [
+  {
+   "code": "MAIS55",
+   "name": "+55",
+   "canonical_label": "+55",
+   "active": 1
+  },
+  {
+   "code": "AERONAVE",
+   "name": "Aeronave",
+   "canonical_label": "Aeronave",
+   "active": 1
+  },
+  {
+   "code": "ARAGUAIA",
+   "name": "Araguaia",
+   "canonical_label": "Araguaia",
+   "active": 1
+  },
+  {
+   "code": "ARROSSENSAL",
+   "name": "Arrossensal",
+   "canonical_label": "Arrossensal",
+   "active": 1
+  },
+  {
+   "code": "CANAL",
+   "name": "Canal",
+   "canonical_label": "Canal",
+   "active": 1
+  },
+  {
+   "code": "ELDORADO",
+   "name": "Eldorado Brasil Celulose",
+   "canonical_label": "Eldorado Brasil Celulose",
+   "active": 1
+  },
+  {
+   "code": "FAZENDA_LUTA",
+   "name": "Fazenda Luta",
+   "canonical_label": "Fazenda Luta",
+   "active": 1
+  },
+  {
+   "code": "FLORA",
+   "name": "Flora Higiene e Beleza",
+   "canonical_label": "Flora Higiene e Beleza",
+   "active": 1
+  },
+  {
+   "code": "FLUXUS",
+   "name": "Fluxus",
+   "canonical_label": "Fluxus",
+   "active": 1
+  },
+  {
+   "code": "GLOBE",
+   "name": "Globe",
+   "canonical_label": "Globe",
+   "active": 1
+  },
+  {
+   "code": "GREENCARGO",
+   "name": "GreenCargo",
+   "canonical_label": "GreenCargo",
+   "active": 1
+  },
+  {
+   "code": "INOVTI",
+   "name": "InovTi",
+   "canonical_label": "InovTi",
+   "active": 1
+  },
+  {
+   "code": "INSTITUTO_J_F",
+   "name": "Instituto J&F",
+   "canonical_label": "Instituto J&F",
+   "active": 1
+  },
+  {
+   "code": "J_F_CAYMAN",
+   "name": "J&F Cayman",
+   "canonical_label": "J&F Cayman",
+   "active": 1
+  },
+  {
+   "code": "J_F_INTERNATIONAL",
+   "name": "J&F International",
+   "canonical_label": "J&F International",
+   "active": 1
+  },
+  {
+   "code": "J_F_LUX",
+   "name": "J&F Lux",
+   "canonical_label": "J&F Lux",
+   "active": 1
+  },
+  {
+   "code": "J_F_PARTICIPACOES",
+   "name": "J&F Participações",
+   "canonical_label": "J&F Participações",
+   "active": 1
+  },
+  {
+   "code": "JF_SA",
+   "name": "J&F S.A. (Holding)",
+   "canonical_label": "J&F S.A. (Holding)",
+   "active": 1
+  },
+  {
+   "code": "JF_URB",
+   "name": "J&F Urbanismo",
+   "canonical_label": "J&F Urbanismo",
+   "active": 1
+  },
+  {
+   "code": "JBS",
+   "name": "JBS",
+   "canonical_label": "JBS",
+   "active": 1
+  },
+  {
+   "code": "JJMB",
+   "name": "JJMB",
+   "canonical_label": "JJMB",
+   "active": 1
+  },
+  {
+   "code": "KOVR",
+   "name": "Kovr",
+   "canonical_label": "Kovr",
+   "active": 1
+  },
+  {
+   "code": "LHG",
+   "name": "LHG Mining",
+   "canonical_label": "LHG Mining",
+   "active": 1
+  },
+  {
+   "code": "LAGUZ",
+   "name": "Laguz",
+   "canonical_label": "Laguz",
+   "active": 1
+  },
+  {
+   "code": "LIONX",
+   "name": "Lionx",
+   "canonical_label": "Lionx",
+   "active": 1
+  },
+  {
+   "code": "LOGAS",
+   "name": "Logás",
+   "canonical_label": "Logás",
+   "active": 1
+  },
+  {
+   "code": "MGAS",
+   "name": "MGás",
+   "canonical_label": "MGás",
+   "active": 1
+  },
+  {
+   "code": "MUNDO_NOVO",
+   "name": "Mundo Novo",
+   "canonical_label": "Mundo Novo",
+   "active": 1
+  },
+  {
+   "code": "ORIGINAL",
+   "name": "Original",
+   "canonical_label": "Original",
+   "active": 1
+  },
+  {
+   "code": "ORIGINAL_CORRETORA",
+   "name": "Original Corretora",
+   "canonical_label": "Original Corretora",
+   "active": 1
+  },
+  {
+   "code": "PHIZ",
+   "name": "Phiz",
+   "canonical_label": "Phiz",
+   "active": 1
+  },
+  {
+   "code": "PICPAY",
+   "name": "Picpay",
+   "canonical_label": "Picpay",
+   "active": 1
+  },
+  {
+   "code": "SAK_SEGURANCA",
+   "name": "Sak Segurança",
+   "canonical_label": "Sak Segurança",
+   "active": 1
+  },
+  {
+   "code": "SAK_SERVICOS",
+   "name": "Sak Serviços",
+   "canonical_label": "Sak Serviços",
+   "active": 1
+  },
+  {
+   "code": "VLMB",
+   "name": "VLMB",
+   "canonical_label": "VLMB",
+   "active": 1
+  },
+  {
+   "code": "VNMB",
+   "name": "VNMB",
+   "canonical_label": "VNMB",
+   "active": 1
+  },
+  {
+   "code": "VVMB",
+   "name": "VVMB",
+   "canonical_label": "VVMB",
+   "active": 1
+  },
+  {
+   "code": "VB_AGRO",
+   "name": "Vb agro",
+   "canonical_label": "Vb agro",
+   "active": 1
+  },
+  {
+   "code": "WWMB",
+   "name": "WWMB",
+   "canonical_label": "WWMB",
+   "active": 1
+  },
+  {
+   "code": "ZMF",
+   "name": "ZMF",
+   "canonical_label": "ZMF",
+   "active": 1
+  },
+  {
+   "code": "AMBAR_DIS",
+   "name": "Âmbar Distribuição",
+   "canonical_label": "Âmbar Distribuição",
+   "active": 1
+  },
+  {
+   "code": "AMBAR_GER",
+   "name": "Âmbar Geração",
+   "canonical_label": "Âmbar Geração",
+   "active": 1
+  }
+ ],
+ "carteira": [
+  {
+   "empresa": "MAIS55",
+   "seat": 2,
+   "segment": "Móveis",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Auxiliares\"]",
+   "load_real": 3,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "AERONAVE",
+   "seat": 3,
+   "segment": "Serviços",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Auxiliares\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "ARAGUAIA",
+   "seat": 4,
+   "segment": "Agro",
+   "flow": "Terceiro",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Endividamento\"]",
+   "load_real": 2,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "ARROSSENSAL",
+   "seat": 4,
+   "segment": "Agro",
+   "flow": "Terceiro",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "CANAL",
+   "seat": 3,
+   "segment": "Comunicação",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "ELDORADO",
+   "seat": 2,
+   "segment": "Celulose",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "FAZENDA_LUTA",
+   "seat": 2,
+   "segment": "Agro",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Auxiliares\"]",
+   "load_real": 2,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "FLORA",
+   "seat": 3,
+   "segment": "Higiene",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "FLUXUS",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "GLOBE",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "GREENCARGO",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "INOVTI",
+   "seat": 6,
+   "segment": "Tecnologia",
+   "flow": "Verificar",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "INSTITUTO_J_F",
+   "seat": 3,
+   "segment": "Educação",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "J_F_CAYMAN",
+   "seat": 2,
+   "segment": "Investimentos",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "J_F_INTERNATIONAL",
+   "seat": 6,
+   "segment": "Financeiro",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "J_F_LUX",
+   "seat": 5,
+   "segment": "Alimentos",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "J_F_PARTICIPACOES",
+   "seat": 6,
+   "segment": "Financeiro",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "JF_SA",
+   "seat": 5,
+   "segment": "Investimentos",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "JF_URB",
+   "seat": 2,
+   "segment": "Empreendimento Urbano",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "JBS",
+   "seat": 5,
+   "segment": "Alimentos",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\"]",
+   "load_real": 3,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "JJMB",
+   "seat": 4,
+   "segment": "Acionista",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "KOVR",
+   "seat": 6,
+   "segment": "Financeiro",
+   "flow": "Terceiro",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "LHG",
+   "seat": 3,
+   "segment": "Mineração",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "LAGUZ",
+   "seat": 2,
+   "segment": "Financeiro",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Auxiliares\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "LIONX",
+   "seat": 6,
+   "segment": "Tecnologia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "LOGAS",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "MGAS",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "MUNDO_NOVO",
+   "seat": 2,
+   "segment": "Empreendimento Urbano",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "ORIGINAL",
+   "seat": 6,
+   "segment": "Financeiro",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "ORIGINAL_CORRETORA",
+   "seat": 6,
+   "segment": "Financeiro",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "PHIZ",
+   "seat": 6,
+   "segment": "Tecnologia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "PICPAY",
+   "seat": 6,
+   "segment": "Financeiro",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 3,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "SAK_SEGURANCA",
+   "seat": 3,
+   "segment": "Serviços",
+   "flow": "Terceiro",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Auxiliares\"]",
+   "load_real": 2,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "SAK_SERVICOS",
+   "seat": 3,
+   "segment": "Serviços",
+   "flow": "Terceiro",
+   "responsibility": "J&F",
+   "deliverables_json": "[\"Painel\", \"Auxiliares\"]",
+   "load_real": 2,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "VLMB",
+   "seat": 2,
+   "segment": "Investimentos",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Auxiliares\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "VNMB",
+   "seat": 2,
+   "segment": "Investimentos",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Auxiliares\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "VVMB",
+   "seat": 2,
+   "segment": "Investimentos",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Auxiliares\"]",
+   "load_real": 1,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "VB_AGRO",
+   "seat": 4,
+   "segment": "Agro",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "WWMB",
+   "seat": 4,
+   "segment": "Acionista",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "ZMF",
+   "seat": 4,
+   "segment": "Acionista",
+   "flow": "Próprio",
+   "responsibility": "J&F",
+   "deliverables_json": "[]",
+   "load_real": 0,
+   "load_ideal": 4,
+   "production": 4,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "AMBAR_DIS",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  },
+  {
+   "empresa": "AMBAR_GER",
+   "seat": 1,
+   "segment": "Energia",
+   "flow": "Terceiro",
+   "responsibility": "Terceiro",
+   "deliverables_json": "[\"Painel\", \"Endividamento\", \"Consolidação\", \"Auxiliares\"]",
+   "load_real": 4,
+   "load_ideal": 4,
+   "production": 1,
+   "note": null,
+   "responsavel": null
+  }
+ ],
+ "paineis": [
+  {
+   "name": "Controladoria",
+   "kind": "equipe",
+   "dono": null,
+   "color": "#16324f",
+   "active": 1,
+   "sort_order": 1
+  },
+  {
+   "name": "Jeferson Bittencourt",
+   "kind": "pessoal",
+   "dono": "Jeferson Bittencourt",
+   "color": "#1d5da8",
+   "active": 1,
+   "sort_order": 10
+  },
+  {
+   "name": "Augusto Gobo",
+   "kind": "pessoal",
+   "dono": "Augusto Gobo",
+   "color": "#1e8a4e",
+   "active": 1,
+   "sort_order": 20
+  },
+  {
+   "name": "Crysthian Oliveira",
+   "kind": "pessoal",
+   "dono": "Crysthian Oliveira",
+   "color": "#b97509",
+   "active": 1,
+   "sort_order": 30
+  },
+  {
+   "name": "Daniel Benedetti",
+   "kind": "pessoal",
+   "dono": "Daniel Benedetti",
+   "color": "#7a5cc0",
+   "active": 1,
+   "sort_order": 40
+  },
+  {
+   "name": "Fernando Edelson",
+   "kind": "pessoal",
+   "dono": "Fernando Edelson",
+   "color": "#16324f",
+   "active": 1,
+   "sort_order": 100
+  }
+ ],
+ "catalogo": [
+  {
+   "title": "Ajustes na estrutura de fechamento para receber dados do EPM",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Preparação dos paineis de consolidação para receber a tabela fato do EPM e manter a consolidação no mesmo nível de detalhe da consolidação atual",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Consolidação de resultado do grupo",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "O prazo do fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Consolidação dos fluxos de endividamento",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "O prazo da consolidação dos fluxos de endividamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Controle dos backups para a emissão do Bond",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "O prazo é dois dias antes da data limite para a entrega do bond para os bancos.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Emissão mensal dos releases de resultado gerencial",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "O prazo do nosso fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Fechamento +55 e Urbanismo",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "Fechamentos individuais, conta-se 2 dias úteis para entrega dos painéis a partir do envio do fechamento por parte da +55 e Urbanismo",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Fechamento de custos",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "Mensalmente temos o fechamento da +55, Fazenda Araguaia, LUTA e Aeronave. O prazo de D+2 é individual, ou seja, dois dias após o recebimento do dados, temos que liberar o custeio.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Fechamento mensal J&F",
+   "dimension": "RESULTADO",
+   "target_type": "prazo_du",
+   "unit": null,
+   "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Implantação EPM",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o FCCS e PBCS.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto +55",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Acompanhamento do projeto e cobrança dos prazos da mudança da fábrica para Sorocaba",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto BI - Qlik",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Implantação de painéis de BI para acompanhamento das áreas internas J&F e Painéis com indicadores do fechamento consolidado grupo J&F",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto Bond",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Apoio em todo o decorrer do projeto, buscando garantir que todos os dados estão consistentes, bem como as análises coerentes",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto Construção de aplicação para releases automáticos",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Criar uma aplicaão capaz de construir automativamente releases a partir de um tamplate, controlando versões e garantindo a acuracidade dos dados.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto EPM",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o FCCS e PBCS.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto estruturação custeio +55",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Estruturar o custeio da fábrica, bem como calcular custos dos produtos que passaram por reengenhara e possuem roteiro.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "title": "Projeto estruturação da empresa - Aeronave",
+   "dimension": "RESULTADO",
+   "target_type": "data_marco",
+   "unit": null,
+   "rational": "Definir e delimitar escopo da estruturação.",
+   "auto_source": null,
+   "active": 1,
+   "sort_order": 100
+  }
+ ],
+ "indicadores": [
+  {
+   "definicao": "Fechamento mensal J&F",
+   "painel": "Jeferson Bittencourt",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Jeferson Bittencourt",
+   "responsavel": "Jeferson Bittencourt",
+   "seq": 1,
+   "title": "Fechamento mensal J&F",
+   "dimension": "RESULTADO",
+   "target_label": "5",
+   "target_type": "prazo_du",
+   "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Consolidação de resultado do grupo",
+   "painel": "Jeferson Bittencourt",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Jeferson Bittencourt",
+   "responsavel": "Jeferson Bittencourt",
+   "seq": 2,
+   "title": "Consolidação de resultado do grupo",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo do fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Controle dos backups para a emissão do Bond",
+   "painel": "Jeferson Bittencourt",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Jeferson Bittencourt",
+   "responsavel": "Jeferson Bittencourt",
+   "seq": 3,
+   "title": "Controle dos backups para a emissão do Bond",
+   "dimension": "RESULTADO",
+   "target_label": "D-2",
+   "target_type": "prazo_du",
+   "rational": "O prazo é dois dias antes da data limite para a entrega do bond para os bancos.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Emissão mensal dos releases de resultado gerencial",
+   "painel": "Jeferson Bittencourt",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Jeferson Bittencourt",
+   "responsavel": "Jeferson Bittencourt",
+   "seq": 4,
+   "title": "Emissão mensal dos releases de resultado gerencial",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo do nosso fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto Bond",
+   "painel": "Jeferson Bittencourt",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Jeferson Bittencourt",
+   "responsavel": "Jeferson Bittencourt",
+   "seq": 5,
+   "title": "Projeto Bond",
+   "dimension": "RESULTADO",
+   "target_label": "TBD",
+   "target_type": "data_marco",
+   "rational": "Apoio em todo o decorrer do projeto, buscando garantir que todos os dados estão consistentes, bem como as análises coerentes",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Fechamento mensal J&F",
+   "painel": "Augusto Gobo",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Augusto Gobo",
+   "responsavel": "Augusto Gobo",
+   "seq": 1,
+   "title": "Fechamento mensal J&F",
+   "dimension": "RESULTADO",
+   "target_label": "5",
+   "target_type": "prazo_du",
+   "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Consolidação de resultado do grupo",
+   "painel": "Augusto Gobo",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Augusto Gobo",
+   "responsavel": "Augusto Gobo",
+   "seq": 2,
+   "title": "Consolidação de resultado do grupo",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo do fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Consolidação dos fluxos de endividamento",
+   "painel": "Augusto Gobo",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Augusto Gobo",
+   "responsavel": "Augusto Gobo",
+   "seq": 3,
+   "title": "Consolidação dos fluxos de endividamento",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo da consolidação dos fluxos de endividamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto +55",
+   "painel": "Augusto Gobo",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Augusto Gobo",
+   "responsavel": "Augusto Gobo",
+   "seq": 4,
+   "title": "Projeto +55",
+   "dimension": "RESULTADO",
+   "target_label": "DEZ",
+   "target_type": "data_marco",
+   "rational": "Acompanhamento do projeto e cobrança dos prazos da mudança da fábrica para Sorocaba",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Fechamento +55 e Urbanismo",
+   "painel": "Augusto Gobo",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Augusto Gobo",
+   "responsavel": "Augusto Gobo",
+   "seq": 5,
+   "title": "Fechamento +55 e Urbanismo",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "Fechamentos individuais, conta-se 2 dias úteis para entrega dos painéis a partir do envio do fechamento por parte da +55 e Urbanismo",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Fechamento mensal J&F",
+   "painel": "Crysthian Oliveira",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Crysthian Oliveira",
+   "responsavel": "Crysthian Oliveira",
+   "seq": 1,
+   "title": "Fechamento mensal J&F",
+   "dimension": "RESULTADO",
+   "target_label": "5",
+   "target_type": "prazo_du",
+   "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Consolidação de resultado do grupo",
+   "painel": "Crysthian Oliveira",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Crysthian Oliveira",
+   "responsavel": "Crysthian Oliveira",
+   "seq": 2,
+   "title": "Consolidação de resultado do grupo",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo do fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Ajustes na estrutura de fechamento para receber dados do EPM",
+   "painel": "Crysthian Oliveira",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Crysthian Oliveira",
+   "responsavel": "Crysthian Oliveira",
+   "seq": 3,
+   "title": "Ajustes na estrutura de fechamento para receber dados do EPM",
+   "dimension": "RESULTADO",
+   "target_label": "SET/26",
+   "target_type": "data_marco",
+   "rational": "Preparação dos paineis de consolidação para receber a tabela fato do EPM e manter a consolidação no mesmo nível de detalhe da consolidação atual",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Implantação EPM",
+   "painel": "Crysthian Oliveira",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Crysthian Oliveira",
+   "responsavel": "Crysthian Oliveira",
+   "seq": 4,
+   "title": "Implantação EPM",
+   "dimension": "RESULTADO",
+   "target_label": "OUT/26",
+   "target_type": "data_marco",
+   "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o FCCS e PBCS.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto BI - Qlik",
+   "painel": "Crysthian Oliveira",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Crysthian Oliveira",
+   "responsavel": "Crysthian Oliveira",
+   "seq": 5,
+   "title": "Projeto BI - Qlik",
+   "dimension": "RESULTADO",
+   "target_label": "SET/26",
+   "target_type": "data_marco",
+   "rational": "Implantação de painéis de BI para acompanhamento das áreas internas J&F e Painéis com indicadores do fechamento consolidado grupo J&F",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Consolidação de resultado do grupo",
+   "painel": "Daniel Benedetti",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Daniel Benedetti",
+   "responsavel": "Daniel Benedetti",
+   "seq": 1,
+   "title": "Consolidação de resultado do grupo",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo do fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Fechamento de custos",
+   "painel": "Daniel Benedetti",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Daniel Benedetti",
+   "responsavel": "Daniel Benedetti",
+   "seq": 2,
+   "title": "Fechamento de custos",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "Mensalmente temos o fechamento da +55, Fazenda Araguaia, LUTA e Aeronave. O prazo de D+2 é individual, ou seja, dois dias após o recebimento do dados, temos que liberar o custeio.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto estruturação da empresa - Aeronave",
+   "painel": "Daniel Benedetti",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Daniel Benedetti",
+   "responsavel": "Daniel Benedetti",
+   "seq": 3,
+   "title": "Projeto estruturação da empresa - Aeronave",
+   "dimension": "RESULTADO",
+   "target_label": "TBD",
+   "target_type": "data_marco",
+   "rational": "Definir e delimitar escopo da estruturação.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto Bond",
+   "painel": "Daniel Benedetti",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Daniel Benedetti",
+   "responsavel": "Daniel Benedetti",
+   "seq": 4,
+   "title": "Projeto Bond",
+   "dimension": "RESULTADO",
+   "target_label": "TBD",
+   "target_type": "data_marco",
+   "rational": "Apoio em todo o decorrer do projeto, buscando garantir que todos os dados estão consistentes, bem como as análises coerentes",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto estruturação custeio +55",
+   "painel": "Daniel Benedetti",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Daniel Benedetti",
+   "responsavel": "Daniel Benedetti",
+   "seq": 5,
+   "title": "Projeto estruturação custeio +55",
+   "dimension": "RESULTADO",
+   "target_label": "Dez",
+   "target_type": "data_marco",
+   "rational": "Estruturar o custeio da fábrica, bem como calcular custos dos produtos que passaram por reengenhara e possuem roteiro.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Consolidação de resultado do grupo",
+   "painel": "Fernando Edelson",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Fernando Edelson",
+   "responsavel": "Fernando Edelson",
+   "seq": 1,
+   "title": "Consolidação de resultado do grupo",
+   "dimension": "RESULTADO",
+   "target_label": "D+2",
+   "target_type": "prazo_du",
+   "rational": "O prazo do fechamento começa a contar após o envio das empresas: Âmbar, Eldorado, LHG, Flora, Fluxus, Canal Rural, Mgás, Logás. Desconsideramos do indicador o envio da JBS e das Financeiras",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto EPM",
+   "painel": "Fernando Edelson",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Fernando Edelson",
+   "responsavel": "Fernando Edelson",
+   "seq": 2,
+   "title": "Projeto EPM",
+   "dimension": "RESULTADO",
+   "target_label": "OUT/26",
+   "target_type": "data_marco",
+   "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o FCCS e PBCS.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto Bond",
+   "painel": "Fernando Edelson",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Fernando Edelson",
+   "responsavel": "Fernando Edelson",
+   "seq": 3,
+   "title": "Projeto Bond",
+   "dimension": "RESULTADO",
+   "target_label": "TBD",
+   "target_type": "data_marco",
+   "rational": "Estruturar toda a base de dados para construção do Offering, garantindo a consistência dos dados e coerência das análises.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto Construção de aplicação para releases automáticos",
+   "painel": "Fernando Edelson",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Fernando Edelson",
+   "responsavel": "Fernando Edelson",
+   "seq": 4,
+   "title": "Projeto Construção de aplicação para releases automáticos",
+   "dimension": "RESULTADO",
+   "target_label": "AGO",
+   "target_type": "data_marco",
+   "rational": "Criar uma aplicaão capaz de construir automativamente releases a partir de um tamplate, controlando versões e garantindo a acuracidade dos dados.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Ajustes na estrutura de fechamento para receber dados do EPM",
+   "painel": "Fernando Edelson",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Fernando Edelson",
+   "responsavel": "Fernando Edelson",
+   "seq": 5,
+   "title": "Ajustes na estrutura de fechamento para receber dados do EPM",
+   "dimension": "RESULTADO",
+   "target_label": "SET/26",
+   "target_type": "data_marco",
+   "rational": "Preparação dos paineis de consolidação para receber a tabela fato do EPM e manter a consolidação no mesmo nível de detalhe da consolidação atual.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  },
+  {
+   "definicao": "Projeto BI - Qlik",
+   "painel": "Fernando Edelson",
+   "painel_tipo": "pessoal",
+   "painel_dono": "Fernando Edelson",
+   "responsavel": "Fernando Edelson",
+   "seq": 6,
+   "title": "Projeto BI - Qlik",
+   "dimension": "RESULTADO",
+   "target_label": "SET/26",
+   "target_type": "data_marco",
+   "rational": "Implantação de painéis de BI para acompanhamento das áreas internas J&F e Painéis com indicadores do fechamento consolidado grupo J&F.",
+   "auto_source": null,
+   "year": 2026,
+   "active": 1,
+   "sort_order": 100
+  }
+ ]
+}

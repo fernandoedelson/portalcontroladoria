@@ -106,11 +106,14 @@ def seed_members():
 # --------------------------------------------------------------------------
 # Empresas + carteira (Controladoria.xlsx -> Planilha1)
 # --------------------------------------------------------------------------
-def seed_companies_and_assignments():
-    if not os.path.exists(CTRL_XLSX):
-        print(f"  [aviso] {CTRL_XLSX} nao encontrado — pulando carteira.")
+def seed_companies_and_assignments(caminho=None):
+    """Empresas + carteira da planilha. `caminho`: arquivo enviado pela tela de
+    Administracao (se omitido, usa a pasta padrao). Nao mexe no responsavel."""
+    caminho = caminho or CTRL_XLSX
+    if not os.path.exists(caminho):
+        print(f"  [aviso] {caminho} nao encontrado — pulando carteira.")
         return 0, 0
-    wb = openpyxl.load_workbook(CTRL_XLSX, data_only=True)
+    wb = openpyxl.load_workbook(caminho, data_only=True)
     ws = wb["Planilha1"]
     n_comp = n_assign = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
@@ -204,16 +207,18 @@ def _target_type(label):
     return "manual"
 
 
-def seed_indicators(members):
-    if not os.path.exists(METAS_XLSX):
-        print(f"  [aviso] {METAS_XLSX} nao encontrado — pulando indicadores.")
+def seed_indicators(members, caminho=None):
+    """Metas por pessoa (uma aba por pessoa). `caminho`: arquivo enviado pela tela."""
+    caminho = caminho or METAS_XLSX
+    if not os.path.exists(caminho):
+        print(f"  [aviso] {caminho} nao encontrado — pulando indicadores.")
         return 0
     name_map = {
         "Augusto": "Augusto Gobo", "Crysthian": "Crysthian Oliveira",
         "Daniel": "Daniel Benedetti", "Jeferson": "Jeferson Bittencourt",
         "Fernando": "Fernando Edelson",
     }
-    wb = openpyxl.load_workbook(METAS_XLSX, data_only=True)
+    wb = openpyxl.load_workbook(caminho, data_only=True)
     n = 0
     for sheet in wb.sheetnames:
         member = members.get(name_map.get(sheet))
@@ -254,6 +259,25 @@ def seed_indicators(members):
                 n += 1
     db.session.commit()
     return n
+
+
+def vincula_catalogo():
+    """Liga cada indicador sem definicao ao catalogo (reaproveita a de mesmo nome,
+    senao cria). Deixa o Catalogo de indicadores completo apos a importacao."""
+    from team.models import IndicatorDef
+    novas = 0
+    for i in Indicator.query.filter(Indicator.indicator_def_id.is_(None)).all():
+        d = IndicatorDef.query.filter(
+            db.func.lower(IndicatorDef.title) == (i.title or "").lower()).first()
+        if not d:
+            d = IndicatorDef(title=i.title, dimension=i.dimension or "RESULTADO",
+                             target_type=i.target_type or "manual", rational=i.rational)
+            db.session.add(d)
+            db.session.flush()
+            novas += 1
+        i.indicator_def_id = d.id
+    db.session.commit()
+    return novas
 
 
 # --------------------------------------------------------------------------
