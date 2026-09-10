@@ -109,8 +109,7 @@
 <section class="notas-editor vazio">
   <div class="empty-box" style="margin:auto;max-width:460px;text-align:center;">
     <p><strong>Escolha uma nota abaixo</strong> ou crie uma nova.</p>
-    <p class="text-muted text-sm">Suas notas são privadas: ninguém mais no portal —
-      nem a controladoria — consegue vê-las.</p>
+    <p class="text-muted text-sm">Suas notas são privadas: ninguém mais no portal consegue vê-las.</p>
     <form method="post" action="/notas/nova" class="mt-2">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <button class="btn btn-primary btn-toque" type="submit">{{ icone('plus') }} Nova nota</button>
