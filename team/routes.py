@@ -1315,7 +1315,10 @@ def register_team_routes(app):
         for lg in AlertLog.query.all():
             stats[lg.status] = stats.get(lg.status, 0) + 1
         me = _current_member()
+        from team.models_workflow import PushSubscription
+        n_aparelhos = PushSubscription.query.filter_by(user_id=current_user.id).count()
         return render_template("team/alertas.html", ordered=ordered, recent=recent,
+                               n_aparelhos=n_aparelhos,
                                mm=_member_map(), stats=stats,
                                email_on=team_alerts.EMAIL_ENABLED,
                                whatsapp_on=team_alerts.WHATSAPP_ENABLED,

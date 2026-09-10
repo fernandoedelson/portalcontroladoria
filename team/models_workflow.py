@@ -203,6 +203,25 @@ class UserNote(db.Model):
                 and not self.tem_tinta)
 
 
+class PushSubscription(db.Model):
+    """Aparelho que ativou as notificacoes push (um por navegador/celular).
+
+    `endpoint` e o endereco do servico de push do aparelho; p256dh/auth sao as
+    chaves PUBLICAS dele para criptografar a mensagem (ver team/push.py)."""
+    __tablename__ = "push_subscriptions"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    endpoint = db.Column(db.String(600), nullable=False, unique=True)
+    p256dh = db.Column(db.String(200), nullable=False)
+    auth = db.Column(db.String(60), nullable=False)
+    aparelho = db.Column(db.String(160))          # resumo do navegador/sistema
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    ultimo_ok = db.Column(db.String(20))
+    falhas = db.Column(db.Integer, default=0)
+
+    user = db.relationship("User")
+
+
 class TaskList(db.Model):
     """Lista de tarefas pessoal — gestao do dia de cada profissional.
 

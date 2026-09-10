@@ -45,6 +45,23 @@
 </div>
 
 <div class="card">
+  <h2>Notificações no aparelho (push)</h2>
+  <p class="text-muted text-sm mb-2">Tudo que chega no sininho do portal também aparece como notificação
+    no celular ou no computador — mesmo com o portal fechado. Ative uma vez em cada aparelho.</p>
+  <p class="text-sm"><strong>Este aparelho:</strong> <span data-push-estado>verificando…</span><br>
+    <span class="text-muted">Aparelhos seus com notificações ativas: {{ n_aparelhos }}</span></p>
+  <div class="flex gap-1 mt-1" style="flex-wrap:wrap;">
+    <button type="button" class="btn btn-primary" data-push-ativar hidden onclick="Push.ativar()">{{ icone('bell') }} Ativar notificações</button>
+    <button type="button" class="btn btn-outline" data-push-desativar hidden onclick="if(confirm('Parar de receber notificações neste aparelho?')) Push.desativar()">Desativar neste aparelho</button>
+    <form method="post" action="/push/teste" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button class="btn btn-outline" type="submit">Enviar notificação de teste</button></form>
+  </div>
+  <p class="help-txt mt-1">No <strong>iPhone/iPad</strong>, as notificações só funcionam com o portal
+    instalado na Tela de Início (Compartilhar → Adicionar à Tela de Início) e aberto por esse ícone.</p>
+</div>
+
+<div class="card">
   <h2>Testar canais</h2>
   <p class="text-muted text-sm mb-2">Envia uma mensagem de teste só para você — confere as credenciais
     sem esperar o ciclo diário.</p>

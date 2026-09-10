@@ -16,6 +16,7 @@
   <button class="adm-tab" data-tab="sistema">Administração</button>
   {% endif %}
   <button class="adm-tab" data-tab="notas">Minhas notas</button>
+  <button class="adm-tab" data-tab="app">App e notificações</button>
   {% if consolidacao_ativa %}<button class="adm-tab" data-tab="validacao">O que é validado</button>{% endif %}
   <button class="adm-tab" data-tab="duvidas">Dúvidas frequentes</button>
 </div>
@@ -453,6 +454,46 @@
   </div>
 </section>
 {% endif %}
+
+<!-- ===================== APP E NOTIFICAÇÕES ===================== -->
+<section class="adm-pane" data-pane="app">
+  <div class="card">
+    <h2>Instalar o portal como aplicativo</h2>
+    <p>O portal pode ser instalado no computador, no celular e no tablet. Ele ganha o ícone
+      da J&amp;F, abre em janela própria (sem a barra do navegador) e, segurando o ícone,
+      mostra atalhos para <em>Painel do Dia</em>, <em>Minhas Notas</em> e <em>Minhas Tarefas</em>.</p>
+    <dl class="doc-dl">
+      <dt>Computador (Chrome ou Edge)</dt><dd>Clique no ícone de instalar na barra de endereço,
+        ou no seu avatar (canto superior direito) → <strong>Instalar aplicativo</strong>.</dd>
+      <dt>Android</dt><dd>Avatar → <strong>Instalar aplicativo</strong>, ou menu ⋮ do Chrome →
+        <em>Instalar app</em>.</dd>
+      <dt>iPhone / iPad</dt><dd>No Safari: <strong>Compartilhar</strong> → <strong>Adicionar à
+        Tela de Início</strong>.</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Notificações no aparelho (push)</h2>
+    <p>Tudo que chega no sininho do portal — atividade que vence hoje, atraso, escalada ao
+      gestor, aviso de tarefa pessoal, férias, realinhamento de prazo — também aparece como
+      notificação no celular ou no computador, <strong>mesmo com o portal fechado</strong>.
+      Tocar na notificação abre direto a tela certa.</p>
+    <dl class="doc-dl">
+      <dt>Ativar</dt><dd>Avatar → <strong>Ativar notificações</strong> (ou tela
+        <em>Alertas</em>) e aceite a permissão do navegador. Faça isso <strong>uma vez em cada
+        aparelho</strong>. Em <em>Alertas</em> há um botão para enviar uma notificação de teste.</dd>
+      <dt>iPhone / iPad</dt><dd>Só funciona com o portal <strong>instalado na Tela de Início</strong>
+        e aberto por esse ícone (iOS 16.4 ou mais novo).</dd>
+      <dt>Muitos avisos juntos</dt><dd>Quando vários avisos saem de uma vez para você, eles chegam
+        numa notificação só (“N novos avisos no portal”).</dd>
+      <dt>Número no ícone</dt><dd>Com o app instalado, o ícone mostra quantos avisos você
+        ainda não leu.</dd>
+      <dt>Desativar</dt><dd>Avatar → <strong>Desativar notificações neste aparelho</strong>.</dd>
+      <dt>Privacidade</dt><dd>A mensagem viaja criptografada do portal até o seu aparelho. Se
+        não quiser o texto aparecendo na tela bloqueada, ajuste isso nas configurações de
+        notificação do próprio celular.</dd>
+    </dl>
+  </div>
+</section>
 
 <!-- ===================== DÚVIDAS ===================== -->
 <section class="adm-pane" data-pane="duvidas">

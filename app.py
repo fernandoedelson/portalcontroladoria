@@ -45,6 +45,11 @@ def create_app(config=Config):
     with app.app_context():
         db.create_all()
         _ensure_columns(app)
+        try:                          # toda notificacao do sininho tambem vira push
+            from team import push as _push
+            _push.instala(app)
+        except Exception as e:
+            app.logger.warning("Push desativado: %s", e)
         for fn, nome in ((ensure_alert_defaults, "alertas"),
                          (ensure_segments_defaults, "segmentos"),
                          (ensure_panels_defaults, "paineis")):
@@ -225,6 +230,63 @@ def register_routes(app):
         resp.mimetype = "application/manifest+json"
         return resp
 
+    # ---------------- Notificacoes push ----------------
+    @app.route("/push/chave")
+    @login_required
+    def push_chave():
+        from team import push
+        return jsonify(publicKey=push.chave_publica_b64())
+
+    @app.route("/push/assinar", methods=["POST"])
+    @login_required
+    def push_assinar():
+        """Registra (ou atualiza) este aparelho para receber push."""
+        from team.models_workflow import PushSubscription
+        d = request.get_json(silent=True) or {}
+        endpoint = str(d.get("endpoint") or "")
+        chaves = d.get("keys") or {}
+        p256dh, auth = str(chaves.get("p256dh") or ""), str(chaves.get("auth") or "")
+        if (not endpoint.startswith("https://") or len(endpoint) > 600
+                or not (60 <= len(p256dh) <= 200) or not (10 <= len(auth) <= 60)):
+            return jsonify(ok=False, erro="assinatura inválida"), 400
+        s = PushSubscription.query.filter_by(endpoint=endpoint).first()
+        if not s:
+            s = PushSubscription(endpoint=endpoint)
+            db.session.add(s)
+        s.user_id, s.p256dh, s.auth = current_user.id, p256dh, auth   # aparelho pode trocar de login
+        s.aparelho = (request.headers.get("User-Agent") or "")[:160]
+        s.falhas = 0
+        db.session.commit()
+        return jsonify(ok=True)
+
+    @app.route("/push/cancelar", methods=["POST"])
+    @login_required
+    def push_cancelar():
+        from team.models_workflow import PushSubscription
+        endpoint = str((request.get_json(silent=True) or {}).get("endpoint") or "")
+        PushSubscription.query.filter_by(endpoint=endpoint, user_id=current_user.id).delete()
+        db.session.commit()
+        return jsonify(ok=True)
+
+    @app.route("/push/teste", methods=["POST"])
+    @login_required
+    def push_teste():
+        from team import push
+        ok, falhas = push.envia_para_usuario(
+            current_user.id, "Teste — Controladoria J&F",
+            "As notificações deste aparelho estão funcionando.", url="/alertas", tag="teste")
+        if request.is_json or request.form.get("ajax"):
+            return jsonify(ok=True, enviados=ok, falhas=falhas)
+        if ok:
+            flash(f"Notificação de teste enviada para {ok} aparelho(s).", "success")
+        elif falhas:
+            flash("Não foi possível entregar a notificação. Desative e ative de novo neste aparelho.",
+                  "danger")
+        else:
+            flash("Nenhum aparelho com notificações ativadas. Clique em “Ativar notificações”.",
+                  "warning")
+        return redirect(request.referrer or url_for("index"))
+
     @app.route("/sw.js")
     def service_worker():
         """Service worker minimo: so a tela de 'sem conexao'.
@@ -246,6 +308,30 @@ self.addEventListener('fetch', e => {
   if (e.request.mode !== 'navigate') return;          // CSS/JS/imagens: navegador normal
   e.respondWith(fetch(e.request).catch(() =>
     new Response(OFFLINE, {headers: {'Content-Type': 'text/html; charset=utf-8'}})));
+});
+// ---- notificacoes push ----
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = {b: e.data ? e.data.text() : ''}; }
+  const tarefas = [self.registration.showNotification(d.t || 'Controladoria J&F', {
+    body: d.b || '', icon: '/static/icons/icon-192.png', badge: '/static/icons/badge-96.png',
+    data: {url: d.u || '/'}, tag: d.tag || undefined, renotify: !!d.tag, lang: 'pt-BR'})];
+  // numero de pendencias no icone do app (Windows, Mac, iPhone/iPad instalado)
+  if (typeof d.n === 'number' && self.navigator && self.navigator.setAppBadge)
+    tarefas.push(d.n > 0 ? self.navigator.setAppBadge(d.n) : self.navigator.clearAppBadge());
+  e.waitUntil(Promise.all(tarefas).catch(() => {}));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const alvo = new URL((e.notification.data && e.notification.data.url) || '/', self.location.origin).href;
+  e.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(janelas => {
+    for (const w of janelas) {
+      if (w.url.startsWith(self.location.origin) && 'focus' in w) {
+        return w.focus().then(f => (f && 'navigate' in f) ? f.navigate(alvo) : f);
+      }
+    }
+    return clients.openWindow(alvo);
+  }));
 });
 """
         resp = app.response_class(js, mimetype="application/javascript")

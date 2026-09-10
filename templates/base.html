@@ -289,6 +289,7 @@
 <div id="user-menu" class="user-menu" style="display:none;">
   <div class="user-menu-head">{{ current_user.email }}</div>
   <a href="#" id="menu-instalar" hidden onclick="instalarApp(event)">📲 Instalar aplicativo</a>
+  <a href="#" id="menu-push" hidden onclick="menuPush(event)">🔔 Ativar notificações</a>
   <a href="/change-password">🔐 Alterar senha</a>
   <a href="/logout" class="danger">🚪 Sair</a>
 </div>
@@ -337,7 +338,11 @@ if(localStorage.getItem('cp-sb-mini')==='1')document.getElementById('app-shell')
 var _um=false;
 function toggleUserMenu(e){e.stopPropagation();_um=!_um;document.getElementById('user-menu').style.display=_um?'block':'none';}
 document.addEventListener('click',function(e){if(_um&&!e.target.closest('#user-menu')){document.getElementById('user-menu').style.display='none';_um=false;}});
+// numero de avisos nao lidos no icone do app instalado
+(function(){ var n={{ unread_notifications|int }};
+  if(navigator.setAppBadge){ try{ if(n>0) navigator.setAppBadge(n); else navigator.clearAppBadge(); }catch(e){} } })();
 </script>
+<script src="/static/js/push.js" defer></script>
 {% else %}
   {% block auth_content %}{% endblock %}
 {% endif %}
