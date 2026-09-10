@@ -9,7 +9,7 @@
 <div class="kpi-grid">
   <div class="kpi {{ 'ok' if email_on else 'warn' }}"><div class="kpi-label">Canal E-mail</div>
     <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if email_on else 'Simulado' }}</div>
-    <div class="kpi-foot">Outlook local (COM)</div></div>
+    <div class="kpi-foot">{{ email_via }}</div></div>
   <div class="kpi {{ 'ok' if whatsapp_on else 'warn' }}"><div class="kpi-label">Canal WhatsApp</div>
     <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if whatsapp_on else 'Simulado' }}</div>
     <div class="kpi-foot">Twilio · só mensagem genérica</div></div>
@@ -42,6 +42,28 @@
     <div class="flex gap-1 mt-2"><button class="btn btn-primary" type="submit">Salvar matriz</button></div>
   </form>
   <p class="help-txt mt-1">WhatsApp passa pela Twilio (terceiro): por sigilo, envia sempre mensagem genérica — "você tem N atividades pendentes, veja no portal" — sem nome de atividade ou projeto. E-mail e painel ficam na rede interna e podem detalhar.</p>
+</div>
+
+<div class="card">
+  <h2>Testar canais</h2>
+  <p class="text-muted text-sm mb-2">Envia uma mensagem de teste só para você — confere as credenciais
+    sem esperar o ciclo diário.</p>
+  <div class="flex gap-1" style="flex-wrap:wrap;">
+    <form method="post" action="/alertas/teste" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="canal" value="email"/>
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Testar e-mail
+        <span class="text-muted text-sm">({{ meu_email }})</span></button></form>
+    <form method="post" action="/alertas/teste" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="canal" value="whatsapp"/>
+      <button class="btn btn-outline" type="submit" {{ 'disabled' if not meu_whatsapp }}
+              title="{{ '' if meu_whatsapp else 'Cadastre seu WhatsApp em Administração › Time' }}">
+        {{ icone('bell') }} Testar WhatsApp
+        <span class="text-muted text-sm">({{ meu_whatsapp or 'sem número cadastrado' }})</span></button></form>
+  </div>
+  <p class="help-txt mt-1">WhatsApp no <strong>sandbox</strong> da Twilio: cada pessoa precisa, uma vez, mandar a
+    mensagem <em>join &lt;código&gt;</em> para o número do sandbox (a sessão expira em 24h sem uso).</p>
 </div>
 
 <div class="card">

@@ -27,22 +27,65 @@ def _flag(name, default=False):
     return str(v).strip().lower() in ("1", "true", "yes", "on", "sim")
 
 
-EMAIL_ENABLED = _flag("TEAM_ALERTS_EMAIL", False)       # Outlook COM
-WHATSAPP_ENABLED = _flag("TEAM_ALERTS_WHATSAPP", False)  # Twilio (num. aprovado)
+# SMTP (Gmail com senha de app, ou qualquer provedor): se SMTP_USER existir, o
+# canal de e-mail liga sozinho. Sem SMTP, cai no Outlook local (so Windows).
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+SMTP_FROM = os.environ.get("SMTP_FROM") or SMTP_USER
+
+EMAIL_ENABLED = _flag("TEAM_ALERTS_EMAIL", bool(SMTP_USER))
+WHATSAPP_ENABLED = _flag("TEAM_ALERTS_WHATSAPP",
+                         bool(os.environ.get("TWILIO_ACCOUNT_SID")))
 PORTAL_URL = os.environ.get("TEAM_PORTAL_URL", "http://127.0.0.1:5050")
 
 
-# --------------------------------------------------------------------------
-# Canal: E-mail via Outlook COM (caixa corporativa local, sem SMTP)
-# --------------------------------------------------------------------------
-def send_email_outlook(to_addr, subject, body):
-    """Envia e-mail pela instancia local do Outlook (COM).
+def email_via():
+    """Descricao do canal de e-mail em uso (para a tela de Alertas)."""
+    return f"SMTP · {SMTP_FROM}" if SMTP_USER else "Outlook local (COM)"
 
-    Retorna (ok, error). Se pywin32/Outlook indisponivel ou desligado por flag,
-    retorna (False, motivo) sem lancar excecao.
-    """
+
+# --------------------------------------------------------------------------
+# Canal: E-mail — SMTP (Gmail) com fallback no Outlook COM local
+# --------------------------------------------------------------------------
+def send_email(to_addr, subject, body):
+    """Envia e-mail pelo canal configurado. Retorna (ok, erro) sem lancar."""
     if not EMAIL_ENABLED:
         return False, "email_desligado"
+    if not to_addr:
+        return False, "sem_destinatario"
+    if SMTP_USER:
+        return _send_email_smtp(to_addr, subject, body)
+    return send_email_outlook(to_addr, subject, body)
+
+
+def _send_email_smtp(to_addr, subject, body):
+    import smtplib
+    from email.message import EmailMessage
+    if not SMTP_PASSWORD:
+        return False, "smtp_sem_senha"
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = f"Controladoria J&F <{SMTP_FROM}>"
+    msg["To"] = to_addr
+    msg.set_content(body)
+    try:   # pragma: no cover - depende de rede/credencial
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASSWORD)
+            s.send_message(msg)
+        return True, None
+    except Exception as e:   # pragma: no cover
+        return False, f"{type(e).__name__}: {e}"
+
+
+def send_email_outlook(to_addr, subject, body):
+    """Envia e-mail pela instancia local do Outlook (COM) — so em Windows.
+
+    Retorna (ok, error). Se pywin32/Outlook indisponivel, retorna (False, motivo)
+    sem lancar excecao.
+    """
     if not to_addr:
         return False, "sem_destinatario"
     try:
@@ -90,14 +133,42 @@ def send_whatsapp(to_number, generic_message):
     from_wa = os.environ.get("TWILIO_WHATSAPP_FROM")  # ex.: 'whatsapp:+14155238886'
     if not (sid and token and from_wa):
         return False, "credenciais_twilio_ausentes"
+    if not from_wa.startswith("whatsapp:"):
+        from_wa = f"whatsapp:{from_wa}"
+    to = to_number if to_number.startswith("whatsapp:") else f"whatsapp:{to_number}"
+    # API REST do Twilio (mesmo padrao do Release Builder) — sem SDK
+    import base64
+    import urllib.parse
+    import urllib.request
+    import urllib.error
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
+    data = urllib.parse.urlencode(
+        {"From": from_wa, "To": to, "Body": generic_message}).encode()
+    req = urllib.request.Request(url, data=data, method="POST")
+    cred = base64.b64encode(f"{sid}:{token}".encode()).decode()
+    req.add_header("Authorization", f"Basic {cred}")
     try:  # pragma: no cover - depende de credencial/externo
-        from twilio.rest import Client
-        client = Client(sid, token)
-        to = to_number if to_number.startswith("whatsapp:") else f"whatsapp:{to_number}"
-        client.messages.create(body=generic_message, from_=from_wa, to=to)
-        return True, None
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return (200 <= resp.status < 300), None
+    except urllib.error.HTTPError as e:   # pragma: no cover
+        return False, f"twilio_{e.code}: {e.read().decode(errors='ignore')[:200]}"
     except Exception as e:   # pragma: no cover
         return False, f"{type(e).__name__}: {e}"
+
+
+def normaliza_whatsapp(numero):
+    """Deixa o numero em E.164 (+55DDDNUMERO). Aceita '(11) 99999-9999' etc."""
+    if not numero:
+        return None
+    s = str(numero).strip()
+    digitos = "".join(ch for ch in s if ch.isdigit())
+    if not digitos:
+        return None
+    if s.startswith("+"):
+        return "+" + digitos
+    if len(digitos) in (10, 11):          # DDD + numero, sem pais -> Brasil
+        return "+55" + digitos
+    return "+" + digitos
 
 
 # --------------------------------------------------------------------------
@@ -158,7 +229,7 @@ def _dispatch(event_key, setting, member, activity, subject, body,
         to = member.user.email if member.user else None
         dk = base + ":email"
         if not _already_sent(dk):
-            ok, err = send_email_outlook(to, subject, body)
+            ok, err = send_email(to, subject, body)
             _record(event_key, "email", mid, aid, dk, subject, body,
                     "enviado" if ok else "simulado", err)
             out.append({"channel": "email", "status": "enviado" if ok else "simulado",
@@ -179,8 +250,8 @@ def _dispatch(event_key, setting, member, activity, subject, body,
 
 
 def _member_phone(member):
-    # telefone ainda nao modelado; placeholder para quando entrar no cadastro
-    return None
+    """WhatsApp cadastrado da pessoa (Administracao > Time), em E.164."""
+    return normaliza_whatsapp(getattr(member, "whatsapp", None)) if member else None
 
 
 def _manager():

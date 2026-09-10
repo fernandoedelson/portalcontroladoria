@@ -63,6 +63,9 @@
         <input class="input" type="number" name="sort_order" value="100"/></div>
       <div class="form-row"><label class="field-label">Cor</label>
         <input class="input" type="color" name="color" value="#1d5da8" style="height:42px;padding:.2rem;"/></div>
+      <div class="form-row"><label class="field-label">WhatsApp</label>
+        <input class="input" type="tel" name="whatsapp" placeholder="(11) 99999-9999"/>
+        <div class="help-txt">Para receber alertas. Sem código do país, assume Brasil (+55).</div></div>
       <div class="form-row"><label class="field-label">Papel</label>
         <label class="chk"><input type="checkbox" name="is_manager" value="1"/> É gestor (pilota os painéis)</label></div>
       <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">Cadastrar membro</button></div>
@@ -73,7 +76,7 @@
     <h2>Membros ({{ members|length }})</h2>
     {% if members %}
     <div class="tbl-wrap"><table class="tbl tbl-cartao">
-      <thead><tr><th scope="col">Membro</th><th scope="col">Login</th><th scope="col">Painel</th><th scope="col">Gestor</th><th scope="col">Ativo</th><th scope="col"></th></tr></thead>
+      <thead><tr><th scope="col">Membro</th><th scope="col">Login</th><th scope="col">Painel</th><th scope="col">WhatsApp</th><th scope="col">Gestor</th><th scope="col">Ativo</th><th scope="col"></th></tr></thead>
       <tbody>
       {% for m in members %}
       {% set F = 'mem-' ~ m.id %}
@@ -90,6 +93,8 @@
         <td data-rot="Painel"><select class="input" form="{{ F }}" name="panel_id"><option value="">— próprio —</option>
           {% for p in panels %}{% if p.active %}<option value="{{ p.id }}" {{ 'selected' if m.panel_id==p.id }}>{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
         </select></td>
+        <td data-rot="WhatsApp"><input class="input" type="tel" form="{{ F }}" name="whatsapp"
+            value="{{ m.whatsapp or '' }}" placeholder="+55…" style="min-width:140px;"/></td>
         <td class="text-center"><input type="checkbox" form="{{ F }}" name="is_manager" value="1" {{ 'checked' if m.is_manager }}/></td>
         <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if m.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">

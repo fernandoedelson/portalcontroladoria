@@ -51,6 +51,12 @@ def _bool(v):
     return str(v).lower() in ("1", "true", "on", "yes", "sim")
 
 
+def _whats(v):
+    """Normaliza o WhatsApp digitado para E.164 (vazio -> None)."""
+    from team.alerts import normaliza_whatsapp
+    return normaliza_whatsapp(v)
+
+
 def register_admin_routes(app):
 
     def admin_required(f):
@@ -137,6 +143,7 @@ def register_admin_routes(app):
             panel_id=_int(request.form.get("panel_id")),
             is_manager=_bool(request.form.get("is_manager")),
             color=request.form.get("color") or "#1d5da8",
+            whatsapp=_whats(request.form.get("whatsapp")),
             sort_order=_int(request.form.get("sort_order")) or 100,
             active=True)
         db.session.add(m)
@@ -155,6 +162,8 @@ def register_admin_routes(app):
         m.panel_id = _int(request.form.get("panel_id"))
         m.is_manager = _bool(request.form.get("is_manager"))
         m.color = request.form.get("color") or m.color
+        if "whatsapp" in request.form:
+            m.whatsapp = _whats(request.form.get("whatsapp"))
         m.sort_order = _int(request.form.get("sort_order")) or m.sort_order
         m.active = _bool(request.form.get("active"))
         db.session.commit()

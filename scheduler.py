@@ -99,8 +99,10 @@ def _avisar_tarefas(app, hoje):
     Dispara no maximo uma vez por dia por tarefa (reminded_on), entao continua
     lembrando enquanto estiver em atraso, sem repetir no mesmo dia.
     """
-    from models import db, notify
+    from models import db, notify, User
+    from team.models import TeamMember
     from team.models_workflow import PersonalTask
+    from team import alerts as canais
 
     pend = PersonalTask.query.filter(
         PersonalTask.remind.is_(True),
@@ -113,10 +115,26 @@ def _avisar_tarefas(app, hoje):
     for t in pend:
         dias = (hoje - t.due_date).days
         quando = ("vence hoje" if dias == 0 else f"venceu há {dias} dia(s)")
-        notify(t.user_id, "Tarefa a vencer",
-               f"“{t.title[:120]}” {quando} "
-               f"({t.due_date.strftime('%d/%m/%Y')}).",
-               kind="tarefa", url="/tarefas")
+        texto = (f"“{t.title[:120]}” {quando} "
+                 f"({t.due_date.strftime('%d/%m/%Y')}).")
+        notify(t.user_id, "Tarefa a vencer", texto, kind="tarefa", url="/tarefas")
+        # tarefa pessoal: o e-mail vai so para o dono, pode trazer o titulo
+        u = db.session.get(User, t.user_id)
+        if u and u.email:
+            ok, err = canais.send_email(
+                u.email, "Tarefa a vencer — Portal Controladoria",
+                f"{texto}\n\nAbra suas tarefas: {canais.PORTAL_URL}/tarefas")
+            if err and err != "email_desligado":
+                _log(app, f"aviso de tarefa por e-mail falhou ({u.email}): {err}")
+        # WhatsApp (terceiro): mensagem generica, sem o titulo da tarefa
+        m = TeamMember.query.filter_by(user_id=t.user_id).first()
+        numero = canais.normaliza_whatsapp(m.whatsapp) if m else None
+        if numero:
+            ok, err = canais.send_whatsapp(
+                numero, "Controladoria J&F: você tem uma tarefa pessoal vencendo. "
+                        f"Veja em {canais.PORTAL_URL}/tarefas")
+            if err and err != "whatsapp_desligado":
+                _log(app, f"aviso de tarefa por WhatsApp falhou: {err}")
         t.reminded_on = hoje
         enviados += 1
     if enviados:

@@ -1314,10 +1314,55 @@ def register_team_routes(app):
         stats = {}
         for lg in AlertLog.query.all():
             stats[lg.status] = stats.get(lg.status, 0) + 1
+        me = _current_member()
         return render_template("team/alertas.html", ordered=ordered, recent=recent,
                                mm=_member_map(), stats=stats,
                                email_on=team_alerts.EMAIL_ENABLED,
-                               whatsapp_on=team_alerts.WHATSAPP_ENABLED)
+                               whatsapp_on=team_alerts.WHATSAPP_ENABLED,
+                               email_via=team_alerts.email_via(),
+                               meu_email=current_user.email,
+                               meu_whatsapp=(me.whatsapp if me else None))
+
+    @app.route("/alertas/teste", methods=["POST"])
+    @team_required
+    def team_alertas_teste():
+        """Envia um e-mail e um WhatsApp de teste para quem clicou.
+
+        Serve para conferir as credenciais (Gmail/Twilio) sem esperar o ciclo."""
+        canal = request.form.get("canal")
+        if canal == "email":
+            ok, err = team_alerts.send_email(
+                current_user.email, "Teste de alerta — Portal Controladoria",
+                "Se você recebeu este e-mail, o canal de e-mail do portal está "
+                f"funcionando.\n\nPortal: {team_alerts.PORTAL_URL}")
+            destino = current_user.email
+        else:
+            me = _current_member()
+            numero = team_alerts.normaliza_whatsapp(me.whatsapp if me else None)
+            if not numero:
+                flash("Cadastre o seu WhatsApp em Administração › Time para testar.",
+                      "warning")
+                return redirect(url_for("team_alertas"))
+            ok, err = team_alerts.send_whatsapp(
+                numero, "Controladoria J&F: teste de alerta. O canal de WhatsApp "
+                        "do portal está funcionando.")
+            destino = numero
+        log_audit(current_user.id, f"alerta_teste_{canal}", "team",
+                  f"{destino} ok={ok} {err or ''}")
+        if ok:
+            flash(f"Teste enviado para {destino}. Confira a caixa/WhatsApp.", "success")
+        else:
+            flash(f"Não foi possível enviar para {destino}: {_motivo(err)}", "danger")
+        return redirect(url_for("team_alertas"))
+
+    def _motivo(err):
+        return {
+            "email_desligado": "canal de e-mail desligado — faltam SMTP_USER/SMTP_PASSWORD no servidor.",
+            "smtp_sem_senha": "falta a variável SMTP_PASSWORD (senha de app do Gmail).",
+            "sem_destinatario": "seu usuário não tem e-mail.",
+            "whatsapp_desligado": "canal de WhatsApp desligado — faltam as credenciais TWILIO_* no servidor.",
+            "credenciais_twilio_ausentes": "faltam TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN ou TWILIO_WHATSAPP_FROM.",
+        }.get(err, err or "erro desconhecido")
 
     @app.route("/alertas/salvar", methods=["POST"])
     @team_required

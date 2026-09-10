@@ -44,6 +44,7 @@ def create_app(config=Config):
 
     with app.app_context():
         db.create_all()
+        _ensure_columns(app)
         for fn, nome in ((ensure_alert_defaults, "alertas"),
                          (ensure_segments_defaults, "segmentos"),
                          (ensure_panels_defaults, "paineis")):
@@ -59,6 +60,30 @@ def create_app(config=Config):
     register_workflow_routes(app)
     scheduler.start(app)
     return app
+
+
+# Colunas adicionadas depois da criacao do banco: (tabela, coluna, tipo SQL).
+# create_all() nao altera tabelas existentes, entao acrescentamos aqui — so ADD
+# COLUMN, nunca apaga nada (seguro para bancos com dados reais).
+_COLUNAS_NOVAS = [
+    ("team_members", "whatsapp", "VARCHAR(30)"),
+]
+
+
+def _ensure_columns(app):
+    from sqlalchemy import inspect, text
+    insp = inspect(db.engine)
+    for tabela, coluna, tipo in _COLUNAS_NOVAS:
+        try:
+            if tabela not in insp.get_table_names():
+                continue
+            existentes = {c["name"] for c in insp.get_columns(tabela)}
+            if coluna not in existentes:
+                with db.engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}"))
+                app.logger.info("Coluna %s.%s adicionada.", tabela, coluna)
+        except Exception as e:
+            app.logger.warning("Nao foi possivel migrar %s.%s: %s", tabela, coluna, e)
 
 
 @login_manager.user_loader

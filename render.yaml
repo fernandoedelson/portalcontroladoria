@@ -20,6 +20,11 @@ services:
         value: /var/data
       - key: SECRET_KEY               # gerado uma vez pela Render (não fica no repo)
         generateValue: true
+      - key: TEAM_PORTAL_URL          # link que vai nos e-mails/WhatsApp
+        value: https://portalcontroladoria.onrender.com
+      # Segredos de e-mail/WhatsApp: cadastrar na aba Environment (NÃO no repo):
+      #   SMTP_USER, SMTP_PASSWORD (senha de app do Gmail), SMTP_FROM (opcional)
+      #   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
     disk:
       name: dados
       mountPath: /var/data

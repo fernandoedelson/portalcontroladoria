@@ -59,6 +59,22 @@ Só depois de confirmar que o Controladoria está no ar e com seus dados:
 | `PORT` | (a Render injeta) | porta do serviço |
 | `PORTAL_DATA_DIR` | `/var/data` | pôr `instance/`+`uploads/`+`data/` no disco |
 | `SECRET_KEY` | (gerado) | segurança de sessão/CSRF |
+| `TEAM_PORTAL_URL` | `https://portalcontroladoria.onrender.com` | link nas mensagens |
+| `SMTP_USER` | conta Gmail remetente | liga o canal de e-mail |
+| `SMTP_PASSWORD` | **senha de app** do Gmail (16 letras) | autenticação SMTP |
+| `SMTP_FROM` | (opcional) endereço exibido | padrão = `SMTP_USER` |
+| `TWILIO_ACCOUNT_SID` | igual ao do Release Builder | liga o WhatsApp |
+| `TWILIO_AUTH_TOKEN` | igual ao do Release Builder | autenticação Twilio |
+| `TWILIO_WHATSAPP_FROM` | número do sandbox (`whatsapp:+1415…`) | remetente |
+
+## E-mail (Gmail) e WhatsApp (Twilio)
+1. **Gmail:** na conta Google remetente, ative a verificação em 2 etapas →
+   *Senhas de app* → gere uma para "Portal" → use os 16 caracteres em `SMTP_PASSWORD`.
+2. **Twilio:** copie `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` e `TWILIO_WHATSAPP_FROM`
+   do serviço do Release Builder (aba Environment) — antes de excluí-lo.
+3. Cadastre o WhatsApp de cada pessoa em **Administração › Time**.
+4. Sandbox: cada pessoa manda uma vez `join <código>` para o número do sandbox.
+5. Em **Alertas › Testar canais**, envie um teste para você mesmo.
 
 ## Segurança
 App público na internet: mantenha `SECRET_KEY` forte (gerado pela Render),

@@ -27,6 +27,7 @@ class TeamMember(db.Model):
     panel_id = db.Column(db.Integer, db.ForeignKey("panels.id"), nullable=True)
     is_manager = db.Column(db.Boolean, default=False)   # pilota os paineis
     color = db.Column(db.String(9), default="#1d5da8")
+    whatsapp = db.Column(db.String(30))   # E.164 (+55DDD...) p/ alertas via Twilio
     active = db.Column(db.Boolean, default=True)
     sort_order = db.Column(db.Integer, default=100)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
