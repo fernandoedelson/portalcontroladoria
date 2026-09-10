@@ -6,6 +6,7 @@
     <div class="sub">Metas organizadas por painel. Crie painéis (pessoais ou de equipe, como Controladoria) em
       <a href="/admin?tab=time">Administração › Time</a>.</div></div>
   <div class="flex gap-1">
+    {% if not escopo %}<a href="/indicadores/medir" class="btn btn-primary btn-sm">{{ icone("gauge") }} Medir indicador</a>{% endif %}
     {% if not escopo %}<a href="/indicadores/catalogo" class="btn btn-outline btn-sm">{{ icone("table") }} Catálogo</a>{% endif %}
     <a href="/export/indicadores.xlsx" class="btn btn-outline btn-sm">{{ icone("download") }} Excel</a>
   </div>
@@ -30,8 +31,9 @@
     {% else %}Sem painel{% endif %}
   </h2>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col">Dimensão</th><th scope="col">Indicador</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
-    <tbody>
+    <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col">Dimensão</th><th scope="col">Indicador</th><th scope="col" class="col-peso">Peso</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
+    {% set total_peso = totais.get(panel_id, 0) %}
+    <tbody data-painel="{{ panel_id }}">
     {% for i in inds %}
     {% set last = i.results|sort(attribute='recorded_at')|last if i.results else none %}
     <tr>
@@ -39,11 +41,21 @@
       <td><a href="/indicador/{{ i.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ i.title }}</a></td>
       <td><span class="kind-chip">{{ i.dimension }}</span></td>
       <td><strong>{{ i.target_label or '—' }}</strong>{% if i.auto_source or i.target_type=='prazo_du' %} <span class="badge-soft">auto</span>{% endif %}</td>
+      <td class="col-peso">{% if not escopo %}<span class="peso-campo"><input class="input peso-in" data-ind="{{ i.id }}"
+            value="{{ ('%g'|format(i.weight))|replace('.', ',') if i.weight is not none else '' }}"
+            inputmode="decimal" placeholder="—" aria-label="Peso de {{ i.title }} (%)"/><span>%</span></span>
+          {% else %}{{ (('%g'|format(i.weight))|replace('.', ',') ~ '%') if i.weight is not none else '—' }}{% endif %}</td>
       <td>{% if last %}<span class="st st-{{ last.outcome }}">{{ {'atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'—'}.get(last.outcome, last.outcome) }}</span> <span class="text-sm text-muted">{{ last.period_label or '' }}</span>{% else %}<span class="text-muted">sem registro</span>{% endif %}</td>
       <td class="text-right"><a href="/indicador/{{ i.id }}" class="btn btn-outline btn-sm">Abrir</a></td>
     </tr>
     {% endfor %}
-    </tbody></table></div>
+    </tbody>
+    <tfoot><tr class="peso-total-linha">
+      <td></td><td colspan="3" class="text-right text-muted">Soma dos pesos do painel</td>
+      <td class="col-peso"><strong class="peso-total {{ 'peso-ok' if total_peso == 100 else ('peso-alerta' if total_peso else '') }}"
+          data-painel="{{ panel_id }}">{{ ('%g'|format(total_peso))|replace('.', ',') }}%</strong></td>
+      <td colspan="2" class="text-sm text-muted peso-dica" data-painel="{{ panel_id }}">{% if total_peso and total_peso != 100 %}deveria somar 100%{% endif %}</td>
+    </tr></tfoot></table></div>
 </div>
 {% else %}
 <div class="card"><p class="text-muted">Nenhum indicador cadastrado ainda.</p></div>
@@ -61,5 +73,44 @@
     <a href="/indicadores/catalogo" class="btn btn-outline btn-sm">{{ icone('table') }} Catálogo</a>
   </div>
 </div>
+{% endif %}
+
+<style>
+  .col-peso{width:7.5rem;white-space:nowrap;}
+  .peso-campo{display:inline-flex;align-items:center;gap:.3rem;}
+  .peso-in{width:4.6rem;padding:.3rem .5rem;text-align:right;}
+  .peso-in.salvo{border-color:#2e9d5b;box-shadow:0 0 0 3px rgba(46,157,91,.15);}
+  .peso-in.erro{border-color:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.15);}
+  .peso-total.peso-ok{color:#2e9d5b;}
+  .peso-total.peso-alerta{color:#b7791f;}
+  .peso-total-linha td{border-top:2px solid var(--border);}
+</style>
+{% if not escopo %}
+<script>
+(function(){
+  function fmt(n){ return (Math.round(n*100)/100).toString().replace('.', ','); }
+  document.querySelectorAll('.peso-in').forEach(function(inp){
+    var antes=inp.value;
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } });
+    inp.addEventListener('change',function(){
+      var fd=new FormData(); fd.append('weight', inp.value);
+      inp.classList.remove('salvo','erro');
+      fetch('/indicador/'+inp.dataset.ind+'/peso',{method:'POST',body:fd})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+        .then(function(res){
+          if(!res.ok || !res.d.ok){ inp.classList.add('erro'); alert((res.d && res.d.erro) || 'Não foi possível salvar o peso.'); inp.value=antes; return; }
+          antes=inp.value=(res.d.weight===null?'':fmt(res.d.weight));
+          inp.classList.add('salvo'); setTimeout(function(){ inp.classList.remove('salvo'); },1200);
+          var pid=inp.closest('tbody').dataset.painel, t=res.d.total;
+          var el=document.querySelector('.peso-total[data-painel="'+pid+'"]');
+          var dica=document.querySelector('.peso-dica[data-painel="'+pid+'"]');
+          if(el){ el.textContent=fmt(t)+'%'; el.classList.toggle('peso-ok', t===100); el.classList.toggle('peso-alerta', !!t && t!==100); }
+          if(dica){ dica.textContent=(t && t!==100)?'deveria somar 100%':''; }
+        })
+        .catch(function(){ inp.classList.add('erro'); inp.value=antes; alert('Sem conexão — o peso não foi salvo.'); });
+    });
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}

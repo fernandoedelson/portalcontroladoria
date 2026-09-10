@@ -12,6 +12,8 @@ from markupsafe import Markup
 _PATHS = {
     "plus": '<path d="M12 5v14M5 12h14"/>',
     "check": '<path d="M20 6 9 17l-5-5"/>',
+    "arrow-left": '<path d="m12 19-7-7 7-7M19 12H5"/>',
+    "gauge": '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
     "x": '<path d="M18 6 6 18M6 6l12 12"/>',
     "trash": '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>'
              '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>'

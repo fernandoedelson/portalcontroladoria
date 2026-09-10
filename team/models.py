@@ -330,6 +330,7 @@ class Indicator(db.Model):
     title = db.Column(db.String(240), nullable=False)
     dimension = db.Column(db.String(40), default="RESULTADO")
     target_label = db.Column(db.String(60))    # "D+2", "5", "OUT/26"
+    weight = db.Column(db.Float)               # peso (%) do indicador NESTE painel
     # como avaliar: 'prazo_du' (D+x), 'contagem', 'data_marco', 'projeto', 'manual'
     target_type = db.Column(db.String(20), default="manual")
     rational = db.Column(db.Text)

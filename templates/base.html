@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <link rel="stylesheet" href="/static/css/style.css"/>
   <link rel="stylesheet" href="/static/css/portal.css"/>
-  <link rel="stylesheet" href="/static/css/responsivo.css"/>
+  <link rel="stylesheet" href="/static/css/responsivo.css?v=2"/>
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
@@ -405,7 +405,8 @@ document.addEventListener('click',function(e){if(_um&&!e.target.closest('#user-m
 (function(){ var n={{ unread_notifications|int }};
   if(navigator.setAppBadge){ try{ if(n>0) navigator.setAppBadge(n); else navigator.clearAppBadge(); }catch(e){} } })();
 </script>
-<script src="/static/js/push.js" defer></script>
+<script src="/static/js/push.js?v=3" defer></script>
+<script src="/static/js/aviso-push.js?v=1" defer></script>
 {% else %}
   {% block auth_content %}{% endblock %}
 {% endif %}

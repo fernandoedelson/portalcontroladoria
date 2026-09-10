@@ -62,6 +62,9 @@ def create_app(config=Config):
             r = dados_iniciais.aplica()
             if r:
                 app.logger.info("Dados iniciais cadastrados: %s", r)
+            n = dados_iniciais.liga_catalogo()
+            if n:
+                app.logger.info("%s indicador(es) ligado(s) ao catálogo", n)
         except Exception as e:
             db.session.rollback()
             app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
@@ -84,6 +87,7 @@ _COLUNAS_NOVAS = [
     ("user_notes", "ink_thumb", "TEXT"),
     ("personal_tasks", "remind_days", "INTEGER DEFAULT 0"),
     ("alert_channel_settings", "push", "BOOLEAN DEFAULT 1"),   # nasce ligado
+    ("indicators", "weight", "FLOAT"),                          # peso (%) no painel
 ]
 
 
@@ -328,7 +332,8 @@ self.addEventListener('push', e => {
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = {b: e.data ? e.data.text() : ''}; }
   const tarefas = [self.registration.showNotification(d.t || 'Controladoria J&F', {
     body: d.b || '', icon: '/static/icons/icon-192.png', badge: '/static/icons/badge-96.png',
-    data: {url: d.u || '/'}, tag: d.tag || undefined, renotify: !!d.tag, lang: 'pt-BR'})];
+    data: {url: d.u || '/', t: d.t || '', b: d.b || '', i: d.i || null},
+    tag: d.tag || undefined, renotify: !!d.tag, lang: 'pt-BR'})];
   // numero de pendencias no icone do app (Windows, Mac, iPhone/iPad instalado)
   if (typeof d.n === 'number' && self.navigator && self.navigator.setAppBadge)
     tarefas.push(d.n > 0 ? self.navigator.setAppBadge(d.n) : self.navigator.clearAppBadge());
@@ -336,8 +341,16 @@ self.addEventListener('push', e => {
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const alvo = new URL((e.notification.data && e.notification.data.url) || '/', self.location.origin).href;
-  e.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(janelas => {
+  const dd = e.notification.data || {};
+  const u = new URL(dd.url || '/', self.location.origin);
+  u.searchParams.set('aviso', '1');            // a tela aberta mostra o conteudo do aviso
+  const alvo = u.href;
+  // guarda o aviso tocado para a pagina ler (Cache API: SW e pagina enxergam)
+  const guarda = caches.open('avisos-push').then(c => c.put('/__aviso-push',
+    new Response(JSON.stringify({t: dd.t || e.notification.title, b: dd.b || e.notification.body,
+                                 i: dd.i || null, em: Date.now()}),
+                 {headers: {'Content-Type': 'application/json'}}))).catch(() => {});
+  e.waitUntil(guarda.then(() => clients.matchAll({type: 'window', includeUncontrolled: true})).then(janelas => {
     for (const w of janelas) {
       if (w.url.startsWith(self.location.origin) && 'focus' in w) {
         return w.focus().then(f => (f && 'navigate' in f) ? f.navigate(alvo) : f);

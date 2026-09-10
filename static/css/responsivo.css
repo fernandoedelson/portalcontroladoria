@@ -446,3 +446,21 @@ table.tbl-empilha td > .flex{flex-wrap:wrap;justify-content:flex-end;}
   .search-box input,.search-box input:focus{width:100%;min-width:0;}
   .nav-tools{gap:.35rem;flex-shrink:0;}
 }
+
+/* ---- aviso do push aberto dentro do app (static/js/aviso-push.js) ---- */
+.aviso-push{margin:0 0 1rem;padding:.85rem 1rem .95rem;border-radius:14px;
+  background:var(--surface,#fff);border:1px solid var(--border);border-left:4px solid #c9962e;
+  box-shadow:0 6px 18px rgba(22,50,79,.10);overflow-wrap:anywhere;animation:avisoEntra .25s ease-out;}
+.aviso-push-topo{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.aviso-push-rotulo{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#c9962e;}
+.aviso-push-fecha{appearance:none;border:0;background:transparent;color:var(--text-muted);
+  font-size:1.4rem;line-height:1;min-width:44px;min-height:36px;cursor:pointer;border-radius:8px;}
+.aviso-push-fecha:hover{background:var(--surface-2);}
+.aviso-push-titulo{display:block;font-size:1.02rem;margin:.1rem 0 .3rem;color:var(--text);}
+.aviso-push-texto{margin:0;white-space:pre-line;color:var(--text);font-size:.92rem;}
+.aviso-push-lista{list-style:none;margin:.2rem 0 0;padding:0;}
+.aviso-push-lista li{padding:.45rem 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.1rem;}
+.aviso-push-lista a{font-weight:600;}
+.aviso-push-lista .aviso-push-texto{font-size:.86rem;color:var(--text-muted);}
+@keyframes avisoEntra{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.aviso-push{animation:none;}}

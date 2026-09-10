@@ -28,6 +28,16 @@
 
   <div class="card">
     <h2>Registrar resultado</h2>
+    {% if outros_paineis and current_user.is_controladoria %}
+    <div class="med-aviso">
+      {{ icone("gauge") }}
+      <span>Este indicador está em <strong>{{ outros_paineis + 1 }} painéis</strong>.
+        <a href="/indicadores/medir?def_id={{ i.indicator_def_id }}">Medir em todos de uma vez</a> —
+        aqui abaixo grava só neste painel.</span>
+    </div>
+    <style>.med-aviso{display:flex;gap:.55rem;align-items:flex-start;padding:.6rem .8rem;margin-bottom:.8rem;
+      border-radius:10px;background:var(--surface-2);font-size:.88rem;}.med-aviso svg{flex:none;margin-top:.1rem;}</style>
+    {% endif %}
     <form method="post" action="/indicador/{{ i.id }}/resultado" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="grid-2">

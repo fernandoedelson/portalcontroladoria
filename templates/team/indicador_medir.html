@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Medir indicador{% endblock %}
+{% set ROT = {'atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'N/A'} %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Medir indicador</h1>
+    <div class="sub">Registre a medição uma vez só: ela vai para todos os painéis que usam o
+      indicador — sem abrir painel por painel.</div></div>
+  <div class="flex gap-1">
+    <a href="/indicadores" class="btn btn-outline btn-sm">{{ icone("arrow-left") }} Indicadores</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="med-escolhe">
+    <label class="field-label" for="med-def">Indicador do catálogo</label>
+    <select class="input" id="med-def" name="def_id" onchange="this.form.submit()">
+      <option value="">Escolha…</option>
+      {% for d in defs %}
+      <option value="{{ d.id }}" {{ 'selected' if sel and sel.id == d.id }}>{{ d.title }} — {{ usos[d.id]|length }} {{ 'painéis' if usos[d.id]|length > 1 else 'painel' }}</option>
+      {% endfor %}
+    </select>
+    <noscript><button class="btn btn-primary btn-sm" type="submit">Abrir</button></noscript>
+  </form>
+  {% if not sel %}
+  <p class="help-txt mt-1">Os indicadores que aparecem em mais painéis vêm primeiro na lista.</p>
+  {% endif %}
+</div>
+
+{% if sel %}
+<form method="post" enctype="multipart/form-data" class="card" id="med-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+  <input type="hidden" name="def_id" value="{{ sel.id }}"/>
+  <h2>{{ sel.title }}</h2>
+  <p class="help-txt">Está em <strong>{{ inds|length }}</strong> {{ 'painéis' if inds|length > 1 else 'painel' }}.
+    Se já houver registro na mesma competência, ele é <strong>atualizado</strong> (não duplica).</p>
+
+  <div class="grid-2">
+    <div class="form-row"><label class="field-label">Competência</label>
+      <select class="input" name="competency_id"><option value="">— (usar só o período)</option>
+        {% for c in comps %}<option value="{{ c.id }}" {{ 'selected' if comp_atual and c.id == comp_atual.id }}>{{ c.label }}</option>{% endfor %}</select></div>
+    <div class="form-row"><label class="field-label">Período (rótulo)</label>
+      <input class="input" name="period_label" placeholder="Em branco = nome da competência"/></div>
+  </div>
+  <div class="grid-2">
+    <div class="form-row"><label class="field-label">Resultado</label>
+      <select class="input" name="outcome" id="med-geral">
+        {% for k, v in ROT.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+    <div class="form-row"><label class="field-label">Valor / detalhe</label>
+      <input class="input" name="value_label" placeholder="Ex.: entregue em D+1"/></div>
+  </div>
+  <div class="form-row"><label class="field-label">Observação</label>
+    <textarea class="input" name="note" rows="2"></textarea></div>
+  <div class="form-row"><label class="field-label">Evidência (anexo)</label>
+    <input class="input" type="file" name="evidence"/>
+    <div class="help-txt">O mesmo anexo é gravado em cada painel.</div></div>
+
+  <h3 class="mt-2">Painéis que recebem esta medição</h3>
+  <p class="help-txt">A meta é de cada painel. Se num deles o resultado for diferente, ajuste só ali.</p>
+  <ul class="med-paineis">
+    {% for i in inds %}
+    {% set last = i.results|sort(attribute='recorded_at')|last if i.results else none %}
+    <li>
+      <label class="med-marca">
+        <input type="checkbox" name="ind" value="{{ i.id }}" checked/>
+        <span>
+          <strong>{{ i.panel.name if i.panel else 'Sem painel' }}</strong>
+          <span class="help-txt">meta {{ i.target_label or '—' }}
+            · último: {% if last %}{{ ROT.get(last.outcome, last.outcome) }} {{ last.period_label or '' }}{% else %}sem registro{% endif %}</span>
+        </span>
+      </label>
+      <select class="input med-override" name="outcome_{{ i.id }}" aria-label="Resultado em {{ i.panel.name if i.panel else 'painel' }}">
+        <option value="">igual ao geral</option>
+        {% for k, v in ROT.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+      </select>
+    </li>
+    {% endfor %}
+  </ul>
+  <button class="btn btn-primary mt-2" type="submit">{{ icone("check") }} Gravar em <span id="med-n">{{ inds|length }}</span> painel(éis)</button>
+</form>
+{% endif %}
+
+<style>
+  .med-escolhe select{max-width:100%;}
+  .med-paineis{list-style:none;margin:0;padding:0;}
+  .med-paineis li{display:flex;align-items:center;justify-content:space-between;gap:.8rem;
+    padding:.6rem 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .med-paineis li:last-child{border-bottom:0;}
+  .med-marca{display:flex;align-items:flex-start;gap:.55rem;cursor:pointer;min-width:0;flex:1 1 14rem;}
+  .med-marca input{margin-top:.25rem;}
+  .med-marca span{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere;}
+  .med-override{width:auto;min-width:10rem;}
+  .med-paineis li.fora{opacity:.45;}
+  @media (max-width:560px){ .med-override{width:100%;} }
+</style>
+<script>
+(function(){
+  var f=document.getElementById('med-form'); if(!f) return;
+  function conta(){
+    var n=0;
+    f.querySelectorAll('input[name="ind"]').forEach(function(c){
+      if(c.checked) n++;
+      var li=c.closest('li'); li.classList.toggle('fora', !c.checked);
+      li.querySelector('.med-override').disabled=!c.checked;
+    });
+    document.getElementById('med-n').textContent=n;
+  }
+  f.addEventListener('change', conta); conta();
+})();
+</script>
+{% endblock %}

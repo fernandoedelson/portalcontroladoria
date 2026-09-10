@@ -139,8 +139,10 @@ def envia(assinatura, dados, urgencia="normal"):
         return False, None, f"{type(e).__name__}: {e}"
 
 
-def envia_para_usuario(user_id, titulo, corpo, url="/", tag=None):
-    """Push para todos os aparelhos ativos da pessoa. Retorna (enviados, falhas)."""
+def envia_para_usuario(user_id, titulo, corpo, url="/", tag=None, itens=None):
+    """Push para todos os aparelhos ativos da pessoa. Retorna (enviados, falhas).
+
+    `itens` (push agrupado): lista de avisos {t, b, u} que o app mostra ao abrir."""
     from models import db, Notification
     from team.models_workflow import PushSubscription
     subs = PushSubscription.query.filter_by(user_id=user_id).all()
@@ -149,6 +151,12 @@ def envia_para_usuario(user_id, titulo, corpo, url="/", tag=None):
     pendentes = Notification.query.filter_by(user_id=user_id, is_read=False).count()
     dados = {"t": titulo[:120], "b": (corpo or "")[:300], "u": url or "/",
              "tag": tag, "n": pendentes}
+    if itens:
+        # limite do push ~4 KB: poucos itens, texto curto (o sino tem a lista completa)
+        dados["i"] = [{"t": (i.get("t") or "")[:100], "b": (i.get("b") or "")[:180],
+                       "u": i.get("u") or "/"} for i in itens[:6]]
+        while dados["i"] and len(json.dumps(dados, ensure_ascii=False).encode()) > 3500:
+            dados["i"].pop()
     ok_n = falha_n = 0
     for s in subs:
         ok, status, _erro = envia(s, dados)
@@ -180,7 +188,9 @@ def _envia_lote(app, fila):
                     titulos = "; ".join(i["title"] for i in itens[:3])
                     envia_para_usuario(uid, f"{len(itens)} novos avisos no portal",
                                        titulos + ("…" if len(itens) > 3 else ""),
-                                       url="/time", tag="resumo")
+                                       url="/time", tag="resumo",
+                                       itens=[{"t": i["title"], "b": i["message"],
+                                               "u": i["url"]} for i in itens])
                 else:
                     for i in itens:
                         envia_para_usuario(uid, i["title"], i["message"], i["url"] or "/",

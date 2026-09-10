@@ -6,7 +6,7 @@
     <div class="sub">Como está o cumprimento do cronograma de fechamento — sem precisar abrir cada tela.</div></div>
 </div>
 
-<div class="card">
+<div class="card"{% if snap %} data-sem-aviso-push{% endif %}>
   {% if snap %}
   <h2>Resumo enviado em {{ snap.quando }}</h2>
   <p class="help-txt">Enviado por {{ snap.autor.display_name if snap.autor else 'agendador automático' }}

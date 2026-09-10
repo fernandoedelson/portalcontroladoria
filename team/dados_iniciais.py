@@ -20,6 +20,23 @@ ARQUIVO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 CHAVE = "dados_iniciais_versao"
 
 
+def liga_catalogo():
+    """Indicador sem ligação ao catálogo -> liga à definição de MESMO nome, se
+    existir (não cria definição). Sem a ligação, a medição única (um indicador
+    medido em todos os painéis) não enxerga o indicador. Retorna quantos ligou."""
+    from team.models import IndicatorDef, Indicator
+    defs = {(d.title or "").strip().lower(): d.id for d in IndicatorDef.query.all()}
+    n = 0
+    for i in Indicator.query.filter(Indicator.indicator_def_id.is_(None)).all():
+        did = defs.get((i.title or "").strip().lower())
+        if did:
+            i.indicator_def_id = did
+            n += 1
+    if n:
+        db.session.commit()
+    return n
+
+
 def aplica(caminho=ARQUIVO, forcar=False):
     """Retorna um resumo (dict) do que foi cadastrado, ou None se nada a fazer."""
     if os.environ.get("PORTAL_SEM_DADOS_INICIAIS") == "1" or not os.path.exists(caminho):

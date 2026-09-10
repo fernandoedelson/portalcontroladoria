@@ -653,9 +653,42 @@ def register_team_routes(app):
         from team.models import IndicatorDef
         defs = (IndicatorDef.query.filter_by(active=True)
                 .order_by(IndicatorDef.sort_order, IndicatorDef.title).all())
-        return render_template("team/indicadores.html", groups=groups,
+        totais = {pid: round(sum(i.weight or 0 for i in lst), 2)
+                  for pid, lst in groups.items()}
+        return render_template("team/indicadores.html", groups=groups, totais=totais,
                                panels=panels, pmap=pmap, f_panel=f_panel,
                                defs=defs, escopo=(sid is not None))
+
+    def _peso(v):
+        """'25', '25%', '12,5' -> 25.0 / 12.5; vazio -> None; fora de 0..100 -> erro."""
+        v = (v or "").strip().replace("%", "").replace(",", ".")
+        if not v:
+            return None
+        p = float(v)
+        if not 0 <= p <= 100:
+            raise ValueError("peso fora de 0 a 100")
+        return p
+
+    def _peso_ou_nada(v):
+        try:
+            return _peso(v)
+        except ValueError:
+            flash("Peso ignorado: use um número de 0 a 100.", "warning")
+            return None
+
+    @app.route("/indicador/<int:iid>/peso", methods=["POST"])
+    @controladoria_required
+    def team_indicador_peso(iid):
+        i = db.session.get(Indicator, iid) or abort(404)
+        try:
+            i.weight = _peso(request.form.get("weight"))
+        except ValueError:
+            return jsonify(ok=False, erro="Use um número de 0 a 100."), 400
+        db.session.commit()
+        log_audit(current_user.id, "indicador_peso", "indicator", f"{i.id}: {i.weight}")
+        irmaos = Indicator.query.filter_by(panel_id=i.panel_id, active=True).all()
+        total = sum(x.weight or 0 for x in irmaos)
+        return jsonify(ok=True, weight=i.weight, total=round(total, 2))
 
     @app.route("/indicador/nova", methods=["POST"])
     @team_required
@@ -699,6 +732,7 @@ def register_team_routes(app):
             title=d.title,                       # denormalizado p/ exibição
             dimension=d.dimension,
             target_label=request.form.get("target_label") or None,   # a META do painel
+            weight=_peso_ou_nada(request.form.get("weight")),
             target_type=d.target_type,
             rational=request.form.get("rational") or d.rational,
             auto_source=d.auto_source,
@@ -783,13 +817,123 @@ def register_team_routes(app):
         flash("Indicador removido do catálogo.", "success")
         return redirect(url_for("team_indicador_catalogo"))
 
+    # ---------------- Medição única: um indicador do catálogo, todos os painéis --
+    def _usos_ativos(did):
+        """Indicadores (um por painel) que usam a definição, só painéis ativos."""
+        from team.models_workflow import Panel
+        inds = (Indicator.query.filter_by(indicator_def_id=did, active=True)
+                .outerjoin(Panel, Indicator.panel_id == Panel.id)
+                .filter(db.or_(Panel.id.is_(None), Panel.active.is_(True)))
+                .order_by(Panel.sort_order, Panel.name).all())
+        return [i for i in inds if not (i.member and not i.member.active)]
+
+    @app.route("/indicadores/medir", methods=["GET", "POST"])
+    @controladoria_required
+    def team_indicador_medir():
+        from team.models import IndicatorDef
+        if request.method == "POST":
+            return _grava_medicao()
+        defs = (IndicatorDef.query.filter_by(active=True)
+                .order_by(IndicatorDef.sort_order, IndicatorDef.title).all())
+        usos = {d.id: _usos_ativos(d.id) for d in defs}
+        defs = [d for d in defs if usos[d.id]]
+        # os comuns a vários painéis primeiro
+        defs.sort(key=lambda d: (-len(usos[d.id]), d.sort_order or 100, d.title))
+        sel = db.session.get(IndicatorDef, request.args.get("def_id", type=int) or 0)
+        comp = _current_competency()
+        return render_template("team/indicador_medir.html", defs=defs, usos=usos,
+                               sel=sel, inds=usos.get(sel.id, []) if sel else [],
+                               comps=_comps(), comp_atual=comp)
+
+    def _grava_medicao():
+        from team.models import IndicatorDef
+        import shutil
+        d = db.session.get(IndicatorDef, _int(request.form.get("def_id"))) or abort(404)
+        comp_id = _int(request.form.get("competency_id"))
+        comp = db.session.get(Competency, comp_id) if comp_id else None
+        periodo = (request.form.get("period_label") or "").strip() or (comp.label if comp else None)
+        if not comp and not periodo:
+            flash("Informe a competência ou o período da medição.", "danger")
+            return redirect(url_for("team_indicador_medir", def_id=d.id))
+        geral = request.form.get("outcome") or "na"
+        valor = (request.form.get("value_label") or "").strip() or None
+        nota = (request.form.get("note") or "").strip() or None
+        file = request.files.get("evidence")
+        if file and file.filename:
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in ALLOWED_EVIDENCE:
+                flash("Formato de evidência não permitido.", "danger")
+                return redirect(url_for("team_indicador_medir", def_id=d.id))
+        marcados = {int(x) for x in request.form.getlist("ind") if x.isdigit()}
+        alvo = [i for i in _usos_ativos(d.id) if i.id in marcados]
+        if not alvo:
+            flash("Marque ao menos um painel.", "warning")
+            return redirect(url_for("team_indicador_medir", def_id=d.id))
+
+        agora = datetime.utcnow()
+        origem = None                     # 1º arquivo salvo; os demais são cópias
+        novos = atualizados = 0
+        for i in alvo:
+            q = IndicatorResult.query.filter_by(indicator_id=i.id)
+            q = (q.filter_by(competency_id=comp.id) if comp
+                 else q.filter_by(competency_id=None, period_label=periodo))
+            r = q.first()
+            if r:
+                atualizados += 1
+            else:
+                r = IndicatorResult(indicator_id=i.id)
+                db.session.add(r)
+                novos += 1
+            r.competency_id = comp.id if comp else None
+            r.period_label = periodo
+            r.outcome = request.form.get(f"outcome_{i.id}") or geral
+            r.value_label = valor
+            r.note = nota
+            r.computed = False
+            r.recorded_by = current_user.id
+            r.recorded_at = agora
+            if file and file.filename:
+                # cada resultado tem a sua cópia: excluir num painel não apaga nos outros
+                folder = os.path.join(EVIDENCE_DIR, str(i.id))
+                os.makedirs(folder, exist_ok=True)
+                path = os.path.join(folder, secure_filename(
+                    f"{agora:%Y%m%d%H%M%S}_{file.filename}"))
+                if origem is None:
+                    file.save(path)
+                    origem = path
+                else:
+                    shutil.copyfile(origem, path)
+                if r.evidence_path and r.evidence_path != path and os.path.exists(r.evidence_path):
+                    try:
+                        os.remove(r.evidence_path)
+                    except OSError:
+                        pass
+                r.evidence_path = path
+                r.evidence_name = file.filename
+                r.evidence_by = current_user.id
+                r.evidence_at = agora
+        db.session.commit()
+        log_audit(current_user.id, "indicador_medicao_unica", "indicator_def",
+                  f"{d.id}: {len(alvo)} painel(éis), {periodo}")
+        partes = []
+        if novos:
+            partes.append(f"{novos} novo(s)")
+        if atualizados:
+            partes.append(f"{atualizados} atualizado(s) — já havia registro em {periodo}")
+        flash(f"“{d.title}” medido em {len(alvo)} painel(éis): " + ", ".join(partes) + ".",
+              "success")
+        return redirect(url_for("team_indicador_medir", def_id=d.id))
+
     @app.route("/indicador/<int:iid>")
     @team_required
     def team_indicador(iid):
         i = db.session.get(Indicator, iid) or abort(404)
         results = (IndicatorResult.query.filter_by(indicator_id=i.id)
                    .order_by(IndicatorResult.recorded_at.desc()).all())
+        outros = (len([u for u in _usos_ativos(i.indicator_def_id) if u.id != i.id])
+                  if i.indicator_def_id else 0)
         return render_template("team/indicador_detail.html", i=i, results=results,
+                               outros_paineis=outros,
                                mm=_member_map(), comps=_comps(),
                                users={u.id: u for u in User.query.all()})
 
