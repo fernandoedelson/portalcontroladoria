@@ -13,6 +13,7 @@
   <button class="adm-tab" data-tab="carteira">Entidades <span class="cnt">{{ assignments|length }}</span></button>
   <button class="adm-tab" data-tab="org">Organização <span class="cnt">{{ companies|length }}</span></button>
   <button class="adm-tab" data-tab="sistema">Sistema</button>
+  <a class="adm-tab" href="/alertas">Alertas</a>
 </div>
 
 <!-- Formularios das linhas editaveis (HTML nao permite <form> dentro de <tr>;
@@ -588,7 +589,7 @@
 })();
 
 (function(){
-  var tabs=document.querySelectorAll('.adm-tab'), panes=document.querySelectorAll('.adm-pane');
+  var tabs=document.querySelectorAll('.adm-tab[data-tab]'), panes=document.querySelectorAll('.adm-pane');
   function show(name){
     var found=false;
     panes.forEach(function(p){var on=(p.dataset.pane===name); if(on)found=true; p.style.display=on?'block':'none';});

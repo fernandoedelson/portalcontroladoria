@@ -80,13 +80,12 @@ def run_daily_tasks(app, force=False):
     if (force or hoje.weekday() == dia_resumo) and (
             force or not _already_ran(app, "resumo", hoje)):
         try:
-            from workflow_routes import weekly_digest_text
-            texto = weekly_digest_text()
-            for u in User.query.filter(User.role.in_(["controladoria", "admin"])).all():
-                notify(u.id, "Resumo do fechamento", texto[:380], kind="resumo", url="/")
+            from workflow_routes import envia_resumo
+            snap = envia_resumo()
             _mark(app, "resumo", hoje)
             resultado["resumo"] = True
-            _log(app, "resumo semanal enviado")
+            _log(app, f"resumo semanal enviado (e-mail {snap.email_ok}/{snap.destinos})"
+                 + (f"\n{snap.email_falhas}" if snap.email_falhas else ""))
         except Exception:
             _log(app, "falha no resumo:\n" + traceback.format_exc())
 

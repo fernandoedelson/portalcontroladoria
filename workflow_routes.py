@@ -21,7 +21,7 @@ from models import (db, User, Company, Competency, log_audit, notify)
 from team.models import TeamMember, Activity
 from team.models_workflow import (ActivityNote, ActivityFile, Absence,
                                   UserNote, TaskList, PersonalTask, AtaReuniao,
-                                  DefinitionList, Definition)
+                                  DefinitionList, Definition, DigestSnapshot)
 
 ANEXO_DIR = os.path.join(Config.UPLOAD_DIR, "_anexos")
 ALLOWED_ANEXO = {".pdf", ".xlsx", ".xlsm", ".xls", ".csv", ".png", ".jpg",
@@ -71,6 +71,44 @@ def weekly_digest_text():
         linhas.append("  Atrasadas por: "
                       + ", ".join(f"{n} ({q})" for n, q in cnt.most_common(6)))
     return "\n".join(linhas)
+
+
+_MOTIVO_EMAIL = {
+    "email_desligado": "canal de e-mail desligado no servidor (faltam SMTP_USER/SMTP_PASSWORD)",
+    "smtp_sem_senha": "falta a variável SMTP_PASSWORD no servidor",
+    "sem_destinatario": "usuário sem e-mail cadastrado",
+}
+
+
+def envia_resumo(enviado_por=None, base_url=None):
+    """Gera o resumo, guarda a foto e manda para a controladoria por
+    painel/push (abrindo a foto) e por e-mail. Retorna o DigestSnapshot."""
+    from team import alerts
+    texto = weekly_digest_text()
+    snap = DigestSnapshot(texto=texto, sent_by=enviado_por)
+    db.session.add(snap)
+    db.session.commit()
+    caminho = f"/resumo/{snap.id}"
+    base = (base_url or os.environ.get("TEAM_PORTAL_URL")
+            or os.environ.get("RENDER_EXTERNAL_URL") or alerts.PORTAL_URL)
+    link = base.rstrip("/") + caminho
+    alvo = User.query.filter(User.role.in_(["controladoria", "admin"]),
+                             User.active.is_(True)).all()
+    falhas, ok = [], 0
+    for u in alvo:
+        notify(u.id, "Resumo do fechamento", texto[:380], kind="resumo", url=caminho)
+        certo, erro = alerts.send_email(
+            u.email, "Resumo do fechamento — Controladoria J&F",
+            f"{texto}\n\nAbrir no portal: {link}\n")
+        if certo:
+            ok += 1
+        else:
+            falhas.append(f"{u.display_name or u.email}: {_MOTIVO_EMAIL.get(erro, erro)}")
+    snap.email_ok = ok
+    snap.email_falhas = "\n".join(falhas) or None
+    snap.destinos = len(alvo)
+    db.session.commit()
+    return snap
 
 
 # ==========================================================================
@@ -418,17 +456,27 @@ def register_workflow_routes(app):
     @app.route("/resumo", methods=["GET", "POST"])
     @team_required
     def wf_resumo():
-        texto = weekly_digest_text()
         if request.method == "POST":
-            alvo = User.query.filter(User.role.in_(["controladoria", "admin"])).all()
-            for u in alvo:
-                notify(u.id, "Resumo do fechamento", texto[:380],
-                       kind="resumo", url=url_for("index"))
-            log_audit(current_user.id, "resumo_enviado", "digest", f"{len(alvo)} destinos")
-            flash(f"Resumo enviado para {len(alvo)} pessoa(s) da controladoria.",
-                  "success")
-            return redirect(url_for("wf_resumo"))
-        return render_template("team/resumo.html", texto=texto)
+            snap = envia_resumo(current_user.id, request.url_root)
+            n = snap.destinos
+            log_audit(current_user.id, "resumo_enviado", "digest", f"{n} destinos")
+            flash(f"Resumo enviado para {n} pessoa(s) da controladoria "
+                  f"(painel/push) — e-mail: {snap.email_ok} de {n}.",
+                  "success" if snap.email_ok == n else "warning")
+            return redirect(url_for("wf_resumo_ver", sid=snap.id))
+        enviados = (DigestSnapshot.query.order_by(DigestSnapshot.created_at.desc())
+                    .limit(12).all())
+        return render_template("team/resumo.html", texto=weekly_digest_text(),
+                               snap=None, enviados=enviados)
+
+    @app.route("/resumo/<int:sid>")
+    @team_required
+    def wf_resumo_ver(sid):
+        snap = db.session.get(DigestSnapshot, sid) or abort(404)
+        enviados = (DigestSnapshot.query.order_by(DigestSnapshot.created_at.desc())
+                    .limit(12).all())
+        return render_template("team/resumo.html", texto=snap.texto,
+                               snap=snap, enviados=enviados)
 
     # ------------------------------------------------------------------
     # BLOCO DE NOTAS PESSOAL — privado, so o dono ve

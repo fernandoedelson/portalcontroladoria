@@ -203,6 +203,26 @@ class UserNote(db.Model):
                 and not self.tem_tinta)
 
 
+class DigestSnapshot(db.Model):
+    """Foto de cada Resumo do fechamento enviado — o push/e-mail aponta para ela."""
+    __tablename__ = "digest_snapshots"
+    id = db.Column(db.Integer, primary_key=True)
+    texto = db.Column(db.Text, nullable=False)
+    sent_by = db.Column(db.Integer, db.ForeignKey("users.id"))   # None = agendador
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    destinos = db.Column(db.Integer, default=0)
+    email_ok = db.Column(db.Integer, default=0)
+    email_falhas = db.Column(db.Text)                             # "fulano: motivo" por linha
+    autor = db.relationship("User", foreign_keys=[sent_by])
+
+    @property
+    def quando(self):
+        """Data/hora de Brasília (UTC-3) para exibir."""
+        from datetime import timedelta
+        return ((self.created_at - timedelta(hours=3)).strftime("%d/%m/%Y às %H:%M")
+                if self.created_at else "")
+
+
 class DefinitionList(db.Model):
     """Lista de Definicoes gerais — COMPARTILHADA: todo o time ve.
 

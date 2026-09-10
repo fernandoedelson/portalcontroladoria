@@ -257,9 +257,6 @@
       <a href="/carteira" class="sb-link {{ 'active' if cur=='/carteira' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         <span class="sb-label">Carteira do Time</span></a>
-      <a href="/alertas" class="sb-link {{ 'active' if cur=='/alertas' }}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326z"/></svg>
-        <span class="sb-label">Alertas</span></a>
         </div>
       </div>
       {% endif %}
@@ -296,7 +293,7 @@
       <a href="/resumo" class="sb-link {{ 'active' if cur=='/resumo' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
         <span class="sb-label">Resumo</span></a>
-      <a href="/admin" class="sb-link {{ 'active' if cur=='/admin' }}">
+      <a href="/admin" class="sb-link {{ 'active' if cur in ('/admin', '/alertas') }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="sb-label">Administração</span></a>
       {% endif %}

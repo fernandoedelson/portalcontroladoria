@@ -2,8 +2,16 @@
 {% block title %}Alertas{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><h1>Alertas</h1>
-    <div class="sub">Matriz evento × canal. Uma linha por evento — quem recebe, por onde.</div></div>
+  <div><h1>Administração</h1>
+    <div class="sub">Alertas — matriz evento × canal. Uma linha por evento — quem recebe, por onde.</div></div>
+</div>
+
+<div class="adm-tabs">
+  <a class="adm-tab" href="/admin?tab=time">Time</a>
+  <a class="adm-tab" href="/admin?tab=carteira">Entidades</a>
+  <a class="adm-tab" href="/admin?tab=org">Organização</a>
+  <a class="adm-tab" href="/admin?tab=sistema">Sistema</a>
+  <a class="adm-tab active" href="/alertas" aria-current="page">Alertas</a>
 </div>
 
 <div class="kpi-grid">

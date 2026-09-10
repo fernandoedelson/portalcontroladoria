@@ -192,7 +192,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible, .sb-link:focus-visibl
 .adm-tabs{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1.2rem;border-bottom:1px solid var(--border);padding-bottom:.6rem;}
 .adm-tab{appearance:none;border:1px solid transparent;background:transparent;color:var(--text-muted);
   font-family:inherit;font-size:.87rem;font-weight:600;padding:.5rem .95rem;border-radius:var(--radius-pill);
-  cursor:pointer;transition:var(--trans);display:inline-flex;align-items:center;gap:.4rem;}
+  cursor:pointer;transition:var(--trans);display:inline-flex;align-items:center;gap:.4rem;text-decoration:none;}
 .adm-tab:hover{background:var(--surface-2);color:var(--text);}
 .adm-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 [data-theme="dark"] .adm-tab.active{background:var(--primary-lt);color:#0b1220;}

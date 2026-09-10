@@ -7,13 +7,52 @@
 </div>
 
 <div class="card">
+  {% if snap %}
+  <h2>Resumo enviado em {{ snap.quando }}</h2>
+  <p class="help-txt">Enviado por {{ snap.autor.display_name if snap.autor else 'agendador automático' }}
+    para {{ snap.destinos or 0 }} pessoa(s) — e-mail entregue a {{ snap.email_ok or 0 }}.
+    É a foto do momento do envio; <a href="/resumo">veja a situação agora</a>.</p>
+  {% else %}
   <h2>Situação agora</h2>
+  {% endif %}
   <pre class="resumo-box">{{ texto }}</pre>
+  {% if snap and snap.email_falhas %}
+  <div class="resumo-falha">
+    <strong>E-mail não entregue:</strong>
+    <ul>{% for l in snap.email_falhas.split('\n') %}<li>{{ l }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if not snap %}
   <form method="post" class="mt-2">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <button class="btn btn-primary" type="submit">{{ icone("send") }} Enviar para a controladoria</button>
   </form>
-  <p class="help-txt mt-1">O envio automático (semanal) é feito pelo agendador —
+  <p class="help-txt mt-1">Vai pelo painel, push e e-mail. O envio automático (semanal) é feito pelo agendador —
     configure o dia e o horário em <a href="/admin?tab=sistema">Administração › Sistema</a>.</p>
+  {% endif %}
 </div>
+
+{% if enviados %}
+<div class="card mt-2">
+  <h2>Resumos enviados</h2>
+  <ul class="resumo-hist">
+    {% for e in enviados %}
+    <li{% if snap and e.id == snap.id %} class="atual"{% endif %}>
+      <a href="/resumo/{{ e.id }}">{{ e.quando }}</a>
+      <span class="help-txt">· {{ e.autor.display_name if e.autor else 'agendador' }}
+        · e-mail {{ e.email_ok or 0 }}/{{ e.destinos or 0 }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+<style>
+  .resumo-falha{margin-top:.8rem;padding:.7rem .9rem;border-radius:10px;background:var(--warn-bg,#fff7e6);
+    border:1px solid var(--warn,#e0a100);font-size:.88rem;}
+  .resumo-falha ul{margin:.3rem 0 0 1.1rem;padding:0;}
+  .resumo-hist{list-style:none;margin:0;padding:0;}
+  .resumo-hist li{padding:.45rem 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere;}
+  .resumo-hist li:last-child{border-bottom:0;}
+  .resumo-hist li.atual a{font-weight:700;}
+</style>
 {% endblock %}
