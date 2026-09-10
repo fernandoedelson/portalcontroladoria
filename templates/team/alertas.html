@@ -48,19 +48,19 @@
   <h2>Testar canais</h2>
   <p class="text-muted text-sm mb-2">Envia uma mensagem de teste só para você — confere as credenciais
     sem esperar o ciclo diário.</p>
-  <div class="flex gap-1" style="flex-wrap:wrap;">
-    <form method="post" action="/alertas/teste" style="display:inline;">
+  <div class="flex gap-2" style="flex-wrap:wrap;">
+    <form method="post" action="/alertas/teste" class="flex gap-1 items-center">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="canal" value="email"/>
-      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Testar e-mail
-        <span class="text-muted text-sm">({{ meu_email }})</span></button></form>
-    <form method="post" action="/alertas/teste" style="display:inline;">
+      <input class="input" type="email" name="destino" value="{{ meu_email }}"
+             placeholder="seu@email.com" aria-label="E-mail de destino do teste" style="width:240px;"/>
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Testar e-mail</button></form>
+    <form method="post" action="/alertas/teste" class="flex gap-1 items-center">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="canal" value="whatsapp"/>
-      <button class="btn btn-outline" type="submit" {{ 'disabled' if not meu_whatsapp }}
-              title="{{ '' if meu_whatsapp else 'Cadastre seu WhatsApp em Administração › Time' }}">
-        {{ icone('bell') }} Testar WhatsApp
-        <span class="text-muted text-sm">({{ meu_whatsapp or 'sem número cadastrado' }})</span></button></form>
+      <input class="input" type="tel" name="destino" value="{{ meu_whatsapp or '' }}"
+             placeholder="(11) 99999-9999" aria-label="WhatsApp de destino do teste" style="width:190px;"/>
+      <button class="btn btn-outline" type="submit">{{ icone('bell') }} Testar WhatsApp</button></form>
   </div>
   <p class="help-txt mt-1">WhatsApp no <strong>sandbox</strong> da Twilio: cada pessoa precisa, uma vez, mandar a
     mensagem <em>join &lt;código&gt;</em> para o número do sandbox (a sessão expira em 24h sem uso).</p>

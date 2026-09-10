@@ -1330,18 +1330,23 @@ def register_team_routes(app):
 
         Serve para conferir as credenciais (Gmail/Twilio) sem esperar o ciclo."""
         canal = request.form.get("canal")
+        digitado = (request.form.get("destino") or "").strip()
         if canal == "email":
+            destino = digitado or current_user.email
+            if "@" not in (destino or ""):
+                flash("Informe um e-mail válido para o teste.", "warning")
+                return redirect(url_for("team_alertas"))
             ok, err = team_alerts.send_email(
-                current_user.email, "Teste de alerta — Portal Controladoria",
+                destino, "Teste de alerta — Portal Controladoria",
                 "Se você recebeu este e-mail, o canal de e-mail do portal está "
                 f"funcionando.\n\nPortal: {team_alerts.PORTAL_URL}")
-            destino = current_user.email
         else:
             me = _current_member()
-            numero = team_alerts.normaliza_whatsapp(me.whatsapp if me else None)
+            numero = team_alerts.normaliza_whatsapp(
+                digitado or (me.whatsapp if me else None))
             if not numero:
-                flash("Cadastre o seu WhatsApp em Administração › Time para testar.",
-                      "warning")
+                flash("Informe o número de WhatsApp para o teste (ou cadastre o seu "
+                      "em Administração › Time com o seu login vinculado).", "warning")
                 return redirect(url_for("team_alertas"))
             ok, err = team_alerts.send_whatsapp(
                 numero, "Controladoria J&F: teste de alerta. O canal de WhatsApp "
