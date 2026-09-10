@@ -391,6 +391,7 @@ class AlertChannelSetting(db.Model):
     email = db.Column(db.Boolean, default=False)
     whatsapp = db.Column(db.Boolean, default=False)
     painel = db.Column(db.Boolean, default=True)
+    push = db.Column(db.Boolean, default=True)      # notificacao no celular/computador
     escalate_manager = db.Column(db.Boolean, default=False)
     lead_days = db.Column(db.Integer, default=1)   # p/ lembrete_previo: dias uteis antes
 
@@ -403,7 +404,7 @@ class AlertLog(db.Model):
     __tablename__ = "alert_log"
     id = db.Column(db.Integer, primary_key=True)
     event_key = db.Column(db.String(40), index=True)
-    channel = db.Column(db.String(20))          # email | whatsapp | painel
+    channel = db.Column(db.String(20))          # email | whatsapp | painel | push
     member_id = db.Column(db.Integer, db.ForeignKey("team_members.id"), nullable=True)
     activity_id = db.Column(db.Integer, db.ForeignKey("activities.id"), nullable=True)
     dedup_key = db.Column(db.String(120), index=True)   # idempotencia por dia/evento/alvo

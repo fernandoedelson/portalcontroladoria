@@ -189,14 +189,33 @@ def _envia_lote(app, fila):
                 app.logger.warning("Falha ao enviar push para o usuario %s: %s", uid, e)
 
 
+def enfileira(sessao, user_id, titulo, mensagem, url="/", tipo=None):
+    """Poe um push na fila da sessao — sai depois do commit (com o agrupamento).
+
+    Usado pela matriz de alertas, que decide o canal push evento a evento."""
+    sessao.info.setdefault("push_fila", []).append({
+        "user_id": user_id, "title": titulo or "Controladoria J&F",
+        "message": mensagem or "", "url": url, "kind": tipo})
+
+
+def tem_aparelho(user_id):
+    from team.models_workflow import PushSubscription
+    return PushSubscription.query.filter_by(user_id=user_id).first() is not None
+
+
 def instala(app):
-    """Liga o gancho Notification -> push. Envia em segundo plano (em testes, na hora)."""
+    """Liga o gancho Notification -> push. Envia em segundo plano (em testes, na hora).
+
+    Notificacoes criadas pela matriz de alertas vem marcadas com `_sem_push`: ali
+    quem decide o push e a coluna Push da matriz (ver team/alerts.py)."""
     from sqlalchemy import event
     from sqlalchemy.orm import Session, object_session
     from models import Notification
 
     @event.listens_for(Notification, "after_insert")
     def _enfileira(mapper, connection, alvo):
+        if getattr(alvo, "_sem_push", False):
+            return
         sess = object_session(alvo)
         if sess is not None:
             sess.info.setdefault("push_fila", []).append({

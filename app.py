@@ -75,6 +75,7 @@ _COLUNAS_NOVAS = [
     ("user_notes", "ink_json", "TEXT"),
     ("user_notes", "ink_thumb", "TEXT"),
     ("personal_tasks", "remind_days", "INTEGER DEFAULT 0"),
+    ("alert_channel_settings", "push", "BOOLEAN DEFAULT 1"),   # nasce ligado
 ]
 
 
@@ -215,15 +216,15 @@ def register_routes(app):
             "theme_color": "#16324f",
             "lang": "pt-BR",
             "icons": [
-                {"src": "/static/icons/icon-192.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-                {"src": "/static/icons/icon-512.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-                {"src": "/static/icons/icon-maskable-192.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
-                {"src": "/static/icons/icon-maskable-512.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+                {"src": "/static/icons/icon-192.png?v=4", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                {"src": "/static/icons/icon-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                {"src": "/static/icons/icon-maskable-192.png?v=4", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+                {"src": "/static/icons/icon-maskable-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
             ],
             "shortcuts": [
-                {"name": "Painel do Dia", "url": "/time", "icons": [{"src": "/static/icons/icon-192.png?v=3", "sizes": "192x192"}]},
-                {"name": "Minhas Notas", "url": "/notas", "icons": [{"src": "/static/icons/icon-192.png?v=3", "sizes": "192x192"}]},
-                {"name": "Minhas Tarefas", "url": "/tarefas", "icons": [{"src": "/static/icons/icon-192.png?v=3", "sizes": "192x192"}]},
+                {"name": "Painel do Dia", "url": "/time", "icons": [{"src": "/static/icons/icon-192.png?v=4", "sizes": "192x192"}]},
+                {"name": "Minhas Notas", "url": "/notas", "icons": [{"src": "/static/icons/icon-192.png?v=4", "sizes": "192x192"}]},
+                {"name": "Minhas Tarefas", "url": "/tarefas", "icons": [{"src": "/static/icons/icon-192.png?v=4", "sizes": "192x192"}]},
             ],
         }
         resp = jsonify(dados)
@@ -301,7 +302,7 @@ def register_routes(app):
 const OFFLINE = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
   + '<title>Sem conexão</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;'
   + 'font-family:system-ui,sans-serif;background:#16324f;color:#fff;text-align:center;padding:1.5rem">'
-  + '<div><img src="/static/icons/icon-192.png?v=3" width="88" height="88" alt="" style="border-radius:20px">'
+  + '<div><img src="/static/icons/icon-192.png?v=4" width="88" height="88" alt="" style="border-radius:20px">'
   + '<h1 style="font-size:1.2rem;margin:1rem 0 .4rem">Sem conexão com a internet</h1>'
   + '<p style="opacity:.8;font-size:.9rem">O portal da Controladoria precisa de conexão.<br>Assim que voltar, recarregue.</p>'
   + '<button onclick="location.reload()" style="margin-top:1rem;padding:.6rem 1.2rem;border:0;border-radius:8px;'

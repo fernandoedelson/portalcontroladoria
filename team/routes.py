@@ -1383,6 +1383,7 @@ def register_team_routes(app):
             s.email = bool(request.form.get(f"{key}__email"))
             s.whatsapp = bool(request.form.get(f"{key}__whatsapp"))
             s.painel = bool(request.form.get(f"{key}__painel"))
+            s.push = bool(request.form.get(f"{key}__push"))
             s.escalate_manager = bool(request.form.get(f"{key}__escalate"))
             ld = request.form.get(f"{key}__lead")
             if ld is not None and str(ld).strip():

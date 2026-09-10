@@ -26,7 +26,7 @@
   <form method="post" action="/alertas/salvar">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="tbl-wrap"><table class="matrix-check">
-      <thead><tr><th>Evento</th><th>E-mail</th><th>WhatsApp</th><th>Painel</th><th>Escalar ao gestor</th><th>Antecedência (d.u.)</th></tr></thead>
+      <thead><tr><th>Evento</th><th>E-mail</th><th>WhatsApp</th><th>Painel</th><th>Push</th><th>Escalar ao gestor</th><th>Antecedência (d.u.)</th></tr></thead>
       <tbody>
       {% for key, lbl, s in ordered %}
       <tr>
@@ -34,6 +34,8 @@
         <td><input type="checkbox" name="{{ key }}__email" {{ 'checked' if s and s.email }}/></td>
         <td><input type="checkbox" name="{{ key }}__whatsapp" {{ 'checked' if s and s.whatsapp }}/></td>
         <td><input type="checkbox" name="{{ key }}__painel" {{ 'checked' if s and s.painel }}/></td>
+        <td><input type="checkbox" name="{{ key }}__push" {{ 'checked' if s and s.push }}
+                   title="Notificação no celular/computador de quem ativou"/></td>
         <td>{% if key == 'atraso' %}<input type="checkbox" name="{{ key }}__escalate" {{ 'checked' if s and s.escalate_manager }}/>{% else %}<span class="text-muted">—</span>{% endif %}</td>
         <td>{% if key == 'lembrete_previo' %}<input class="input" type="number" name="{{ key }}__lead" value="{{ s.lead_days if s else 1 }}" style="width:70px;margin:0 auto;"/>{% else %}<span class="text-muted">—</span>{% endif %}</td>
       </tr>
@@ -41,7 +43,8 @@
       </tbody></table></div>
     <div class="flex gap-1 mt-2"><button class="btn btn-primary" type="submit">Salvar matriz</button></div>
   </form>
-  <p class="help-txt mt-1">WhatsApp passa pela Twilio (terceiro): por sigilo, envia sempre mensagem genérica — "você tem N atividades pendentes, veja no portal" — sem nome de atividade ou projeto. E-mail e painel ficam na rede interna e podem detalhar.</p>
+  <p class="help-txt mt-1">WhatsApp passa pela Twilio (terceiro): por sigilo, envia sempre mensagem genérica — "você tem N atividades pendentes, veja no portal" — sem nome de atividade ou projeto. E-mail e painel ficam na rede interna e podem detalhar.
+    <strong>Push</strong> é a notificação no celular/computador de quem ativou (conteúdo criptografado até o aparelho); quem ainda não ativou aparece como “simulado” no log. Avisos fora desta matriz (férias, realinhamento de prazo, tarefas pessoais) sempre saem por push.</p>
 </div>
 
 <div class="card">

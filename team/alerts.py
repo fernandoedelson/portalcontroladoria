@@ -181,9 +181,29 @@ def send_panel(member, title, message, url="/time"):
     """
     if not member or not member.user_id:
         return False, "membro_sem_login"
-    db.session.add(Notification(user_id=member.user_id, title=title,
-                                message=message, kind="cobranca", url=url))
+    n = Notification(user_id=member.user_id, title=title,
+                     message=message, kind="cobranca", url=url)
+    n._sem_push = True          # aqui o push e decidido pela coluna Push da matriz
+    db.session.add(n)
     return True, None
+
+
+def _texto_push(body):
+    """Corpo curto para a notificacao do aparelho (sem a linha do link)."""
+    linhas = [l for l in (body or "").split("\n") if l.strip() and not l.startswith("Abra o portal")]
+    return " · ".join(linhas[1:4]) or (linhas[0] if linhas else "")
+
+
+def send_push(event_key, member, activity, subject, body):
+    """Canal push: poe na fila (sai apos o commit do ciclo). Retorna (status, erro)."""
+    from team import push as _push
+    if not member or not member.user_id:
+        return "simulado", "membro_sem_login"
+    if not _push.tem_aparelho(member.user_id):
+        return "simulado", "sem_aparelho"          # pessoa ainda nao ativou em nenhum aparelho
+    url = f"/atividade/{activity.id}" if activity else "/time"
+    _push.enfileira(db.session, member.user_id, subject, _texto_push(body), url, event_key)
+    return "enviado", None
 
 
 # --------------------------------------------------------------------------
@@ -223,6 +243,14 @@ def _dispatch(event_key, setting, member, activity, subject, body,
                     "enviado" if ok else "falha", err)
             out.append({"channel": "painel", "status": "enviado" if ok else "falha",
                         "error": err})
+
+    # push (celular/computador de quem ativou as notificacoes)
+    if getattr(setting, "push", False) and member:
+        dk = base + ":push"
+        if not _already_sent(dk):
+            st, err = send_push(event_key, member, activity, subject, body)
+            _record(event_key, "push", mid, aid, dk, subject, body, st, err)
+            out.append({"channel": "push", "status": st, "error": err})
 
     # email
     if setting.email and member:
@@ -332,12 +360,20 @@ def run_alert_cycle(ref=None, dry_run=False):
                             who = member.name if member else "sem responsável"
                             msg = (f"Atividade “{a.title}” de {who} está atrasada "
                                    f"({a.due_date.strftime('%d/%m/%Y')}).")
-                            db.session.add(Notification(
+                            n_esc = Notification(
                                 user_id=mgr.user_id, title="Escalada de atraso",
-                                message=msg, kind="cobranca", url="/time"))
+                                message=msg, kind="cobranca", url=f"/atividade/{a.id}")
+                            n_esc._sem_push = True     # push segue a coluna da matriz
+                            db.session.add(n_esc)
                             _record("atraso", "painel", mgr.id, a.id, dk,
                                     "Escalada de atraso", msg, "enviado")
                             _tally(summary, [{"channel": "escalada", "status": "enviado"}])
+                            if getattr(s, "push", False) and not _already_sent(dk + ":push"):
+                                st, err = send_push("atraso", mgr, a, "Escalada de atraso",
+                                                    "Escalada de atraso\n" + msg)
+                                _record("atraso", "push", mgr.id, a.id, dk + ":push",
+                                        "Escalada de atraso", msg, st, err)
+                                _tally(summary, [{"channel": "push", "status": st}])
 
     if not dry_run:
         db.session.commit()   # persiste todos os AlertLog/Notification do ciclo em lote
