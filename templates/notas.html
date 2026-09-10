@@ -75,6 +75,18 @@
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button type="button" class="ne-f" id="ink-pagina" title="Mais espaço (nova folha)" aria-label="Mais espaço">{{ icone('plus') }}</button>
       <button type="button" class="ne-f" id="ink-limpar" title="Apagar tudo" aria-label="Apagar tudo">{{ icone('trash') }}</button>
+      <span class="ne-sep" aria-hidden="true"></span>
+      <div class="ne-zoom" role="group" aria-label="Zoom da folha">
+        <button type="button" class="ne-f" id="ink-zoom-menos" title="Diminuir zoom" aria-label="Diminuir zoom">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M8 11h6"/></svg></button>
+        <button type="button" class="ne-zoom-val" id="ink-zoom-val" title="Voltar a 100% (largura da tela)" aria-label="Zoom atual — voltar a 100%">100%</button>
+        <button type="button" class="ne-f" id="ink-zoom-mais" title="Aumentar zoom" aria-label="Aumentar zoom">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M8 11h6M11 8v6"/></svg></button>
+        <button type="button" class="ne-f" id="ink-zoom-trava" aria-pressed="false"
+                title="Travar o zoom (a pinça passa a só arrastar a folha)" aria-label="Travar zoom">
+          <svg class="ico-aberto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="11" x="4" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.3"/></svg>
+          <svg class="ico-fechado" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="11" x="4" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+      </div>
       <label class="chk ne-socaneta" title="Com isto ligado, a mão/dedo não risca — o dedo rola a folha">
         <input type="checkbox" id="ink-socaneta"/> Só caneta</label>
     </div>
@@ -167,9 +179,20 @@
   .ne-tinta.sel{box-shadow:0 0 0 3px #c9962e}
   .ne-sep{width:1px;height:26px;background:rgba(127,127,127,.35);margin:0 .2rem}
   .ne-socaneta{margin-left:auto;font-size:.85rem}
-  .ne-caderno{height:68vh;overflow-y:auto;overflow-x:hidden;border-radius:10px;
-              border:1px solid rgba(0,0,0,.12);background:#fffef8;-webkit-overflow-scrolling:touch}
-  .ne-folha{position:relative;width:100%;background-color:#fffef8;
+  .ne-zoom{display:inline-flex;align-items:center;gap:.25rem}
+  .ne-zoom-val{min-width:58px;height:38px;border:1px solid rgba(127,127,127,.35);border-radius:8px;
+               background:transparent;color:inherit;font:inherit;font-size:.85rem;cursor:pointer;
+               font-variant-numeric:tabular-nums}
+  .ne-zoom button:disabled{opacity:.35;cursor:not-allowed}
+  #ink-zoom-trava .ico-fechado{display:none}
+  #ink-zoom-trava[aria-pressed="true"]{border-color:#c9962e;color:#c9962e;box-shadow:0 0 0 2px rgba(201,150,46,.45)}
+  #ink-zoom-trava[aria-pressed="true"] .ico-aberto{display:none}
+  #ink-zoom-trava[aria-pressed="true"] .ico-fechado{display:inline}
+  .ne-caderno{position:relative;height:68vh;overflow:auto;border-radius:10px;
+              border:1px solid rgba(0,0,0,.12);background:#e9e7df;-webkit-overflow-scrolling:touch;
+              touch-action:pan-x pan-y}          /* sem zoom do navegador sobre a folha */
+  .ne-folha{position:relative;width:100%;margin:0 auto;background-color:#fffef8;
+    box-shadow:0 1px 4px rgba(0,0,0,.12);will-change:transform;
     --pauta:32px;--margem:56px;
     background-image:
       linear-gradient(to right,transparent calc(var(--margem) - 1px),rgba(214,86,86,.55) calc(var(--margem) - 1px),rgba(214,86,86,.55) var(--margem),transparent var(--margem)),
@@ -236,8 +259,13 @@
   var corpo=document.getElementById('ne-corpo');
   var escala=1, dpr=window.devicePixelRatio||1, pronto=false;
   var ferramenta='pen', cor='#1f2937', esp=2.6, soCaneta=false;
-  var traco=null, modo=null, pilha=[], removidos=[], rolagem=null, quadro=null;
+  var traco=null, tracoTipo=null, modo=null, pilha=[], removidos=[], rolagem=null, quadro=null;
+  // zoom: z=1 -> folha na largura da tela. Travado, a pinca so arrasta.
+  var z=1, ZMIN=0.5, ZMAX=3, travaZoom=false, PIXMAX=16e6;
+  var toques=new Map(), pinca=null, pincaAcabou=false, previa=null, tRoda=null;
   try{ soCaneta=localStorage.getItem('nota-so-caneta')==='1'; }catch(e){}
+  try{ z=Math.min(ZMAX,Math.max(ZMIN,parseFloat(localStorage.getItem('nota-zoom'))||1));
+       travaZoom=localStorage.getItem('nota-zoom-trava')==='1'; }catch(e){}
   document.getElementById('ink-socaneta').checked=soCaneta;
 
   function larg(s,pr){ return s.t==='hl' ? s.w : s.w*(0.35+pr*1.1); }
@@ -279,10 +307,15 @@
   }
   function agenda(){ if(!quadro) quadro=requestAnimationFrame(compoe); }
   function dimensiona(){
-    var l=folha.clientWidth; if(!l) return;
-    escala=l/W; dpr=window.devicePixelRatio||1;
+    var bw=caderno.clientWidth; if(!bw) return;
+    var l=Math.round(bw*z);
+    escala=l/W;
     var a=doc.h*escala;
+    // teto de memoria: em zoom alto numa nota longa, reduz a densidade de pixels
+    dpr=Math.min(window.devicePixelRatio||1, Math.sqrt(PIXMAX/(l*a)));
+    folha.style.width=l+'px';
     folha.style.height=a+'px';
+    var zv=document.getElementById('ink-zoom-val'); if(zv) zv.textContent=Math.round(z*100)+'%';
     folha.style.setProperty('--pauta',(PAUTA*escala)+'px');
     folha.style.setProperty('--margem',(MARGEM*escala)+'px');
     cv.style.width=l+'px'; cv.style.height=a+'px';
@@ -325,22 +358,114 @@
     agendarSalvar(1500);
   }
 
-  cv.addEventListener('pointerdown',function(ev){
-    if(ev.pointerType==='touch' && soCaneta){          // dedo/palma: rola a folha
-      rolagem={id:ev.pointerId, y:ev.clientY, top:caderno.scrollTop};
-      cv.setPointerCapture(ev.pointerId); return;
+  /* ---------- zoom (pinça, Ctrl+rolagem, botões) ---------- */
+  function iniciaPrevia(cx,cy){                // previa visual (CSS) durante o gesto
+    var fr=folha.getBoundingClientRect();
+    previa={ox:cx-fr.left, oy:cy-fr.top, cx0:cx, cy0:cy, cx:cx, cy:cy, s:1};
+    folha.style.transformOrigin=previa.ox+'px '+previa.oy+'px';
+  }
+  function atualizaPrevia(s,cx,cy){
+    if(!previa) return;
+    previa.s=Math.max(ZMIN/z,Math.min(ZMAX/z,s)); previa.cx=cx; previa.cy=cy;
+    folha.style.transform='translate('+(cx-previa.cx0)+'px,'+(cy-previa.cy0)+'px) scale('+previa.s+')';
+  }
+  function confirmaPrevia(){                   // fim do gesto: redesenha nitido no zoom novo
+    var p=previa; previa=null; folha.style.transform=''; folha.style.transformOrigin='';
+    if(p) fixaZoom(z*p.s, p.ox/escala, p.oy/escala, p.cx, p.cy);
+  }
+  // muda o zoom mantendo o ponto (lx,ly) da folha embaixo da posicao de tela (cx,cy)
+  function fixaZoom(nz,lx,ly,cx,cy){
+    z=Math.max(ZMIN,Math.min(ZMAX,nz));
+    try{ localStorage.setItem('nota-zoom',String(z)); }catch(e){}
+    dimensiona();
+    var r=caderno.getBoundingClientRect();
+    caderno.scrollLeft=folha.offsetLeft+lx*escala-(cx-r.left-caderno.clientLeft);
+    caderno.scrollTop=folha.offsetTop+ly*escala-(cy-r.top-caderno.clientTop);
+  }
+  function zoomBotao(fator){
+    if(travaZoom) return;
+    var r=caderno.getBoundingClientRect(), fr=folha.getBoundingClientRect();
+    var cx=r.left+caderno.clientWidth/2, cy=r.top+caderno.clientHeight/2;
+    fixaZoom(z*fator,(cx-fr.left)/escala,(cy-fr.top)/escala,cx,cy);
+  }
+  function comecaPinca(){                      // 2o dedo encostou: vira gesto
+    if(modo==='desenhar' && tracoTipo==='touch'){ traco=null; modo=null; }   // descarta o risco do 1o dedo
+    if(modo==='apagar'){
+      folha.classList.remove('apagando'); modo=null;
+      if(removidos.length){ pilha.push({tipo:'del',itens:removidos.slice()}); removidos=[]; mudou(); }
     }
+    rolagem=null;
+    var ps=Array.from(toques.values()), mx=(ps[0].x+ps[1].x)/2, my=(ps[0].y+ps[1].y)/2;
+    pinca={d0:Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y)||1, mx0:mx, my0:my,
+           sl:caderno.scrollLeft, st:caderno.scrollTop};
+    if(!travaZoom) iniciaPrevia(mx,my);
+    agenda();
+  }
+  function movePinca(){
+    var ps=Array.from(toques.values()); if(ps.length<2) return;
+    var mx=(ps[0].x+ps[1].x)/2, my=(ps[0].y+ps[1].y)/2;
+    if(travaZoom){                             // travado: dois dedos so arrastam
+      caderno.scrollLeft=pinca.sl-(mx-pinca.mx0); caderno.scrollTop=pinca.st-(my-pinca.my0); return;
+    }
+    atualizaPrevia(Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y)/pinca.d0, mx, my);
+  }
+  function terminaPinca(){
+    if(!travaZoom) confirmaPrevia();
+    pinca=null; pincaAcabou=toques.size>0;     // o dedo que sobrou nao risca
+  }
+  caderno.addEventListener('wheel',function(ev){
+    if(!ev.ctrlKey) return;                    // rolagem normal continua nativa
+    ev.preventDefault();                       // nunca o zoom da pagina inteira sobre a folha
+    if(travaZoom || painel.hidden) return;
+    if(!previa) iniciaPrevia(ev.clientX,ev.clientY);
+    atualizaPrevia(previa.s*Math.exp(-ev.deltaY*0.0025), previa.cx0, previa.cy0);
+    clearTimeout(tRoda); tRoda=setTimeout(confirmaPrevia,160);
+  },{passive:false});
+  function aplicaTrava(){
+    var b=document.getElementById('ink-zoom-trava');
+    b.setAttribute('aria-pressed',travaZoom?'true':'false');
+    b.title=travaZoom ? 'Zoom travado — clique para destravar' : 'Travar o zoom (a pinça passa a só arrastar a folha)';
+    ['ink-zoom-mais','ink-zoom-menos','ink-zoom-val'].forEach(function(id){ document.getElementById(id).disabled=travaZoom; });
+  }
+  document.getElementById('ink-zoom-mais').addEventListener('click',function(){ zoomBotao(1.25); });
+  document.getElementById('ink-zoom-menos').addEventListener('click',function(){ zoomBotao(0.8); });
+  document.getElementById('ink-zoom-val').addEventListener('click',function(){ zoomBotao(1/z); });
+  document.getElementById('ink-zoom-trava').addEventListener('click',function(){
+    travaZoom=!travaZoom; try{ localStorage.setItem('nota-zoom-trava',travaZoom?'1':'0'); }catch(e){}
+    aplicaTrava();
+  });
+  aplicaTrava();
+
+  cv.addEventListener('pointerdown',function(ev){
+    if(ev.pointerType==='touch'){
+      toques.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+      cv.setPointerCapture(ev.pointerId);
+      if(toques.size===2){ comecaPinca(); return; }
+      if(toques.size>2 || pinca || pincaAcabou) return;
+      if(soCaneta){                             // dedo/palma: rola a folha
+        rolagem={id:ev.pointerId, x:ev.clientX, y:ev.clientY, left:caderno.scrollLeft, top:caderno.scrollTop};
+        return;
+      }
+    }
+    if(previa) return;                          // zoom em andamento
     if(ev.button!==0 && ev.button!==5 && ev.pointerType==='mouse') return;
     ev.preventDefault(); cv.setPointerCapture(ev.pointerId);
     var pt=ponto(ev);
     var borracha=ferramenta==='eraser' || (ev.pointerType==='pen' && (ev.buttons & 32));
     if(borracha){ modo='apagar'; removidos=[]; folha.classList.add('apagando'); apagaEm(pt); return; }
-    modo='desenhar';
+    modo='desenhar'; tracoTipo=ev.pointerType;
     traco = ferramenta==='hl' ? {c:cor,w:22,t:'hl',p:[pt]} : {c:cor,w:esp,t:'pen',p:[pt]};
     agenda();
   });
   cv.addEventListener('pointermove',function(ev){
-    if(rolagem && ev.pointerId===rolagem.id){ caderno.scrollTop=rolagem.top-(ev.clientY-rolagem.y); return; }
+    if(ev.pointerType==='touch' && toques.has(ev.pointerId)){
+      toques.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+      if(pinca){ movePinca(); return; }
+    }
+    if(rolagem && ev.pointerId===rolagem.id){
+      caderno.scrollLeft=rolagem.left-(ev.clientX-rolagem.x);
+      caderno.scrollTop=rolagem.top-(ev.clientY-rolagem.y); return;
+    }
     if(!modo) return;
     ev.preventDefault();
     var evs=(ev.getCoalescedEvents && ev.getCoalescedEvents().length) ? ev.getCoalescedEvents() : [ev];
@@ -354,6 +479,11 @@
     if(modo==='desenhar') agenda();
   });
   function fim(ev){
+    if(ev.pointerType==='touch'){
+      toques.delete(ev.pointerId);
+      if(pinca){ if(toques.size<2) terminaPinca(); return; }
+      if(pincaAcabou){ if(!toques.size) pincaAcabou=false; return; }
+    }
     if(rolagem && ev.pointerId===rolagem.id){ rolagem=null; return; }
     if(modo==='desenhar' && traco){
       doc.strokes.push(traco); pilha.push({tipo:'add',s:traco}); traco=null;
