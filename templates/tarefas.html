@@ -60,10 +60,21 @@
                   {% else %}{{ t.due_date.strftime('%d/%m/%Y') }}{% endif %}
                 </span>
                 {% endif %}
-                {% if t.remind and t.grupo != 'concluido' %}<span class="tl-bell" title="Aviso de vencimento ativo">{{ icone('bell') }}</span>{% endif %}
               </div>
             </div>
             {% if t.grupo != 'concluido' %}
+            {% if t.due_date %}
+            <form method="post" action="/tarefa/{{ t.id }}/lembrete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button class="btn-icone tl-bell-btn {{ 'on' if t.remind }}" type="submit"
+                      aria-pressed="{{ 'true' if t.remind else 'false' }}"
+                      title="{{ 'Aviso ativo — clique para desligar' if t.remind else 'Ativar aviso no vencimento' }}"
+                      aria-label="{{ 'Desligar aviso de vencimento' if t.remind else 'Ativar aviso de vencimento' }}">{{ icone('bell') }}</button>
+            </form>
+            {% else %}
+            <span class="btn-icone tl-bell-btn off-dis" title="Defina um vencimento para poder ativar o aviso"
+                  aria-label="Aviso indisponível: tarefa sem vencimento">{{ icone('bell') }}</span>
+            {% endif %}
             <form method="post" action="/tarefa/{{ t.id }}/status" class="tl-statusform">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <select class="input tl-status-sel" name="status" onchange="this.form.submit()" title="Situação" aria-label="Situação">
@@ -97,4 +108,11 @@
   </section>
   {% endfor %}
 </div>
+<style>
+  .tl-bell-btn{opacity:.4;transition:opacity .15s,color .15s;}
+  .tl-bell-btn:hover{opacity:.85;}
+  .tl-bell-btn.on{opacity:1;color:#c9962e;}
+  .tl-bell-btn.on svg{fill:currentColor;}
+  .tl-bell-btn.off-dis{opacity:.18;cursor:not-allowed;}
+</style>
 {% endblock %}

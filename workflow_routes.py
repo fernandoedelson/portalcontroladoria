@@ -612,6 +612,19 @@ def register_workflow_routes(app):
             return jsonify(ok=True, done=t.done, status=t.status)
         return redirect(url_for("tarefas"))
 
+    @app.route("/tarefa/<int:tid>/lembrete", methods=["POST"])
+    @login_required
+    def tarefa_lembrete(tid):
+        """Liga/desliga o aviso de vencimento de uma tarefa já existente."""
+        t = _minha_tarefa(tid)
+        t.remind = not t.remind
+        if t.remind:
+            t.reminded_on = None      # religou: volta a avisar no vencimento
+        db.session.commit()
+        if request.form.get("ajax"):
+            return jsonify(ok=True, remind=t.remind)
+        return redirect(url_for("tarefas"))
+
     @app.route("/tarefa/<int:tid>/status", methods=["POST"])
     @login_required
     def tarefa_status(tid):
