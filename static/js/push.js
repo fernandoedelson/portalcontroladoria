@@ -134,7 +134,7 @@
     d.id = 'push-convite'; d.className = 'push-convite';
     d.setAttribute('role', 'dialog'); d.setAttribute('aria-label', 'Receber avisos no aparelho');
     d.innerHTML =
-      '<img src="/static/icons/icon-192.png?v=2" alt="" width="44" height="44">' +
+      '<img src="/static/icons/icon-192.png?v=3" alt="" width="44" height="44">' +
       '<div class="pc-txt"><strong>Receber os avisos no aparelho?</strong><span>' +
       (ios ? 'No iPhone/iPad: Compartilhar → Adicionar à Tela de Início, e abra o portal por esse ícone para ativar.'
            : 'Atividades que vencem, atrasos e aprovações chegam como notificação, mesmo com o portal fechado.') +
