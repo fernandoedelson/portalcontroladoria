@@ -203,6 +203,40 @@ class UserNote(db.Model):
                 and not self.tem_tinta)
 
 
+class DefinitionList(db.Model):
+    """Lista de Definicoes gerais — COMPARTILHADA: todo o time ve.
+
+    Diferente das listas pessoais de tarefas: nao tem dono, nem vencimento, nem
+    status. Guarda os combinados da area (padroes, criterios, prazos acordados)."""
+    __tablename__ = "definition_lists"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, default="Definições")
+    sort_order = db.Column(db.Integer, default=100)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    itens = db.relationship("Definition", cascade="all, delete-orphan",
+                            order_by="Definition.sort_order, Definition.id")
+
+
+class Definition(db.Model):
+    """Uma definicao (texto) dentro de uma lista compartilhada."""
+    __tablename__ = "definitions"
+    id = db.Column(db.Integer, primary_key=True)
+    list_id = db.Column(db.Integer, db.ForeignKey("definition_lists.id"),
+                        nullable=False, index=True)
+    text = db.Column(db.Text, nullable=False)
+    sort_order = db.Column(db.Integer, default=100)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    updated_at = db.Column(db.DateTime)
+
+    lista = db.relationship("DefinitionList", overlaps="itens")
+    autor = db.relationship("User", foreign_keys=[created_by])
+    editor = db.relationship("User", foreign_keys=[updated_by])
+
+
 class PushSubscription(db.Model):
     """Aparelho que ativou as notificacoes push (um por navegador/celular).
 

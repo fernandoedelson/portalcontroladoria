@@ -388,6 +388,14 @@ self.addEventListener('notificationclick', e => {
                 {"titulo": i.title, "sub": i.member.name if i.member else "",
                  "url": url_for("team_indicador", iid=i.id)} for i in inds]))
 
+            from team.models_workflow import Definition
+            defs = (Definition.query.filter(Definition.text.ilike(like))
+                    .order_by(Definition.list_id, Definition.sort_order).limit(15).all())
+            grupos.append(("Definições gerais", [
+                {"titulo": (d.text[:90] + ("…" if len(d.text) > 90 else "")),
+                 "sub": d.lista.name if d.lista else "",
+                 "url": url_for("definicoes", q=q) + f"#def-{d.id}"} for d in defs]))
+
             pess = (TeamMember.query.filter(TeamMember.name.ilike(like))
                     .limit(10).all())
             grupos.append(("Pessoas", [

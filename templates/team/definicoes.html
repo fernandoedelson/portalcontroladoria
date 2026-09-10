@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Definições gerais{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Definições gerais</h1>
+    <div class="sub">Os combinados da área — visíveis para todo o time.{% if not pode_editar %} Só a controladoria altera.{% endif %}</div></div>
+  {% if pode_editar %}
+  <form method="post" action="/definicoes/lista/nova" class="flex gap-1 items-center">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input class="input" type="text" name="name" placeholder="Nome da lista" style="width:170px;"/>
+    <button class="btn btn-primary" type="submit">{{ icone('plus') }} Nova lista</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="notas-busca def-busca" role="search">
+  {{ icone('search') }}
+  <input type="search" id="def-q" value="{{ busca }}" placeholder="Buscar nas definições…"
+         aria-label="Buscar nas definições" autocomplete="off"/>
+  <span class="text-muted text-sm" id="def-cont" aria-live="polite"></span>
+</div>
+
+{% if not listas %}
+<div class="empty-box" style="margin-top:1rem;">
+  <p><strong>Nenhuma definição cadastrada ainda.</strong></p>
+  <p class="text-muted text-sm">A controladoria registra aqui os combinados da área.</p>
+</div>
+{% endif %}
+
+<div class="tl-stack" id="def-listas">
+  {% for l in listas %}
+  <section class="tl-list def-lista" id="lista-{{ l.id }}" data-nome="{{ l.name }}">
+    <div class="tl-head">
+      {% if pode_editar %}
+      <form method="post" action="/definicoes/lista/{{ l.id }}/renomear" style="flex:1;display:flex;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input class="tl-name" type="text" name="name" value="{{ l.name }}"
+               aria-label="Nome da lista" onblur="if(this.value!==this.defaultValue) this.form.submit()"/>
+      </form>
+      {% else %}
+      <span class="tl-name" style="flex:1;">{{ l.name }}</span>
+      {% endif %}
+      <span class="badge-soft">{{ l.itens|length }} {{ 'definição' if l.itens|length == 1 else 'definições' }}</span>
+      {% if pode_editar and listas|length > 1 %}
+      <form method="post" action="/definicoes/lista/{{ l.id }}/excluir"
+            onsubmit="return confirm('Excluir a lista “{{ l.name }}” e todas as suas definições?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button class="btn btn-outline btn-danger btn-sm" type="submit"
+                title="Excluir lista" aria-label="Excluir lista">{{ icone('trash') }}</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <ul class="tl-items">
+      {% for d in l.itens %}
+      <li class="tl-item def-item" id="def-{{ d.id }}">
+        <span class="def-marca" aria-hidden="true"></span>
+        <div class="tl-txt">
+          <div class="def-texto" data-texto="{{ d.text }}">{{ d.text }}</div>
+          <div class="tl-meta">
+            <span>{{ d.autor.display_name if d.autor else '—' }} · {{ d.created_at.strftime('%d/%m/%Y') }}</span>
+            {% if d.updated_at %}<span>editada por {{ d.editor.display_name if d.editor else '—' }} em {{ d.updated_at.strftime('%d/%m/%Y') }}</span>{% endif %}
+          </div>
+          {% if pode_editar %}
+          <form method="post" action="/definicao/{{ d.id }}/editar" class="def-edita" hidden>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <textarea class="input" name="text" rows="3" maxlength="2000" required
+                      aria-label="Editar definição">{{ d.text }}</textarea>
+            <div class="flex gap-1 mt-1">
+              <button class="btn btn-primary btn-sm" type="submit">Salvar</button>
+              <button class="btn btn-outline btn-sm" type="button" data-cancela>Cancelar</button>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+        {% if pode_editar %}
+        <button type="button" class="btn-icone def-editar" title="Editar" aria-label="Editar definição">{{ icone('edit') }}</button>
+        <form method="post" action="/definicao/{{ d.id }}/excluir" onsubmit="return confirm('Excluir esta definição?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn-icone" type="submit" title="Excluir" aria-label="Excluir definição">{{ icone('x') }}</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if not l.itens %}<p class="text-muted text-sm def-vazia" style="padding:.5rem .9rem;">Nenhuma definição nesta lista ainda.</p>{% endif %}
+
+    {% if pode_editar %}
+    <form method="post" action="/definicao/nova" class="tl-add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="list_id" value="{{ l.id }}"/>
+      <textarea class="input def-nova" name="text" rows="1" maxlength="2000" required
+                placeholder="Nova definição…  (Ctrl+Enter adiciona)" aria-label="Nova definição"></textarea>
+      <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Adicionar</button>
+    </form>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+<p class="text-muted text-sm" id="def-nada" hidden style="margin-top:1rem;">Nenhuma definição encontrada para essa busca.</p>
+
+<style>
+  .def-busca{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;}
+  .def-item{align-items:flex-start;}
+  .def-item[hidden],.def-lista[hidden]{display:none !important;}
+  .def-marca{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:.5rem;}
+  .def-texto{font-size:.92rem;line-height:1.5;color:var(--text);white-space:pre-line;overflow-wrap:anywhere;}
+  .def-texto mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 .1rem;}
+  .def-edita textarea{width:100%;min-height:80px;resize:vertical;font-family:inherit;}
+  .tl-add .def-nova{flex:1;min-height:38px;resize:none;overflow:hidden;font-family:inherit;line-height:1.4;}
+  .def-editar{margin-top:.1rem;}
+  .def-editar:hover{color:var(--primary-lt);}
+</style>
+
+<script>
+(function(){
+  var q=document.getElementById('def-q'), cont=document.getElementById('def-cont'),
+      nada=document.getElementById('def-nada');
+  // busca sem acento e sem diferenciar maiusculas ("previsao" acha "Previsão")
+  function norm(s){ return (s||'').normalize('NFC').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+  function esc(s){ return s.replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function destaca(texto, termo){
+    texto=texto.normalize('NFC');
+    var n=norm(texto), t=norm(termo), out='', i=0, k;
+    if(!t) return esc(texto);
+    while((k=n.indexOf(t,i))>=0){
+      out+=esc(texto.slice(i,k))+'<mark>'+esc(texto.slice(k,k+t.length))+'</mark>'; i=k+t.length;
+    }
+    return out+esc(texto.slice(i));
+  }
+  function filtra(){
+    var termo=q.value.trim(), t=norm(termo), achados=0;
+    document.querySelectorAll('.def-lista').forEach(function(sec){
+      var nomeBate=!!t && norm(sec.dataset.nome).indexOf(t)>=0, visiveis=0;
+      sec.querySelectorAll('.def-item').forEach(function(li){
+        var el=li.querySelector('.def-texto'), txt=el.dataset.texto||'';
+        var bate=!t || nomeBate || norm(txt).indexOf(t)>=0;
+        li.hidden=!bate;
+        if(bate) visiveis++;
+        el.innerHTML=(t && !nomeBate) ? destaca(txt, termo) : esc(txt);
+      });
+      sec.hidden=!!t && !visiveis && !nomeBate;
+      achados+=visiveis;
+    });
+    cont.textContent=t ? (achados+(achados===1?' encontrada':' encontradas')) : '';
+    nada.hidden=!t || achados>0;
+    try{ var u=new URL(location.href);
+      if(termo) u.searchParams.set('q',termo); else u.searchParams.delete('q');
+      history.replaceState(null,'',u.toString()); }catch(e){}
+  }
+  if(q){ q.addEventListener('input',filtra); if(q.value) filtra(); }
+
+  // editar no lugar
+  document.querySelectorAll('.def-editar').forEach(function(b){
+    b.addEventListener('click',function(){
+      var li=b.closest('.def-item'), f=li.querySelector('.def-edita');
+      li.querySelector('.def-texto').hidden=true; f.hidden=false;
+      var ta=f.querySelector('textarea'); ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
+    });
+  });
+  document.querySelectorAll('[data-cancela]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var li=b.closest('.def-item'), f=li.querySelector('.def-edita');
+      f.hidden=true; li.querySelector('.def-texto').hidden=false;
+    });
+  });
+  // nova definicao: cresce com o texto; Ctrl+Enter adiciona
+  document.querySelectorAll('textarea.def-nova, .def-edita textarea').forEach(function(ta){
+    function ajusta(){ if(ta.classList.contains('def-nova')){ ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; } }
+    ta.addEventListener('input',ajusta);
+    ta.addEventListener('keydown',function(e){
+      if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault();
+        if(ta.value.trim()) ta.form.requestSubmit ? ta.form.requestSubmit() : ta.form.submit(); }
+    });
+  });
+})();
+</script>
+{% endblock %}

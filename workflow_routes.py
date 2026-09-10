@@ -20,7 +20,8 @@ from config import Config
 from models import (db, User, Company, Competency, log_audit, notify)
 from team.models import TeamMember, Activity
 from team.models_workflow import (ActivityNote, ActivityFile, Absence,
-                                  UserNote, TaskList, PersonalTask, AtaReuniao)
+                                  UserNote, TaskList, PersonalTask, AtaReuniao,
+                                  DefinitionList, Definition)
 
 ANEXO_DIR = os.path.join(Config.UPLOAD_DIR, "_anexos")
 ALLOWED_ANEXO = {".pdf", ".xlsx", ".xlsm", ".xls", ".csv", ".png", ".jpg",
@@ -736,6 +737,96 @@ def register_workflow_routes(app):
         db.session.delete(t)
         db.session.commit()
         return redirect(url_for("tarefas"))
+
+    # ------------------------------------------------------------------
+    # DEFINICOES GERAIS — compartilhadas: todo o time ve; controladoria edita
+    # ------------------------------------------------------------------
+    @app.route("/definicoes")
+    @any_team_required
+    def definicoes():
+        listas = DefinitionList.query.order_by(DefinitionList.sort_order, DefinitionList.id).all()
+        if not listas and current_user.is_controladoria:
+            l = DefinitionList(name="Definições gerais", created_by=current_user.id)
+            db.session.add(l)
+            db.session.commit()
+            listas = [l]
+        return render_template("team/definicoes.html", listas=listas,
+                               pode_editar=current_user.is_controladoria,
+                               busca=(request.args.get("q") or "").strip()[:100],
+                               total=Definition.query.count())
+
+    def _def_volta(lid=None):
+        return redirect(url_for("definicoes") + (f"#lista-{lid}" if lid else ""))
+
+    @app.route("/definicoes/lista/nova", methods=["POST"])
+    @team_required
+    def definicao_lista_nova():
+        nome = (request.form.get("name") or "").strip() or "Nova lista"
+        n = DefinitionList.query.count()
+        l = DefinitionList(name=nome[:120], sort_order=100 + n, created_by=current_user.id)
+        db.session.add(l)
+        db.session.commit()
+        log_audit(current_user.id, "definicao_lista_criada", "definicoes", l.name)
+        return _def_volta(l.id)
+
+    @app.route("/definicoes/lista/<int:lid>/renomear", methods=["POST"])
+    @team_required
+    def definicao_lista_renomear(lid):
+        l = db.session.get(DefinitionList, lid) or abort(404)
+        nome = (request.form.get("name") or "").strip()
+        if nome:
+            l.name = nome[:120]
+            db.session.commit()
+        if request.form.get("ajax"):
+            return jsonify(ok=True, nome=l.name)
+        return _def_volta(lid)
+
+    @app.route("/definicoes/lista/<int:lid>/excluir", methods=["POST"])
+    @team_required
+    def definicao_lista_excluir(lid):
+        l = db.session.get(DefinitionList, lid) or abort(404)
+        log_audit(current_user.id, "definicao_lista_excluida", "definicoes",
+                  f"{l.name} ({len(l.itens)} itens)")
+        db.session.delete(l)
+        db.session.commit()
+        flash(f"Lista “{l.name}” excluída.", "success")
+        return _def_volta()
+
+    @app.route("/definicao/nova", methods=["POST"])
+    @team_required
+    def definicao_nova():
+        l = db.session.get(DefinitionList, request.form.get("list_id", type=int) or 0) or abort(404)
+        texto = (request.form.get("text") or "").strip()
+        if texto:
+            n = Definition.query.filter_by(list_id=l.id).count()
+            db.session.add(Definition(list_id=l.id, text=texto[:2000], sort_order=100 + n,
+                                      created_by=current_user.id))
+            db.session.commit()
+        return _def_volta(l.id)
+
+    @app.route("/definicao/<int:did>/editar", methods=["POST"])
+    @team_required
+    def definicao_editar(did):
+        d = db.session.get(Definition, did) or abort(404)
+        texto = (request.form.get("text") or "").strip()
+        if texto and texto != d.text:
+            d.text = texto[:2000]
+            d.updated_by = current_user.id
+            d.updated_at = datetime.utcnow()
+            db.session.commit()
+        if request.form.get("ajax"):
+            return jsonify(ok=True)
+        return _def_volta(d.list_id)
+
+    @app.route("/definicao/<int:did>/excluir", methods=["POST"])
+    @team_required
+    def definicao_excluir(did):
+        d = db.session.get(Definition, did) or abort(404)
+        lid = d.list_id
+        log_audit(current_user.id, "definicao_excluida", "definicoes", d.text[:120])
+        db.session.delete(d)
+        db.session.commit()
+        return _def_volta(lid)
 
     # ------------------------------------------------------------------
     # ATAS DE REUNIÃO — captura estruturada (do prompt sobre a transcrição)
