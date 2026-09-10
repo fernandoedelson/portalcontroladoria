@@ -1,0 +1,26 @@
+# Blueprint de deploy na Render (plano Starter + disco persistente).
+# Cria um Web Service Python servido por waitress, com o SQLite e os uploads
+# gravados num disco que sobrevive a deploys/reinicios.
+services:
+  - type: web
+    name: portalcontroladoria          # vira portalcontroladoria.onrender.com
+    runtime: python
+    plan: starter                      # ~US$7/mês (o mesmo tipo do serviço atual)
+    region: oregon                     # ajuste para a mesma região do serviço antigo
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    healthCheckPath: /login
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORTAL_DATA_DIR          # instance/ + uploads/ + data/ vão para o disco
+        value: /var/data
+      - key: SECRET_KEY               # gerado uma vez pela Render (não fica no repo)
+        generateValue: true
+    disk:
+      name: dados
+      mountPath: /var/data
+      sizeGB: 1

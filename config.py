@@ -3,11 +3,16 @@
 import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+# Raiz dos dados. Local: a propria pasta do projeto. Producao (Render): aponte
+# PORTAL_DATA_DIR para o disco persistente (ex.: /var/data) para o banco SQLite
+# e os uploads NAO serem apagados a cada deploy.
+DATA_ROOT = os.environ.get("PORTAL_DATA_DIR", BASE_DIR)
+INSTANCE_DIR = os.path.join(DATA_ROOT, "instance")
+UPLOAD_DIR = os.path.join(DATA_ROOT, "uploads")
+DATA_DIR = os.path.join(DATA_ROOT, "data")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 
 class Config:
