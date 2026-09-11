@@ -29,7 +29,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Painel do Dia</h1>
-    <div class="sub">{{ today.strftime('%A, %d/%m/%Y') }} · visão de execução e cobrança do time.</div></div>
+    <div class="sub">{{ today|data_extenso|capitalize }} · visão de execução e cobrança do time.</div></div>
   {% if comp %}<span class="deadline-pill">Competência aberta: {{ comp.label }}{% if comp.deadline %} · prazo {{ comp.deadline.strftime('%d/%m') }}{% endif %}</span>{% endif %}
 </div>
 

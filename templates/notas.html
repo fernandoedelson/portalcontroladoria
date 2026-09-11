@@ -21,7 +21,7 @@
     <input type="hidden" name="ink_thumb" id="nota-ink-thumb" value=""/>
     <div class="ne-barra">
       <span class="ne-status" id="ne-status" aria-live="polite">
-        Editada em {{ atual.updated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+        Editada em {{ (atual.updated_at|local).strftime('%d/%m/%Y %H:%M') }}</span>
       <div class="ne-acoes">
         <div class="ne-modos" role="group" aria-label="Modo de escrita">
           <button type="button" class="ne-modo" data-modo="texto" aria-pressed="false">Texto</button>
@@ -145,7 +145,7 @@
     </div>
     {% if n.ink_thumb %}<img class="ni-ink" src="{{ n.ink_thumb }}" alt="Prévia da escrita à mão"/>{% endif %}
     {% if n.preview %}<div class="ni-preview">{{ n.preview }}</div>{% endif %}
-    <div class="ni-data">{{ n.updated_at.strftime('%d/%m/%Y %H:%M') }}</div>
+    <div class="ni-data">{{ (n.updated_at|local).strftime('%d/%m/%Y %H:%M') }}</div>
   </a>
   {% endmacro %}
 

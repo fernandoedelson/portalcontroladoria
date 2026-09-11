@@ -85,9 +85,9 @@
       <td><span class="st st-{{ r.outcome }}">{{ {'atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'N/A'}.get(r.outcome, r.outcome) }}</span>{% if r.computed %} <span class="badge-soft">auto</span>{% endif %}</td>
       <td>{{ r.value_label or '—' }}</td>
       <td>{% if r.evidence_path %}<a href="/indicador/resultado/{{ r.id }}/evidencia">{{ r.evidence_name or 'arquivo' }}</a>
-        <div class="text-sm text-muted">por {{ users.get(r.evidence_by).display_name if r.evidence_by and users.get(r.evidence_by) else '—' }}{% if r.evidence_at %}, {{ r.evidence_at.strftime('%d/%m %H:%M') }}{% endif %}</div>
+        <div class="text-sm text-muted">por {{ users.get(r.evidence_by).display_name if r.evidence_by and users.get(r.evidence_by) else '—' }}{% if r.evidence_at %}, {{ (r.evidence_at|local).strftime('%d/%m %H:%M') }}{% endif %}</div>
         {% else %}<span class="text-muted">—</span>{% endif %}</td>
-      <td class="text-sm text-muted">{{ r.recorded_at.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td class="text-sm text-muted">{{ (r.recorded_at|local).strftime('%d/%m/%Y %H:%M') }}</td>
       <td class="text-right">
         <form method="post" action="/indicador/resultado/{{ r.id }}/excluir" onsubmit="return confirm('Remover este resultado?');" style="display:inline;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>

@@ -16,6 +16,8 @@ services:
         value: "3.13.7"
       - key: HOST
         value: "0.0.0.0"
+      - key: TZ                       # horario de Brasilia (o app tambem forca no codigo)
+        value: America/Sao_Paulo
       - key: PORTAL_DATA_DIR          # instance/ + uploads/ + data/ vão para o disco
         value: /var/data
       - key: SECRET_KEY               # gerado uma vez pela Render (não fica no repo)

@@ -5,6 +5,8 @@ Somente o modulo de Gestao do Time (atividades, projetos, indicadores,
 capacidade, ferias, carteira, alertas, atas, tarefas e notas). O modulo de
 Consolidacao foi removido desta versao.
 """
+import fuso
+fuso.ativa()                 # antes de tudo: o servidor roda em UTC
 from datetime import datetime
 from functools import wraps
 
@@ -74,6 +76,7 @@ def create_app(config=Config):
             app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
 
     register_icons(app)
+    fuso.registra(app)       # filtros |local, |data_extenso, |dia_mes
     register_routes(app)
     register_team_routes(app)
     register_admin_routes(app)

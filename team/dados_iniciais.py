@@ -25,6 +25,8 @@ def ajustes_unicos():
     (marcadas em Setting) — edições posteriores feitas no portal ficam."""
     from team.models import IndicatorDef, Indicator
     feitos = []
+    if os.environ.get("PORTAL_SEM_DADOS_INICIAIS") == "1":
+        return feitos
     # 2026-09-10: "todos os indicadores são prazo" (vieram como RESULTADO)
     chave = "ajuste_dimensao_prazo_v1"
     if get_setting(chave) != "ok":
@@ -72,7 +74,7 @@ def atualiza_metas(caminho=METAS):
     - indicador que saiu da planilha: INATIVA (o histórico de resultados fica guardado).
     Dono não encontrado: não cria ninguém; fica pendente e tenta na próxima subida.
     Retorna lista de textos do que foi feito."""
-    if not os.path.exists(caminho):
+    if os.environ.get("PORTAL_SEM_DADOS_INICIAIS") == "1" or not os.path.exists(caminho):
         return []
     from team.models import TeamMember, IndicatorDef, Indicator
     from team.models_workflow import Panel

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Motor de atividades: prazos em dia util, geracao mensal e farol do fechamento."""
+import fuso
 from datetime import date, timedelta, datetime
 from functools import lru_cache
 
@@ -84,7 +85,7 @@ def insumo_ready_date(competency, codes):
         if not sub:
             return None, received, total
         received += 1
-        when = (sub.submitted_at.date() if sub.submitted_at else date.today())
+        when = (sub.submitted_at.date() if sub.submitted_at else fuso.hoje())
         if last is None or when > last:
             last = when
     return last, received, total
@@ -301,7 +302,7 @@ def resolve_auto_metrics(competency):
 # --------------------------------------------------------------------------
 def farol(competency, ref=None):
     """Contadores de status das atividades de fechamento da competencia."""
-    ref = ref or date.today()
+    ref = ref or fuso.hoje()
     counts = {"total": 0, "concluida": 0, "atrasada": 0, "vence_hoje": 0,
               "aguardando": 0, "pendente": 0, "em_andamento": 0,
               "bloqueada": 0, "cancelada": 0}
@@ -323,7 +324,7 @@ def member_farol(competency=None, ref=None):
     Conta as atividades em aberto de qualquer competência (antes ficava preso à
     competência atual, então uma atrasada de outro mês aparecia na Fila mas somava
     0 no cartão da pessoa). Ignora prazos provisórios (aguardando insumo)."""
-    ref = ref or date.today()
+    ref = ref or fuso.hoje()
     out = {}
     acts = (Activity.query
             .filter(Activity.status.in_(["pendente", "em_andamento", "bloqueada"]))
@@ -353,7 +354,7 @@ def day_panel(ref=None, member_id=None, kind_filter=None):
     kind_filter: 'projeto' (só projetos) | 'fechamento' (tudo menos projeto) | None.
     Retorna dict com listas ordenadas por prioridade/prazo.
     """
-    ref = ref or date.today()
+    ref = ref or fuso.hoje()
     q = Activity.query.filter(Activity.status.in_(["pendente", "em_andamento", "bloqueada"]))
     if member_id:
         q = q.filter(Activity.member_id == member_id)

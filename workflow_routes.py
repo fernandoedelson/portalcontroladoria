@@ -6,6 +6,7 @@ que consome. Quando isso acontece, o dado de gestao vira subproduto — ninguem
 precisa ser cobrado para manter o portal atualizado.
 """
 import os
+import fuso
 import re
 import json
 from datetime import datetime, date, timedelta
@@ -44,7 +45,7 @@ def weekly_digest_text():
     comp = current_competency()
     if not comp:
         return "Nenhuma competência cadastrada (crie em Administração › Sistema)."
-    hoje = date.today()
+    hoje = fuso.hoje()
     acts = Activity.query.filter_by(competency_id=comp.id, kind="fechamento").all()
     total = len(acts)
     concluidas = sum(1 for a in acts if a.status == "concluida")
@@ -68,6 +69,7 @@ def weekly_digest_text():
         if concluido:
             # terminou: diz QUANDO terminou frente ao prazo, nada de "vencido"
             fim = max((a.done_at for a in acts if a.done_at), default=None) or comp.closed_at
+            fim = fuso.local(fim)          # gravado em UTC; o dia é o de Brasília
             if fim:
                 atraso = (fim.date() - comp.deadline).days
                 quando = ("no prazo" if atraso <= 0
@@ -277,7 +279,7 @@ def register_workflow_routes(app):
             return redirect(url_for("team_atividade", aid=aid))
         pasta = os.path.join(ANEXO_DIR, str(aid))
         os.makedirs(pasta, exist_ok=True)
-        stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        stamp = fuso.agora().strftime("%Y%m%d%H%M%S")
         nome = secure_filename(f"{stamp}_{f.filename}")
         caminho = os.path.join(pasta, nome)
         f.save(caminho)
@@ -378,7 +380,7 @@ def register_workflow_routes(app):
                 flash("Solicitação enviada para aprovação do gestor.", "success")
             return redirect(url_for("wf_ausencias"))
 
-        hoje = date.today()
+        hoje = fuso.hoje()
         base = Absence.query
         if not eu_gestor:                       # profissional vê só as próprias
             base = base.filter(Absence.member_id == (meu_membro.id if meu_membro else -1))
@@ -567,7 +569,7 @@ def register_workflow_routes(app):
         db.session.commit()
         if request.form.get("ajax"):
             return jsonify(ok=True, titulo=n.titulo_exibicao,
-                           quando=n.updated_at.strftime("%H:%M"))
+                           quando=fuso.local(n.updated_at).strftime("%H:%M"))
         return redirect(url_for("notas", n=n.id))
 
     _COR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -664,7 +666,7 @@ def register_workflow_routes(app):
             db.session.add(l)
             db.session.commit()
             listas = [l]
-        hoje = date.today()
+        hoje = fuso.hoje()
         return render_template("tarefas.html", listas=listas, hoje=hoje)
 
     @app.route("/tarefas/lista/nova", methods=["POST"])
@@ -786,7 +788,7 @@ def register_workflow_routes(app):
         if "due_date" in request.form:
             nova = _parse_due(request.form.get("due_date"))
             t.due_date = nova
-            if nova and nova >= date.today():
+            if nova and nova >= fuso.hoje():
                 t.reminded_on = None      # reabre o aviso se remarcou pra frente
         if "remind" in request.form:
             t.remind = bool(request.form.get("remind"))

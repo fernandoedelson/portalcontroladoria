@@ -58,8 +58,8 @@
         <div class="tl-txt">
           <div class="def-texto" data-texto="{{ d.text }}">{{ d.text }}</div>
           <div class="tl-meta">
-            <span>{{ d.autor.display_name if d.autor else '—' }} · {{ d.created_at.strftime('%d/%m/%Y') }}</span>
-            {% if d.updated_at %}<span>editada por {{ d.editor.display_name if d.editor else '—' }} em {{ d.updated_at.strftime('%d/%m/%Y') }}</span>{% endif %}
+            <span>{{ d.autor.display_name if d.autor else '—' }} · {{ (d.created_at|local).strftime('%d/%m/%Y') }}</span>
+            {% if d.updated_at %}<span>editada por {{ d.editor.display_name if d.editor else '—' }} em {{ (d.updated_at|local).strftime('%d/%m/%Y') }}</span>{% endif %}
           </div>
           {% if pode_editar %}
           <form method="post" action="/definicao/{{ d.id }}/editar" class="def-edita" hidden>

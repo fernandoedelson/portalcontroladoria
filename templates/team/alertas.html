@@ -115,7 +115,7 @@
     <tbody>
     {% for lg in recent %}
     <tr>
-      <td class="text-sm text-muted">{{ lg.created_at.strftime('%d/%m %H:%M') }}</td>
+      <td class="text-sm text-muted">{{ (lg.created_at|local).strftime('%d/%m %H:%M') }}</td>
       <td>{{ lg.event_key }}</td>
       <td><span class="kind-chip">{{ lg.channel }}</span></td>
       <td>{{ mm.get(lg.member_id).name if lg.member_id and mm.get(lg.member_id) else '—' }}</td>

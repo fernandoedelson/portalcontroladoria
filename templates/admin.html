@@ -414,7 +414,7 @@
         <td><select class="input" form="{{ F }}" name="company_id"><option value="">—</option>
           {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if u.company_id==c.id }}>{{ c.name }}</option>{% endfor %}</select></td>
         <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if u.active }}/></td>
-        <td class="text-sm text-muted">{{ u.last_login.strftime('%d/%m/%y %H:%M') if u.last_login else 'nunca' }}</td>
+        <td class="text-sm text-muted">{{ (u.last_login|local).strftime('%d/%m/%y %H:%M') if u.last_login else 'nunca' }}</td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
           <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
           <button class="btn btn-outline btn-sm" type="submit" form="usrpw-{{ u.id }}" title="Redefinir senha">{{ icone("key") }}</button>

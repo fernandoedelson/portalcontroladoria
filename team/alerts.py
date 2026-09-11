@@ -10,6 +10,7 @@ Ambos os canais externos sao "guardados": se a dependencia/credencial nao
 existir, o envio e registrado como 'simulado' e nada quebra. Isso deixa a
 ferramenta plenamente utilizavel na fase de validacao local.
 """
+import fuso
 import os
 from datetime import date, datetime
 
@@ -228,7 +229,7 @@ def _dispatch(event_key, setting, member, activity, subject, body,
 
     Retorna lista de dicts {channel, status, error}.
     """
-    ref = ref or date.today()
+    ref = ref or fuso.hoje()
     out = []
     aid = activity.id if activity else None
     mid = member.id if member else None
@@ -297,7 +298,7 @@ def run_alert_cycle(ref=None, dry_run=False):
     Retorna um resumo.
     """
     from team.engine import add_business_days
-    ref = ref or date.today()
+    ref = ref or fuso.hoje()
     settings = {s.event_key: s for s in AlertChannelSetting.query.all()}
     summary = {"lembrete_previo": 0, "vence_hoje": 0, "atraso": 0,
                "por_canal": {}, "detalhe": []}

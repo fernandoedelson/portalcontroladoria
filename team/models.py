@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Modelos do modulo de Gestao do Time (compartilha o db do Portal de Consolidacao)."""
+import fuso
 import json
 from datetime import datetime, date
 
@@ -203,12 +204,12 @@ class Activity(db.Model):
         return self.status in ("pendente", "em_andamento", "bloqueada")
 
     def is_overdue(self, ref=None):
-        ref = ref or date.today()
+        ref = ref or fuso.hoje()
         return bool(self.due_date and self.is_open and not self.due_provisional
                     and self.due_date < ref)
 
     def is_due_today(self, ref=None):
-        ref = ref or date.today()
+        ref = ref or fuso.hoje()
         return bool(self.due_date and self.is_open and self.due_date == ref)
 
     def effective_status(self, ref=None):
@@ -224,7 +225,7 @@ class Activity(db.Model):
         return self.status  # pendente | em_andamento
 
     def days_to_due(self, ref=None):
-        ref = ref or date.today()
+        ref = ref or fuso.hoje()
         return (self.due_date - ref).days if self.due_date else None
 
     def kind_pt(self):

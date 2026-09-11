@@ -5,6 +5,7 @@ Notas e anexos na atividade (o trabalho passa a ser discutido no portal),
 ausencias (o mapa de capacidade so e honesto se souber quem esta fora) e a
 serie historica do fechamento (o que transforma foto em argumento).
 """
+import fuso
 import json
 from datetime import datetime, date
 
@@ -115,13 +116,13 @@ class Absence(db.Model):
 
     @property
     def vigente(self):
-        return self.cobre(date.today())
+        return self.cobre(fuso.hoje())
 
     @property
     def em_aberto_para_retorno(self):
         """Aprovada, já terminou e ainda não teve o retorno confirmado."""
         return (self.status == "aprovada" and not self.real_return
-                and self.end_date <= date.today())
+                and self.end_date <= fuso.hoje())
 
 
 def absences_map(dias):
@@ -217,10 +218,9 @@ class DigestSnapshot(db.Model):
 
     @property
     def quando(self):
-        """Data/hora de Brasília (UTC-3) para exibir."""
-        from datetime import timedelta
-        return ((self.created_at - timedelta(hours=3)).strftime("%d/%m/%Y às %H:%M")
-                if self.created_at else "")
+        """Data/hora de Brasília para exibir (gravado em UTC)."""
+        from fuso import local
+        return local(self.created_at).strftime("%d/%m/%Y às %H:%M") if self.created_at else ""
 
 
 class DefinitionList(db.Model):
@@ -344,12 +344,12 @@ class PersonalTask(db.Model):
     @property
     def atrasada(self):
         return bool(self.due_date and self.status != "concluido"
-                    and self.due_date < date.today())
+                    and self.due_date < fuso.hoje())
 
     @property
     def vence_hoje(self):
         return bool(self.due_date and self.status != "concluido"
-                    and self.due_date == date.today())
+                    and self.due_date == fuso.hoje())
 
     @property
     def grupo(self):

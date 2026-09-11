@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Rotas do modulo de Gestao do Time (registradas sobre o app hospedeiro)."""
+import fuso
 import os
 from functools import wraps
 from datetime import datetime, date, timedelta
@@ -82,7 +83,7 @@ def register_team_routes(app):
         from team.models_workflow import Absence
         if not member:
             return None
-        ref = ref or date.today()
+        ref = ref or fuso.hoje()
         return (Absence.query.filter_by(member_id=member.id, status="aprovada")
                 .filter(Absence.start_date <= ref, Absence.end_date >= ref).first())
 
@@ -226,7 +227,7 @@ def register_team_routes(app):
     @app.route("/time")
     @team_required
     def team_hoje():
-        ref = date.today()
+        ref = fuso.hoje()
         members = _members()
         sel = request.args.get("member_id", type=int)
         tipo = request.args.get("tipo")     # 'projeto' | 'fechamento' | None
@@ -274,7 +275,7 @@ def register_team_routes(app):
             q = q.filter(Activity.project_id == f_project)
         acts = q.order_by(Activity.due_date.is_(None), Activity.due_date,
                           Activity.sort_order, Activity.id).all()
-        ref = date.today()
+        ref = fuso.hoje()
         if f_status:
             acts = [a for a in acts if a.effective_status(ref) == f_status]
         # colunas do kanban por status efetivo
@@ -336,7 +337,7 @@ def register_team_routes(app):
                                revisoes=revisoes, pendentes=pendentes,
                                pode_aprovar=_pode_aprovar_revisao("activity", a.id),
                                users={u.id: u for u in User.query.all()},
-                               today=date.today())
+                               today=fuso.hoje())
 
     @app.route("/atividade/<int:aid>/editar", methods=["GET", "POST"])
     @team_required
@@ -538,7 +539,7 @@ def register_team_routes(app):
     def team_cronograma():
         items = (ClosingTemplateItem.query
                  .order_by(ClosingTemplateItem.sort_order, ClosingTemplateItem.id).all())
-        hoje = date.today()
+        hoje = fuso.hoje()
         return render_template("team/cronograma.html", items=items,
                                members=_members(), companies=_companies(),
                                kinds=KINDS, priorities=PRIORITIES,
@@ -586,7 +587,7 @@ def register_team_routes(app):
     @controladoria_required
     def team_cronograma_gerar():
         modo = request.form.get("modo") or "mes"
-        ano = _int(request.form.get("ano")) or date.today().year
+        ano = _int(request.form.get("ano")) or fuso.hoje().year
         pares = []
         if modo == "ano":
             pares = [(ano, m) for m in range(1, 13)]
@@ -597,7 +598,7 @@ def register_team_routes(app):
                 ini, fim = fim, ini
             pares = [(ano, m) for m in range(ini, fim + 1)]
         else:  # mes
-            m = _int(request.form.get("mes")) or date.today().month
+            m = _int(request.form.get("mes")) or fuso.hoje().month
             pares = [(ano, m)]
         if not ClosingTemplateItem.query.filter_by(active=True).count():
             flash("Cadastre ao menos uma atividade ativa antes de gerar.", "warning")
@@ -1065,7 +1066,7 @@ def register_team_routes(app):
         return render_template("team/projetos.html", projects=projects, prog=prog,
                                members=_members(), mm=_member_map(),
                                gantt=build_gantt(projects, prog),
-                               today=date.today())
+                               today=fuso.hoje())
 
     @app.route("/projeto/novo", methods=["POST"])
     @team_required
@@ -1114,7 +1115,7 @@ def register_team_routes(app):
                                gestor=_projeto_gestor(p),
                                gestor_ferias=_membro_em_ferias(_projeto_gestor(p)),
                                users={u.id: u for u in User.query.all()},
-                               today=date.today())
+                               today=fuso.hoje())
 
     @app.route("/projeto/<int:pid>/editar", methods=["POST"])
     @team_required
@@ -1203,7 +1204,7 @@ def register_team_routes(app):
         p = db.session.get(Project, pid) or abort(404)
         p.status = "ativo"
         if not p.start_date:
-            p.start_date = date.today()
+            p.start_date = fuso.hoje()
         db.session.commit()
         flash("Projeto aberto.", "success")
         return redirect(request.referrer or url_for("team_projeto", pid=p.id))
@@ -1215,7 +1216,7 @@ def register_team_routes(app):
         p = db.session.get(Project, pid) or abort(404)
         p.status = "concluido"
         if not p.target_date:
-            p.target_date = date.today()
+            p.target_date = fuso.hoje()
         db.session.commit()
         flash("Projeto encerrado.", "success")
         return redirect(request.referrer or url_for("team_projeto", pid=p.id))
@@ -1301,7 +1302,7 @@ def register_team_routes(app):
         Responde 'quem vai estourar e em que dia' ANTES do atraso acontecer.
         """
         from engine.calendar_br import business_days
-        hoje = date.today()
+        hoje = fuso.hoje()
         comp = _current_competency()
         # janela: mes do prazo da competencia aberta (onde acontece o pico)
         ref = comp.deadline if (comp and comp.deadline) else hoje
@@ -1608,7 +1609,7 @@ def build_gantt(projects, prog=None, today=None):
     Retorna None quando nenhum projeto tem data (nao ha o que desenhar).
     Cada barra traz posicao/largura em % e os marcos posicionados na escala.
     """
-    today = today or date.today()
+    today = today or fuso.hoje()
     prog = prog or {}
     dated = [p for p in projects if p.start_date or p.target_date]
     if not dated:
@@ -1686,7 +1687,7 @@ def build_activity_timeline(acts, color="#1d5da8", today=None):
     Mesma estrutura do build_gantt (meses + linhas) para reusar o CSS do Gantt.
     A barra vai do início (ou criação) até o prazo; cor pela situação.
     """
-    today = today or date.today()
+    today = today or fuso.hoje()
     dated = [a for a in acts if a.due_date or a.start_date]
     if not dated:
         return None

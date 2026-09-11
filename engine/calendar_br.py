@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Calendario de dias uteis (feriados nacionais BR) e prazos de fechamento."""
+import fuso
 from datetime import date, timedelta
 
 try:
@@ -43,5 +44,5 @@ def deadline_for_competency(comp_year, comp_month, nth=5):
 
 
 def days_until(target, ref=None):
-    ref = ref or date.today()
+    ref = ref or fuso.hoje()
     return (target - ref).days if target else None

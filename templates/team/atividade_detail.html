@@ -25,7 +25,7 @@
       <tr><th>Início</th><td>{{ a.start_date.strftime('%d/%m/%Y') if a.start_date else '—' }}</td></tr>
       <tr><th>Prazo</th><td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">provisório (aguarda insumo)</span>{% endif %}</td></tr>
       <tr><th>Origem</th><td>{{ {'manual':'Manual','template':'Agenda de fechamento','indicador':'Indicador'}.get(a.origin, a.origin) }}{% if a.auto_metric %} · <span class="badge-soft">auto-métrica</span>{% endif %}</td></tr>
-      <tr><th>Concluída em</th><td>{{ a.done_at.strftime('%d/%m/%Y %H:%M') if a.done_at else '—' }}</td></tr>
+      <tr><th>Concluída em</th><td>{{ (a.done_at|local).strftime('%d/%m/%Y %H:%M') if a.done_at else '—' }}</td></tr>
     </table>
     {% if a.description %}<div class="mt-2"><div class="field-label">Descrição</div><p>{{ a.description }}</p></div>{% endif %}
   </div>
@@ -87,7 +87,7 @@
     <thead><tr><th scope="col">Quando</th><th scope="col">De</th><th scope="col">Para</th><th scope="col">Movimento</th><th scope="col">Justificativa</th><th scope="col">Por</th></tr></thead>
     <tbody>{% for r in revisoes %}
       <tr>
-        <td class="text-sm">{{ r.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td class="text-sm">{{ (r.created_at|local).strftime('%d/%m/%Y %H:%M') }}</td>
         <td class="text-sm">{{ r.old_date.strftime('%d/%m/%Y') if r.old_date else '—' }}</td>
         <td class="text-sm">{{ r.new_date.strftime('%d/%m/%Y') if r.new_date else '—' }}</td>
         <td><span class="badge-soft">{{ r.sentido }}{% if r.dias %} {{ r.dias }}d{% endif %}</span></td>
@@ -124,7 +124,7 @@
         <div class="nota-body">
           <div class="nota-txt">{{ n.body }}</div>
           <div class="nota-meta">{{ n.user.display_name if n.user else 'sistema' }} ·
-            {{ n.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+            {{ (n.created_at|local).strftime('%d/%m/%Y %H:%M') }}</div>
         </div>
       </div>
       {% else %}
@@ -140,7 +140,7 @@
     <div class="anexo">
       <span>{{ icone("paperclip") }}</span>
       <a href="/anexo/{{ f.id }}">{{ f.filename }}</a>
-      <span class="anexo-meta">{{ f.size_label }} · {{ f.uploaded_at.strftime('%d/%m/%y') }}</span>
+      <span class="anexo-meta">{{ f.size_label }} · {{ (f.uploaded_at|local).strftime('%d/%m/%y') }}</span>
       <form method="post" action="/anexo/{{ f.id }}/excluir" onsubmit="return confirm('Remover este anexo?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <button class="btn btn-outline btn-sm btn-danger" type="submit">{{ icone("x") }}</button></form>

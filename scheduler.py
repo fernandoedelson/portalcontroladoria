@@ -10,6 +10,7 @@ Configuracao (aba Administracao ou tabela settings):
     scheduler_hour      hora do disparo diario (0-23)     (padrao: 8)
     digest_weekday      dia do resumo semanal (0=segunda) (padrao: 0)
 """
+import fuso
 import threading
 import traceback
 from datetime import datetime, date
@@ -52,7 +53,7 @@ def run_daily_tasks(app, force=False):
     from team import alerts as team_alerts
 
     resultado = {"alertas": None, "cobrancas": 0, "resumo": False, "tarefas": 0}
-    hoje = date.today()
+    hoje = fuso.hoje()
 
     # 1) ciclo de alertas do time (lembrete previo, vence hoje, atraso)
     if force or not _already_ran(app, "alertas", hoje):
@@ -157,7 +158,7 @@ def _loop(app):
                 from models import get_setting
                 if _s(_get(app, "scheduler_enabled", "1")) == "1":
                     hora = int(_get(app, "scheduler_hour", 8))
-                    agora = datetime.now()
+                    agora = fuso.agora()
                     if agora.hour >= hora:
                         run_daily_tasks(app)
         except Exception:
