@@ -100,6 +100,7 @@ _COLUNAS_NOVAS = [
     ("indicators", "scale_min", "VARCHAR(30)"),
     ("indicators", "scale_obj", "VARCHAR(30)"),
     ("indicators", "scale_sup", "VARCHAR(30)"),
+    ("closing_template_items", "company_ids_json", "TEXT"),   # várias empresas por item
 ]
 
 

@@ -283,13 +283,13 @@
   var ctx=cv.getContext('2d'), base=document.createElement('canvas'), bctx=base.getContext('2d');
   var corpo=document.getElementById('ne-corpo');
   var escala=1, dpr=window.devicePixelRatio||1, pronto=false;
-  var ferramenta='pen', cor='#1f2937', esp=2.6, soCaneta=false;
+  var ferramenta='pen', cor='#1f2937', esp=2.6, soCaneta=true;   // padrão: só caneta (dedo rola a folha)
   // tracoOrigem: 'ferramenta' | 'botao' (botao lateral) | 'segurar' (borracha temporaria)
   var traco=null, tracoTipo=null, tracoOrigem=null, modo=null, pilha=[], rolagem=null, quadro=null;
   // zoom: z=1 -> folha na largura da tela. Travado, a pinca so arrasta.
   var z=1, ZMIN=0.5, ZMAX=3, travaZoom=false, PIXMAX=16e6;
   var toques=new Map(), pinca=null, pincaAcabou=false, previa=null, tRoda=null;
-  try{ soCaneta=localStorage.getItem('nota-so-caneta')==='1'; }catch(e){}
+  try{ soCaneta=localStorage.getItem('nota-so-caneta')!=='0'; }catch(e){}   // só desliga se a pessoa desligou
   try{ z=Math.min(ZMAX,Math.max(ZMIN,parseFloat(localStorage.getItem('nota-zoom'))||1));
        travaZoom=localStorage.getItem('nota-zoom-trava')==='1'; }catch(e){}
   document.getElementById('ink-socaneta').checked=soCaneta;

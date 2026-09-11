@@ -160,9 +160,11 @@ def generate_closing_activities(competency, created_by=None):
         due, provisional = compute_due(rule, competency)
         if it.per_company:                       # todas as empresas da carteira
             alvos = [(a.company_id, a.member_id or it.member_id) for a in assigns]
-        elif it.company_id:                      # uma empresa específica
-            a = by_company.get(it.company_id)
-            alvos = [(it.company_id, (a.member_id if a else None) or it.member_id)]
+        elif it.company_ids:                     # uma ou várias empresas específicas
+            alvos = []
+            for cid in it.company_ids:
+                a = by_company.get(cid)
+                alvos.append((cid, (a.member_id if a else None) or it.member_id))
         else:                                    # atividade geral do time
             alvos = [(None, it.member_id)]
         for cid, mid in alvos:

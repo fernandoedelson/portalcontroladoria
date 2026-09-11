@@ -518,25 +518,107 @@ def register_team_routes(app):
     # ==================================================================
     # CRONOGRAMA DE FECHAMENTO (cadastro de itens + geração mês/período/ano)
     # ==================================================================
-    def _cron_item_from_form(it, form):
-        it.title = (form.get("title") or "").strip() or it.title or "Nova atividade"
-        it.kind = form.get("kind") if form.get("kind") in KINDS else "fechamento"
-        # escopo: 'geral' | 'todas' | <id da empresa>
-        escopo = (form.get("escopo") or "geral").strip()
+    def _cron_item_from_form(it, form, p="", novo=False):
+        """Aplica os campos do formulário ao item. `p` = prefixo do campo (lote:
+        't12_' para o item 12, 'n3_' para a 3ª linha nova/duplicada)."""
+        def g(k, d=None):
+            return form.get(p + k, d)
+        it.title = (g("title") or "").strip() or it.title or "Nova atividade"
+        if (p + "kind") in form:
+            it.kind = g("kind") if g("kind") in KINDS else "fechamento"
+        elif not it.kind:
+            it.kind = "fechamento"
+        # escopo: 'geral' | 'todas' | 'empresas' (+ lista 'empresas') | <id> (formato antigo)
+        escopo = (g("escopo") or "geral").strip()
+        empresas = [e for e in form.getlist(p + "empresas") if e]
         if escopo == "todas":
-            it.per_company, it.company_id = True, None
-        elif escopo == "geral":
-            it.per_company, it.company_id = False, None
+            it.per_company = True
+            it.company_ids = []
+        elif escopo == "empresas" or (escopo not in ("geral", "todas") and escopo.isdigit()):
+            if escopo.isdigit():
+                empresas = [escopo] + empresas
+            it.per_company = False
+            it.company_ids = empresas             # sem nenhuma marcada = vira geral
         else:
-            it.per_company, it.company_id = False, _int(escopo)
+            it.per_company = False
+            it.company_ids = []
         # responsável (usado no geral e como fallback nas empresas)
-        it.member_id = _int(form.get("member_id"))
-        it.deliverable = form.get("deliverable") or None
-        it.priority = form.get("priority") if form.get("priority") in PRIORITIES else "media"
-        # cronograma trabalha sempre em Nº dia útil do mês seguinte
-        it.due_base = "fixed_bd"
-        it.due_offset = max(_int(form.get("due_offset")) or 1, 1)
-        it.sort_order = _int(form.get("sort_order")) or it.sort_order or 100
+        it.member_id = _int(g("member_id"))
+        if (p + "deliverable") in form:
+            it.deliverable = g("deliverable") or None
+        it.priority = g("priority") if g("priority") in PRIORITIES else (it.priority or "media")
+        if (p + "active") in form or (p + "active_presente") in form:
+            it.active = g("active") in ("1", "on", "true")
+        # prazo: o cronograma trabalha em Nº dia útil do mês seguinte. Itens antigos
+        # com outra base (ex.: 5º DU −1) só mudam se o número for de fato editado.
+        off = _int(g("due_offset"))
+        if off is not None and (novo or it.due_base == "fixed_bd" or off != it.due_offset):
+            it.due_base = "fixed_bd"
+            it.due_offset = max(off, 1)
+        elif novo and it.due_offset is None:
+            it.due_base, it.due_offset = "fixed_bd", 5
+        if _int(g("sort_order")):
+            it.sort_order = _int(g("sort_order"))
+        elif not it.sort_order:
+            it.sort_order = 100
+
+    def _exclui_item_cronograma(it):
+        """Remove o item e DESVINCULA as atividades geradas por ele. O SQLite
+        reaproveita o id apagado: sem isso, um item criado depois herdaria as
+        atividades (e o histórico) do excluído. Desvinculadas, as concluídas
+        ficam como histórico e as em aberto saem na próxima geração."""
+        Activity.query.filter_by(template_id=it.id).update(
+            {Activity.template_id: None}, synchronize_session=False)
+        db.session.delete(it)
+
+    @app.route("/cronograma/salvar", methods=["POST"])
+    @controladoria_required
+    def team_cronograma_salvar():
+        """Salvar tudo: grava de uma vez as linhas alteradas, cria as duplicadas
+        e remove as marcadas para exclusão."""
+        import re as _re
+        f = request.form
+        ids = sorted({int(m.group(1)) for k in f for m in [_re.match(r"t(\d+)_", k)] if m})
+        novos = sorted({int(m.group(1)) for k in f for m in [_re.match(r"n(\d+)_", k)] if m})
+        alterados = excluidos = criados = 0
+        for iid in ids:
+            it = db.session.get(ClosingTemplateItem, iid)
+            if not it:
+                continue
+            if f.get(f"t{iid}_excluir") == "1":
+                _exclui_item_cronograma(it)
+                excluidos += 1
+            elif f.get(f"t{iid}_mudou") == "1":
+                _cron_item_from_form(it, f, f"t{iid}_")
+                alterados += 1
+        db.session.flush()
+        for k in novos:
+            p = f"n{k}_"
+            if f.get(p + "excluir") == "1" or not (f.get(p + "title") or "").strip():
+                continue
+            origem = db.session.get(ClosingTemplateItem, _int(f.get(p + "origem")) or 0)
+            it = ClosingTemplateItem(title="Nova atividade")
+            if origem:                                   # duplicata: herda o que não está na tela
+                it.kind, it.deliverable = origem.kind, origem.deliverable
+                it.due_base, it.due_offset = origem.due_base, origem.due_offset
+                it.insumo_codes_json, it.auto_metric = origem.insumo_codes_json, origem.auto_metric
+                it.sort_order = origem.sort_order
+            _cron_item_from_form(it, f, p, novo=not origem)
+            db.session.add(it)
+            criados += 1
+        db.session.commit()
+        log_audit(current_user.id, "cronograma_salvo", "closing_template",
+                  f"~{alterados} +{criados} -{excluidos}")
+        partes = []
+        if alterados:
+            partes.append(f"{alterados} alterada(s)")
+        if criados:
+            partes.append(f"{criados} criada(s)")
+        if excluidos:
+            partes.append(f"{excluidos} removida(s)")
+        flash("Cronograma salvo: " + ", ".join(partes) + "." if partes else "Nada a salvar.",
+              "success" if partes else "info")
+        return redirect(url_for("team_cronograma"))
 
     @app.route("/cronograma")
     @controladoria_required
@@ -554,7 +636,7 @@ def register_team_routes(app):
     @controladoria_required
     def team_cronograma_item_new():
         it = ClosingTemplateItem(title="Nova atividade")
-        _cron_item_from_form(it, request.form)
+        _cron_item_from_form(it, request.form, novo=True)
         db.session.add(it)
         db.session.commit()
         log_audit(current_user.id, "cronograma_item_criado", "closing_template", str(it.id))
@@ -582,7 +664,7 @@ def register_team_routes(app):
     @controladoria_required
     def team_cronograma_item_delete(iid):
         it = db.session.get(ClosingTemplateItem, iid) or abort(404)
-        db.session.delete(it)
+        _exclui_item_cronograma(it)
         db.session.commit()
         flash("Atividade removida do cronograma.", "success")
         return redirect(url_for("team_cronograma"))

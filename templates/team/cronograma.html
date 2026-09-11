@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Cronograma de Fechamento{% endblock %}
 {% block content %}
+{% macro campo_escopo(p, esc, sel_ids) %}
+<div class="esc" data-esc>
+  <select class="input esc-sel" name="{{ p }}escopo" aria-label="Escopo">
+    <option value="geral" {{ 'selected' if esc=='geral' }}>Geral (uma no mês)</option>
+    <option value="todas" {{ 'selected' if esc=='todas' }}>Todas as empresas ({{ n_empresas }})</option>
+    <option value="empresas" {{ 'selected' if esc=='empresas' }}>Empresas específicas…</option>
+  </select>
+  <details class="esc-pop"{{ ' hidden' if esc!='empresas' }}>
+    <summary class="esc-resumo">Escolher empresas</summary>
+    <div class="esc-lista">
+      <input type="search" class="input esc-busca" placeholder="Filtrar empresas…" aria-label="Filtrar empresas"/>
+      <div class="esc-itens">
+      {% for c in companies %}<label class="esc-item"><input type="checkbox" name="{{ p }}empresas" value="{{ c.id }}" {{ 'checked' if c.id in sel_ids }}/><span>{{ c.name }}</span></label>{% endfor %}
+      </div>
+    </div>
+  </details>
+</div>
+{% endmacro %}
 {% set MESES = [(1,'Jan'),(2,'Fev'),(3,'Mar'),(4,'Abr'),(5,'Mai'),(6,'Jun'),(7,'Jul'),(8,'Ago'),(9,'Set'),(10,'Out'),(11,'Nov'),(12,'Dez')] %}
 <div class="page-head">
   <div><h1>Cronograma de Fechamento</h1>
@@ -41,14 +59,8 @@
     <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Atividade</label>
       <input class="input input-lg" name="title" placeholder="Ex.: Consolidar eliminações" required/></div>
     <div class="form-row"><label class="field-label">Escopo / empresa</label>
-      <select class="input" name="escopo">
-        <option value="geral">Geral (uma no mês)</option>
-        <option value="todas">Todas as empresas da carteira ({{ n_empresas }})</option>
-        <optgroup label="Empresa específica">
-          {% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
-        </optgroup>
-      </select>
-      <div class="help-txt">“Todas” replica no responsável de cada empresa; “empresa específica” usa o responsável dela na carteira.</div></div>
+      {{ campo_escopo('', 'geral', []) }}
+      <div class="help-txt">“Todas” e “empresas específicas” criam uma atividade por empresa, com o responsável dela na carteira.</div></div>
     <div class="form-row"><label class="field-label">Responsável (geral / fallback)</label>
       <select class="input" name="member_id"><option value="">— a definir —</option>
         {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
@@ -61,49 +73,46 @@
   </form>
 </div>
 
-<!-- ===== lista ===== -->
-<div class="card">
+<!-- ===== lista (salvar tudo de uma vez) ===== -->
+<form class="card" id="form-cron" method="post" action="/cronograma/salvar" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
   <h2>Atividades do cronograma ({{ items|length }})</h2>
-  <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col" style="min-width:280px;">Atividade</th><th scope="col">Escopo / empresa</th><th scope="col">Responsável</th>
-      <th class="num">Venc. (DU)</th><th scope="col">Prioridade</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
-    <tbody>
+  <div class="barra-salvar" id="cron-barra">
+    <span id="cron-status">Edite à vontade: nada é gravado até você clicar em <b>Salvar tudo</b>.</span>
+    <span class="flex gap-1">
+      <button type="button" class="btn btn-outline btn-sm" id="cron-descartar" hidden>Descartar alterações</button>
+      <button type="submit" class="btn btn-primary btn-sm" id="cron-salvar">{{ icone('check') }} Salvar tudo</button>
+    </span>
+  </div>
+  <div class="tbl-wrap"><table class="tbl tbl-cron">
+    <thead><tr><th scope="col" style="min-width:260px;">Atividade</th><th scope="col">Escopo / empresa</th><th scope="col">Responsável</th>
+      <th class="num" title="Nº do dia útil do mês seguinte à competência">Venc. (DU)</th><th scope="col">Prioridade</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
+    <tbody id="cron-corpo">
     {% for it in items %}
-    <tr class="{{ '' if it.active else 'row-inativa' }}">
-      <td><input class="input" form="cri-{{ it.id }}" name="title" value="{{ it.title }}" style="width:100%;min-width:260px;"/></td>
-      <td><select class="input" form="cri-{{ it.id }}" name="escopo" style="min-width:150px;">
-        <option value="geral" {{ 'selected' if not it.per_company and not it.company_id }}>Geral</option>
-        <option value="todas" {{ 'selected' if it.per_company }}>Todas as empresas</option>
-        <optgroup label="Empresa específica">
-          {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if it.company_id==c.id }}>{{ c.name }}</option>{% endfor %}
-        </optgroup>
-      </select></td>
-      <td><select class="input" form="cri-{{ it.id }}" name="member_id" style="min-width:130px;"><option value="">— a definir —</option>
+    {% set p = 't%d_'|format(it.id) %}
+    <tr class="cron-lin{{ '' if it.active else ' row-inativa' }}" data-p="{{ p }}" data-id="{{ it.id }}">
+      <td><input type="hidden" name="{{ p }}mudou" value="0" class="cr-mudou"/>
+          <input type="hidden" name="{{ p }}excluir" value="0" class="cr-excluir"/>
+          <input class="input" name="{{ p }}title" value="{{ it.title }}" aria-label="Atividade" required/></td>
+      <td>{{ campo_escopo(p, it.escopo, it.company_ids) }}</td>
+      <td><select class="input" name="{{ p }}member_id" aria-label="Responsável"><option value="">— a definir —</option>
         {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if it.member_id==m.id }}>{{ m.name }}</option>{% endfor %}</select></td>
-      <td class="num"><input class="input" form="cri-{{ it.id }}" type="number" name="due_offset" min="1" max="23" value="{{ it.due_offset }}" style="width:70px;"/></td>
-      <td><select class="input" form="cri-{{ it.id }}" name="priority" style="width:auto;">{% for p in priorities %}<option value="{{ p }}" {{ 'selected' if it.priority==p }}>{{ p|capitalize }}</option>{% endfor %}</select></td>
-      <td>
-        <form method="post" action="/cronograma/item/{{ it.id }}/toggle" style="display:inline;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <button class="btn btn-outline btn-sm" type="submit" title="{{ 'Desativar' if it.active else 'Ativar' }}">{{ 'Ativo' if it.active else 'Inativo' }}</button>
-        </form>
-      </td>
-      <td><div class="flex gap-1">
-        <button class="btn btn-outline btn-sm" type="submit" form="cri-{{ it.id }}">Salvar</button>
-        <button class="btn btn-outline btn-sm btn-danger" type="submit" form="crd-{{ it.id }}" title="Remover">{{ icone('trash') }}</button>
+      <td class="num"><input class="input cr-du" type="number" name="{{ p }}due_offset" value="{{ it.due_offset }}" aria-label="Dia útil de vencimento"
+            {% if it.due_base != 'fixed_bd' %} title="Prazo atual: {{ it.due_label }}. Mudar o número passa a contar como Nº dia útil do mês seguinte."{% endif %}/>
+          {% if it.due_base != 'fixed_bd' %}<div class="cr-base">{{ it.due_label }}</div>{% endif %}</td>
+      <td><select class="input" name="{{ p }}priority" aria-label="Prioridade">{% for pr in priorities %}<option value="{{ pr }}" {{ 'selected' if it.priority==pr }}>{{ pr|capitalize }}</option>{% endfor %}</select></td>
+      <td><input type="hidden" name="{{ p }}active_presente" value="1"/>
+          <label class="chk cr-ativo"><input type="checkbox" name="{{ p }}active" value="1" {{ 'checked' if it.active }}/><span>Ativo</span></label></td>
+      <td><div class="cr-acoes">
+        <button type="button" class="btn btn-outline btn-sm cr-dup" title="Duplicar esta atividade" aria-label="Duplicar {{ it.title }}">{{ icone('copy') }}<span>Duplicar</span></button>
+        <button type="button" class="btn btn-outline btn-sm btn-danger cr-del" title="Marcar para remover" aria-label="Remover {{ it.title }}">{{ icone('trash') }}</button>
       </div></td>
     </tr>
     {% else %}<tr><td colspan="7" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhuma atividade cadastrada ainda. Adicione acima.</td></tr>{% endfor %}
     </tbody></table></div>
-  <div hidden>
-    {% for it in items %}
-    <form id="cri-{{ it.id }}" method="post" action="/cronograma/item/{{ it.id }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
-    <form id="crd-{{ it.id }}" method="post" action="/cronograma/item/{{ it.id }}/excluir"
-          onsubmit="return confirm('Remover “{{ it.title }}” do cronograma?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/></form>
-    {% endfor %}
-  </div>
-  <p class="help-txt mt-1">“Todas as empresas” e “empresa específica” usam o responsável definido na Carteira do Time.</p>
-</div>
+  <p class="help-txt mt-1">“Todas as empresas” e “empresas específicas” usam o responsável definido na Carteira do Time;
+    o responsável da linha vale como reserva. Duplicar cria a cópia logo abaixo — ajuste e clique em Salvar tudo.</p>
+</form>
 
 <script>
 function cgModo(){
@@ -112,5 +121,112 @@ function cgModo(){
   document.querySelectorAll('.cg-periodo').forEach(function(e){e.hidden=(v!=='periodo');});
 }
 cgModo();
+
+/* ---------- escopo: geral / todas / empresas específicas (várias) ---------- */
+function escAtualiza(box){
+  var sel=box.querySelector('.esc-sel'), pop=box.querySelector('.esc-pop');
+  var marcadas=Array.prototype.filter.call(box.querySelectorAll('.esc-item input'),function(c){return c.checked;});
+  pop.hidden = sel.value!=='empresas';
+  var nomes=marcadas.map(function(c){return c.nextElementSibling.textContent;});
+  box.querySelector('.esc-resumo').textContent = !nomes.length ? 'Escolher empresas'
+    : (nomes.length<=2 ? nomes.join(', ') : nomes.length+' empresas: '+nomes.slice(0,2).join(', ')+'…');
+  box.classList.toggle('esc-vazio', sel.value==='empresas' && !nomes.length);
+}
+function escLiga(box){
+  var sel=box.querySelector('.esc-sel'), pop=box.querySelector('.esc-pop');
+  sel.addEventListener('change',function(){ escAtualiza(box); if(sel.value==='empresas'){ pop.open=true; var b=pop.querySelector('.esc-busca'); if(b) b.focus(); } });
+  box.addEventListener('change',function(e){ if(e.target.matches('.esc-item input')) escAtualiza(box); });
+  var busca=box.querySelector('.esc-busca');
+  busca.addEventListener('input',function(){
+    var q=busca.value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    box.querySelectorAll('.esc-item').forEach(function(l){
+      l.hidden = q && l.textContent.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().indexOf(q)<0;
+    });
+  });
+  busca.addEventListener('keydown',function(e){ if(e.key==='Enter') e.preventDefault(); });
+  escAtualiza(box);
+}
+document.querySelectorAll('[data-esc]').forEach(escLiga);
+/* fecha a lista de empresas ao clicar fora */
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.esc-pop[open]').forEach(function(d){ if(!d.contains(e.target)) d.open=false; });
+});
+
+/* ---------- cronograma: salvar tudo de uma vez ---------- */
+(function(){
+  var form=document.getElementById('form-cron'); if(!form) return;
+  var corpo=document.getElementById('cron-corpo'), status=document.getElementById('cron-status');
+  var btnSalvar=document.getElementById('cron-salvar'), btnDesc=document.getElementById('cron-descartar');
+  var barra=document.getElementById('cron-barra'), salvando=false, nNovo=0;
+  function conta(){
+    var alt=corpo.querySelectorAll('.cron-lin.linha-alterada:not(.cron-nova):not(.cron-excluida)').length;
+    var nov=corpo.querySelectorAll('.cron-nova').length, exc=corpo.querySelectorAll('.cron-excluida').length;
+    var n=alt+nov+exc, partes=[];
+    if(alt) partes.push(alt+' alterada'+(alt>1?'s':''));
+    if(nov) partes.push(nov+' nova'+(nov>1?'s':''));
+    if(exc) partes.push(exc+' para remover');
+    status.innerHTML = n ? '<b>'+partes.join(' · ')+'</b> — ainda não gravado.' : 'Edite à vontade: nada é gravado até você clicar em <b>Salvar tudo</b>.';
+    barra.classList.toggle('ativa', n>0); btnDesc.hidden=!n;
+    return n;
+  }
+  function suja(tr){ if(!tr || tr.classList.contains('cron-nova')) return;
+    tr.querySelector('.cr-mudou').value='1'; tr.classList.add('linha-alterada'); conta(); }
+  corpo.addEventListener('input',function(e){ suja(e.target.closest('.cron-lin')); });
+  corpo.addEventListener('change',function(e){ suja(e.target.closest('.cron-lin')); });
+  corpo.addEventListener('click',function(e){
+    var dup=e.target.closest('.cr-dup'), del=e.target.closest('.cr-del');
+    if(dup){
+      var tr=dup.closest('.cron-lin'), p=tr.dataset.p, np='n'+(nNovo++)+'_';
+      var novo=tr.cloneNode(true);
+      // copia os valores atuais (inclusive os ainda não salvos) com o prefixo novo
+      var orig=tr.querySelectorAll('input,select'), copia=novo.querySelectorAll('input,select');
+      copia.forEach(function(el,i){
+        if(el.name) el.name=el.name.replace(p,np);
+        if(el.type==='checkbox'||el.type==='radio') el.checked=orig[i].checked; else el.value=orig[i].value;
+      });
+      novo.dataset.p=np; novo.removeAttribute('data-id');
+      var ex=novo.querySelector('.cr-excluir'); if(ex) ex.value='0';
+      var bd=novo.querySelector('.cr-del'); if(bd) bd.innerHTML='{{ icone("x") }}';
+      novo.classList.remove('linha-alterada','cron-excluida'); novo.classList.add('cron-nova');
+      var h=document.createElement('input'); h.type='hidden'; h.name=np+'origem'; h.value=tr.dataset.id||'';
+      novo.querySelector('td').appendChild(h);
+      var t=novo.querySelector('input[name="'+np+'title"]'); t.value=t.value.replace(/ \(cópia\)$/,'')+' (cópia)';
+      var bdel=novo.querySelector('.cr-del'); bdel.title='Descartar esta cópia'; bdel.setAttribute('aria-label','Descartar cópia');
+      var tag=document.createElement('span'); tag.className='cr-tag'; tag.textContent='nova'; novo.querySelector('td').appendChild(tag);
+      tr.parentNode.insertBefore(novo, tr.nextSibling);
+      novo.querySelectorAll('[data-esc]').forEach(escLiga);
+      t.focus(); t.select(); conta();
+      return;
+    }
+    if(del){
+      var tr2=del.closest('.cron-lin');
+      if(tr2.classList.contains('cron-nova')){ tr2.remove(); conta(); return; }
+      var marcar=!tr2.classList.contains('cron-excluida');
+      tr2.classList.toggle('cron-excluida', marcar);
+      tr2.querySelector('.cr-excluir').value=marcar?'1':'0';
+      del.innerHTML = marcar ? '{{ icone("undo") }}<span>Desfazer</span>' : '{{ icone("trash") }}';
+      del.title = marcar ? 'Desfazer a remoção' : 'Marcar para remover';
+      conta();
+    }
+  });
+  btnDesc.addEventListener('click',function(){
+    if(confirm('Descartar todas as alterações não salvas do cronograma?')){ salvando=true; location.reload(); }
+  });
+  form.addEventListener('submit',function(e){
+    // título vazio e "empresas específicas" sem empresa marcada não passam
+    var ruim=null;
+    corpo.querySelectorAll('.cron-lin:not(.cron-excluida)').forEach(function(tr){
+      if(ruim) return;
+      var t=tr.querySelector('input[name$="title"]');
+      if(t && !t.value.trim()){ ruim={el:t, msg:'Uma atividade está sem nome.'}; return; }
+      var box=tr.querySelector('[data-esc]');
+      if(box && box.classList.contains('esc-vazio')) ruim={el:box.querySelector('.esc-sel'), msg:'“'+(t?t.value:'')+'” está em “Empresas específicas” sem nenhuma empresa marcada.'};
+    });
+    if(ruim){ e.preventDefault(); alert(ruim.msg); ruim.el.focus(); return; }
+    salvando=true;
+  });
+  window.addEventListener('beforeunload',function(e){ if(!salvando && conta()>0){ e.preventDefault(); e.returnValue=''; } });
+  conta();
+})();
 </script>
 {% endblock %}

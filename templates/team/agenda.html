@@ -49,7 +49,7 @@
         {% if it.insumo_codes %}<div class="text-sm text-muted">insumo: {{ it.insumo_codes|join(', ') }}</div>{% endif %}</td>
       <td><span class="kind-chip">{{ it.kind }}</span></td>
       <td>{{ it.member.name.split()[0] if it.member else '—' }}</td>
-      <td>{{ it.company.name if it.company else '—' }}</td>
+      <td>{{ it.escopo_label }}</td>
       <td><span class="kind-chip">{{ it.due_label }}</span></td>
       <td>{{ '✓' if it.auto_metric else '—' }}</td>
       <td><span class="st st-{{ 'aprovado' if it.active else 'pendente' }}">{{ 'Ativo' if it.active else 'Inativo' }}</span></td>

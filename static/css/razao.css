@@ -534,3 +534,53 @@ table.tbl-empilha td.col-assunto,table.tbl-empilha td.text-sm{grid-column:1/-1;t
 
 .col-assunto .assunto{display:block;min-width:15rem;}
 table.tbl-empilha .col-assunto .assunto{min-width:0;}
+
+/* ==========================================================================
+   CRONOGRAMA — salvar tudo, duplicar, excluir e escopo com várias empresas
+   ========================================================================== */
+.tbl-cron td{vertical-align:top;padding:10px 7px;}
+.tbl-cron th{padding:11px 7px;}
+.tbl-cron td:first-child,.tbl-cron th:first-child{padding-left:12px;}
+.tbl-cron input[name$="title"]{min-width:200px;width:100%;}
+.tbl-cron select[name$="member_id"]{min-width:max-content;}
+.tbl-cron select[name$="priority"]{min-width:max-content;}
+.tbl-cron .esc{min-width:180px;}
+.cr-ativo span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}   /* o cabeçalho já diz "Ativo" */
+.cr-acoes .btn{padding:0 10px;height:34px;min-height:34px;min-width:38px;justify-content:center;}
+@media (max-width:1599px){ .cr-dup span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);} }
+.tbl-cron .cr-du{width:72px;text-align:right;}
+.cr-base{font-family:var(--r-mono);font-size:10.5px;color:var(--text-soft);margin-top:4px;white-space:nowrap;}
+.cr-acoes{display:flex;gap:6px;justify-content:flex-end;}
+.cr-acoes .btn{gap:6px;}
+.cr-ativo{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;}
+.cron-lin.cron-nova > td{background:var(--success-lt);}
+.cron-lin.cron-nova > td:first-child{box-shadow:inset 3px 0 0 var(--r-verde);}
+.cron-lin.cron-excluida > td{background:var(--danger-lt);}
+.cron-lin.cron-excluida .input,.cron-lin.cron-excluida .esc,.cron-lin.cron-excluida .cr-ativo{opacity:.45;pointer-events:none;}
+.cron-lin.cron-excluida input[name$="title"]{text-decoration:line-through;}
+.cron-lin.cron-excluida .cr-dup{visibility:hidden;}
+.cr-tag{display:inline-block;margin-top:5px;font-family:var(--r-mono);font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--r-verde);border:1.5px solid currentColor;border-radius:3px;padding:0 5px;}
+#cron-barra{position:sticky;top:64px;z-index:6;}
+/* escopo com várias empresas */
+.esc{display:flex;flex-direction:column;gap:6px;min-width:190px;position:relative;}
+.esc-pop{position:relative;}
+.esc-pop > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:34px;padding:4px 10px;
+  border:1px dashed var(--border-2);border-radius:8px;font-size:12.5px;color:var(--text);background:var(--surface);}
+.esc-pop > summary::-webkit-details-marker{display:none;}
+.esc-pop > summary::after{content:"▾";margin-left:auto;color:var(--text-soft);font-size:11px;}
+.esc-pop[open] > summary{border-style:solid;border-color:var(--text);}
+.esc.esc-vazio .esc-pop > summary{border-color:var(--r-carimbo);color:var(--r-carimbo);}
+.esc-lista{position:absolute;z-index:30;left:0;top:calc(100% + 4px);width:max(100%,280px);background:var(--surface);
+  border:1px solid var(--border-2);border-radius:10px;box-shadow:var(--shadow-md);padding:8px;}
+.esc-busca{height:34px;min-height:34px !important;font-size:13px;margin-bottom:6px;}
+.esc-itens{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;}
+.esc-item{display:flex;align-items:center;gap:8px;padding:6px 6px;border-radius:6px;font-size:13px;cursor:pointer;}
+.esc-item:hover{background:var(--surface-2);}
+.esc-item input{width:16px;height:16px;flex-shrink:0;}
+@media (max-width:760px){
+  .esc-lista{position:static;width:100%;box-shadow:none;margin-top:4px;}
+  .tbl-cron input[name$="title"]{min-width:0;}
+  #cron-barra{top:60px;}
+  .cr-acoes{justify-content:flex-start;}
+}

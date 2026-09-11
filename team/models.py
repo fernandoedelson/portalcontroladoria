@@ -244,6 +244,9 @@ class ClosingTemplateItem(db.Model):
     kind = db.Column(db.String(20), default="fechamento")
     member_id = db.Column(db.Integer, db.ForeignKey("team_members.id"), nullable=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+    # empresas específicas (uma ou várias): lista de ids em JSON. Itens antigos
+    # guardavam uma só em company_id — a propriedade company_ids cobre os dois.
+    company_ids_json = db.Column(db.Text)
     deliverable = db.Column(db.String(60))   # Painel, Consolidacao, Custos, Release...
     priority = db.Column(db.String(10), default="media")
     # True: replica a atividade para cada empresa da carteira (responsavel = o da empresa).
@@ -263,6 +266,48 @@ class ClosingTemplateItem(db.Model):
 
     member = db.relationship("TeamMember")
     company = db.relationship("Company")
+
+    @property
+    def company_ids(self):
+        try:
+            ids = [int(x) for x in json.loads(self.company_ids_json or "[]")]
+        except Exception:
+            ids = []
+        if not ids and self.company_id:
+            ids = [self.company_id]
+        return ids
+
+    @company_ids.setter
+    def company_ids(self, value):
+        ids = []
+        for v in value or []:
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                continue
+            if v not in ids:
+                ids.append(v)
+        self.company_ids_json = json.dumps(ids) if ids else None
+        self.company_id = ids[0] if len(ids) == 1 else None
+
+    @property
+    def escopo_label(self):
+        """Texto do escopo: 'Todas as empresas', nomes das empresas ou '—'."""
+        if self.per_company:
+            return "Todas as empresas"
+        ids = self.company_ids
+        if not ids:
+            return "—"
+        from models import Company
+        nomes = [c.name for c in Company.query.filter(Company.id.in_(ids)).order_by(Company.name)]
+        return ", ".join(nomes) if len(nomes) <= 3 else f"{len(nomes)} empresas: " + ", ".join(nomes[:3]) + "…"
+
+    @property
+    def escopo(self):
+        """'todas' | 'empresas' | 'geral' — como a tela mostra o item."""
+        if self.per_company:
+            return "todas"
+        return "empresas" if self.company_ids else "geral"
 
     @property
     def insumo_codes(self):
