@@ -43,6 +43,9 @@
     document.querySelectorAll('.tbl-wrap table').forEach(function(t){
       if(t.classList.contains('tbl-ativ')) return;             // tem layout proprio
       var w=t.closest('.tbl-wrap'); if(!w || !w.offsetParent) return;   // escondida: decide ao aparecer
+      var ativo=document.activeElement;                         // alguem usando um campo da tabela:
+      if(ativo && ativo!==document.body && t.contains(ativo) &&  // nao remonta (fecharia o select)
+         /^(SELECT|INPUT|TEXTAREA)$/.test(ativo.tagName)) return;
       if(!t.dataset.rotulado){                                  // rotulos vindos do cabecalho
         var nomes=[];
         if(t.tHead && t.tHead.rows.length){
@@ -73,7 +76,12 @@
   window.addEventListener('load',function(){ ajustaTabelas(); });
   window.addEventListener('resize',function(){ _ajustaDepois(150); });
   window.addEventListener('orientationchange',function(){ _ajustaDepois(250); });
-  document.addEventListener('click',function(){ _ajustaDepois(80); });   // abas/grupos que mostram tabelas
+  // abas/grupos que mostram tabelas. Clique em campo (select, caixa de texto...) NAO
+  // remede: remontar a tabela fecha a lista do select que acabou de abrir.
+  document.addEventListener('click',function(e){
+    if(e.target && e.target.closest && e.target.closest('select,option,input,textarea,label')) return;
+    _ajustaDepois(80);
+  });
   // ---- janelas do portal no lugar dos avisos padrao do navegador (alert/confirm) ----
   // confirm() do navegador e sincrono; a janela do portal nao. Truque: a 1a chamada
   // mostra a janela e cancela; ao confirmar, a acao original (envio do formulario ou
