@@ -36,6 +36,107 @@ def ajustes_unicos():
     return feitos
 
 
+METAS = os.path.join(os.path.dirname(ARQUIVO), "metas_2026.json")
+
+
+def _norm(s):
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(s or "")).lower()
+    return " ".join("".join(c for c in s if not unicodedata.combining(c)).split())
+
+
+def _acha_membro(nome, membros):
+    """Casa o dono da aba com o membro cadastrado: nome igual; senão todas as
+    palavras do cadastro dentro do nome da planilha, com o mesmo primeiro nome
+    ("Thiago Forte" ~ "Thiago de Bellis Forte"); senão primeiro nome único."""
+    alvo = _norm(nome)
+    for m in membros:
+        if _norm(m.name) == alvo:
+            return m
+    pal = set(alvo.split())
+    prim = alvo.split()[0] if alvo else ""
+    cand = [m for m in membros if _norm(m.name).split()[:1] == [prim]
+            and set(_norm(m.name).split()) <= pal]
+    if len(cand) == 1:
+        return cand[0]
+    cand = [m for m in membros if _norm(m.name).split()[:1] == [prim]]
+    return cand[0] if len(cand) == 1 else None
+
+
+def atualiza_metas(caminho=METAS):
+    """Aplica a planilha de metas (dados_iniciais/metas_2026.json) aos painéis.
+
+    Por painel, UMA vez (marca em Setting — edições feitas depois no portal ficam):
+    - indicador de mesmo nome: atualiza nº, meta, peso, unidade, sentido, escala e racional;
+    - indicador novo: cria (ligado ao catálogo, dimensão PRAZO);
+    - indicador que saiu da planilha: INATIVA (o histórico de resultados fica guardado).
+    Dono não encontrado: não cria ninguém; fica pendente e tenta na próxima subida.
+    Retorna lista de textos do que foi feito."""
+    if not os.path.exists(caminho):
+        return []
+    from team.models import TeamMember, IndicatorDef, Indicator
+    from team.models_workflow import Panel
+    with open(caminho, encoding="utf-8") as fh:
+        d = json.load(fh)
+    membros = TeamMember.query.all()
+    feitos = []
+    for p in d.get("paineis", []):
+        chave = ("metas26v2:" + _norm(p["dono"]).replace(" ", "_"))[:60]
+        if get_setting(chave) == "ok":
+            continue
+        m = _acha_membro(p["dono"], membros)
+        if not m:
+            feitos.append(f"PENDENTE: {p['dono']} não está cadastrado no time")
+            continue
+        painel = Panel.query.filter_by(kind="pessoal", owner_member_id=m.id).first()
+        if not painel:
+            painel = Panel(name=m.name, kind="pessoal", owner_member_id=m.id,
+                           color=m.color or "#1d5da8", sort_order=m.sort_order or 100)
+            db.session.add(painel)
+            db.session.flush()
+        atuais = {}
+        for i in (Indicator.query.filter_by(panel_id=painel.id)
+                  .order_by(Indicator.active.desc(), Indicator.id).all()):
+            atuais.setdefault(_norm(i.title), i)        # ativo tem preferência
+        vistos, novos, mudados = set(), 0, 0
+        for x in p["metas"]:
+            k = _norm(x["title"])
+            vistos.add(k)
+            i = atuais.get(k)
+            if not i:
+                defn = IndicatorDef.query.filter(
+                    db.func.lower(IndicatorDef.title) == x["title"].lower()).first()
+                if not defn:
+                    defn = IndicatorDef(title=x["title"], dimension="PRAZO",
+                                        target_type=x.get("target_type") or "manual",
+                                        unit=x.get("unit"), rational=x.get("rational"))
+                    db.session.add(defn)
+                    db.session.flush()
+                i = Indicator(indicator_def_id=defn.id, panel_id=painel.id, member_id=m.id,
+                              title=x["title"], dimension="PRAZO",
+                              target_type=x.get("target_type") or "manual", year=2026)
+                db.session.add(i)
+                novos += 1
+            else:
+                mudados += 1
+            i.seq = x["seq"]
+            i.target_label = x.get("target_label")
+            i.weight = x.get("weight")
+            i.unit = x.get("unit")
+            i.direction = x.get("direction")
+            i.scale_min, i.scale_obj, i.scale_sup = x.get("scale_min"), x.get("scale_obj"), x.get("scale_sup")
+            if x.get("rational"):
+                i.rational = x["rational"]
+            i.active = True
+        saem = [i for k, i in atuais.items() if k not in vistos and i.active]
+        for i in saem:
+            i.active = False
+        db.session.commit()
+        set_setting(chave, "ok")
+        feitos.append(f"{m.name}: {mudados} atualizado(s), {novos} novo(s), {len(saem)} inativado(s)")
+    return feitos
+
+
 def liga_catalogo():
     """Indicador sem ligação ao catálogo -> liga à definição de MESMO nome, se
     existir (não cria definição). Sem a ligação, a medição única (um indicador

@@ -331,6 +331,12 @@ class Indicator(db.Model):
     dimension = db.Column(db.String(40), default="RESULTADO")
     target_label = db.Column(db.String(60))    # "D+2", "5", "OUT/26"
     weight = db.Column(db.Float)               # peso (%) do indicador NESTE painel
+    # do formulário de contratação de metas: unidade, sentido e escala
+    unit = db.Column(db.String(30))            # "Dia útil", "Mês", "%", "Prazo"
+    direction = db.Column(db.String(10))       # 'menor' (menor melhor) | 'maior'
+    scale_min = db.Column(db.String(30))       # mínimo aceitável (80%)
+    scale_obj = db.Column(db.String(30))       # objetivo (100%)
+    scale_sup = db.Column(db.String(30))       # superado (>=120%)
     # como avaliar: 'prazo_du' (D+x), 'contagem', 'data_marco', 'projeto', 'manual'
     target_type = db.Column(db.String(20), default="manual")
     rational = db.Column(db.Text)

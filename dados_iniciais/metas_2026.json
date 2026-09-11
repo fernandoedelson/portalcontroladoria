@@ -1,0 +1,438 @@
+{
+ "versao": "metas-2026-v2 (planilha 30/06/2026)",
+ "paineis": [
+  {
+   "dono": "Augusto Gobo",
+   "metas": [
+    {
+     "seq": 1,
+     "title": "Fechamento mensal J&F",
+     "target_label": "5",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "6",
+     "scale_obj": "5",
+     "scale_sup": "4",
+     "target_type": "prazo_du",
+     "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo.Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 2,
+     "title": "Consolidação de resultado do grupo",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Caso todas as empresas não enviem seus respectivos painéis, será enviada uma prévia com os painéis das empresas que enviaram. A prévia valerá como entrega.Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 3,
+     "title": "Consolidação dos fluxos de endividamento",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Caso todas as empresas não enviem seus respectivos painéis, será enviada uma prévia com os fluxos de endividamento das empresas que enviaram. A prévia valerá como entrega.Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 4,
+     "title": "Construção dos painéis da J&F no exterior",
+     "target_label": "AGO",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "OUT",
+     "scale_obj": "SET",
+     "scale_sup": "AGO",
+     "target_type": "data_marco",
+     "rational": "Entrega da J&F Finance, Lux até o prazo de setembro. A J&F International ainda está se estruturando e não há previsão até o momento."
+    },
+    {
+     "seq": 5,
+     "title": "Gestão do processo de tesouraria do grupo",
+     "target_label": "AGO",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "OUT",
+     "scale_obj": "SET",
+     "scale_sup": "AGO",
+     "target_type": "data_marco",
+     "rational": "Estruturar e fazer o fechamento mensal do processo transversal de tesouraria do grupo (gestão da dívida)"
+    }
+   ]
+  },
+  {
+   "dono": "Crysthian Oliveira",
+   "metas": [
+    {
+     "seq": 1,
+     "title": "Fechamento mensal J&F",
+     "target_label": "5",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 15.0,
+     "scale_min": "6",
+     "scale_obj": "5",
+     "scale_sup": "4",
+     "target_type": "prazo_du",
+     "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 2,
+     "title": "Consolidação de resultado do grupo",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Caso todas as empresas não enviem seus respectivos painéis, será enviada uma prévia com os painéis das empresas que enviaram. A prévia valerá como entrega.Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 3,
+     "title": "Ajustes na estrutura de fechamento para receber dados do EPM",
+     "target_label": "SET/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "OUT/26",
+     "scale_obj": "SET/26",
+     "scale_sup": "AGO/26",
+     "target_type": "data_marco",
+     "rational": "Preparação dos paineis de consolidação para receber a tabela fato do EPM e manter a consolidação no mesmo nível de detalhe da consolidação atual"
+    },
+    {
+     "seq": 4,
+     "title": "Implantação EPM",
+     "target_label": "OUT/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "NOV/26",
+     "scale_obj": "OUT/26",
+     "scale_sup": "SET/26",
+     "target_type": "data_marco",
+     "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o PBCS. (Fase 1)"
+    },
+    {
+     "seq": 5,
+     "title": "Projeto BI - Qlik",
+     "target_label": "SET/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 15.0,
+     "scale_min": "OUT/26",
+     "scale_obj": "SET/26",
+     "scale_sup": "AGO/26",
+     "target_type": "data_marco",
+     "rational": "Implantação de painéis de BI para acompanhamento das áreas internas J&F e Painéis com indicadores do fechamento consolidado grupo J&F"
+    }
+   ]
+  },
+  {
+   "dono": "Daniel Benedetti",
+   "metas": [
+    {
+     "seq": 1,
+     "title": "Consolidação de resultado do grupo",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Caso todas as empresas não enviem seus respectivos painéis, será enviada uma prévia com os painéis das empresas que enviaram. A prévia valerá como entrega. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 2,
+     "title": "Capex (acuracidade)",
+     "target_label": "95%",
+     "unit": "%",
+     "direction": "maior",
+     "weight": 20.0,
+     "scale_min": "85%",
+     "scale_obj": "90%",
+     "scale_sup": "90,1%",
+     "target_type": "manual",
+     "rational": "Garantir que o Capex enviado pelas empresas nos relatórios gerenciais estenham em linha com o fechameto societário. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 3,
+     "title": "Estruturação dos paineis e DRE da empresa - Aeronave - extração automatica do novo sistema",
+     "target_label": "DEZ",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "DEZ",
+     "scale_obj": "DEZ",
+     "scale_sup": "NOV",
+     "target_type": "data_marco",
+     "rational": "Estruturar a base do sistema para que seja possível criar uma integração com os painéis de fechamento"
+    },
+    {
+     "seq": 4,
+     "title": "Projeto Bond",
+     "target_label": "D-1",
+     "unit": "Prazo",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "D0",
+     "scale_obj": "D-1",
+     "scale_sup": "D-2",
+     "target_type": "data_marco",
+     "rational": "Apoio em todo o decorrer do projeto, buscando garantir que todos os dados estão consistentes, bem como as análises coerentes. A prazo é medido pela data da entrega do Bond. Válido a partir de jan/26"
+    },
+    {
+     "seq": 5,
+     "title": "Estruturação Custeio Fazenda Lealdade",
+     "target_label": "AGO",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "SET",
+     "scale_obj": "AGO",
+     "scale_sup": "JUL",
+     "target_type": "data_marco",
+     "rational": "Estruturar o custeio da fazenda, bem como estruturar o envio mensal do custeio para o fechamento."
+    }
+   ]
+  },
+  {
+   "dono": "Jeferson Bittencourt",
+   "metas": [
+    {
+     "seq": 1,
+     "title": "Fechamento mensal J&F",
+     "target_label": "5",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "7",
+     "scale_obj": "5",
+     "scale_sup": "4",
+     "target_type": "prazo_du",
+     "rational": "Consideramos neste indicador o fechamento dos custos da J&F Holding. O fechamento de caixa e demais conciliações da holding está contemplado no indicador da consolidação do grupo. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 2,
+     "title": "Consolidação de resultado do grupo",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Caso todas as empresas não enviem seus respectivos painéis, será enviada uma prévia com os painéis das empresas que enviaram. A prévia valerá como entrega. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 3,
+     "title": "Controle dos backups para a emissão do Bond",
+     "target_label": "D-2",
+     "unit": "Dia corrido",
+     "direction": "menor",
+     "weight": 10.0,
+     "scale_min": "D-1",
+     "scale_obj": "D-2",
+     "scale_sup": "D-3",
+     "target_type": "data_marco",
+     "rational": "O prazo é dois dias antes da data limite para a entrega do bond para os bancos. Válido a partir de jan/26"
+    },
+    {
+     "seq": 4,
+     "title": "Emissão mensal dos releases de resultado gerencial",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Caso todas as empresas não enviem seus respectivos painéis, serão enviados os releases das empresas que enviaram. Esse envio valerá como entrega. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 5,
+     "title": "Projeto Bond",
+     "target_label": "D-1",
+     "unit": "Prazo",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "D0",
+     "scale_obj": "D-1",
+     "scale_sup": "D-2",
+     "target_type": "data_marco",
+     "rational": "Apoio em todo o decorrer do projeto, buscando garantir que todos os dados estão consistentes, bem como as análises coerentes. Válido a partir de jan/26"
+    }
+   ]
+  },
+  {
+   "dono": "Fernando Edelson",
+   "metas": [
+    {
+     "seq": 1,
+     "title": "Consolidação de resultado do grupo",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 20.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Considerada a entrega como o envio do relatório consolidado das empresas que enviaram seus respectivos painéis, junto dos releases de cada empresa, garantindo o resultado quantitativo e qualitativo. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 2,
+     "title": "Projeto EPM",
+     "target_label": "OUT/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "NOV/26",
+     "scale_obj": "OUT/26",
+     "scale_sup": "SET/26",
+     "target_type": "data_marco",
+     "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o FCCS e PBCS."
+    },
+    {
+     "seq": 3,
+     "title": "Projeto Bond",
+     "target_label": "D-1",
+     "unit": "Prazo",
+     "direction": "menor",
+     "weight": 15.0,
+     "scale_min": "D0",
+     "scale_obj": "D-1",
+     "scale_sup": "D-2",
+     "target_type": "data_marco",
+     "rational": "Estruturar toda a base de dados para construção do Offering, garantindo a consistência dos dados e coerência das análises, bem como o envio completo de todos os backups."
+    },
+    {
+     "seq": 4,
+     "title": "Projeto Construção de aplicação para releases automáticos",
+     "target_label": "AGO",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 15.0,
+     "scale_min": "SET",
+     "scale_obj": "AGO",
+     "scale_sup": "JUL",
+     "target_type": "data_marco",
+     "rational": "Criar uma aplicaão capaz de construir automaticamente releases a partir de um template, controlando versões e garantindo a acuracidade dos dados."
+    },
+    {
+     "seq": 5,
+     "title": "Entrega orçamento 2027",
+     "target_label": "DEZ/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 15.0,
+     "scale_min": "JAN/27",
+     "scale_obj": "DEZ/26",
+     "scale_sup": "NOV/26",
+     "target_type": "data_marco",
+     "rational": "Entrega dos orçamentos + projeções de 5 anos + análises, justificativas e premissas gerais que compõem o orçamento"
+    },
+    {
+     "seq": 6,
+     "title": "Projeto BI - Qlik",
+     "target_label": "SET/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 10.0,
+     "scale_min": "OUT/26",
+     "scale_obj": "SET/26",
+     "scale_sup": "AGO/26",
+     "target_type": "data_marco",
+     "rational": "Implantação de painéis de BI para acompanhamento das áreas internas J&F e Painéis com indicadores do fechamento consolidado grupo J&F."
+    }
+   ]
+  },
+  {
+   "dono": "Thiago de Bellis Forte",
+   "metas": [
+    {
+     "seq": 1,
+     "title": "Consolidação de resultado do grupo",
+     "target_label": "8",
+     "unit": "Dia útil",
+     "direction": "menor",
+     "weight": 10.0,
+     "scale_min": "9",
+     "scale_obj": "8",
+     "scale_sup": "7",
+     "target_type": "prazo_du",
+     "rational": "Considerada a entrega como o envio do relatório consolidado das empresas que enviaram seus respectivos painéis, junto dos releases de cada empresa, garantindo o resultado quantitativo e qualitativo. Válido a partir do calendário de Julho"
+    },
+    {
+     "seq": 2,
+     "title": "Implantação EPM - PBCS",
+     "target_label": "OUT/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "NOV/26",
+     "scale_obj": "OUT/26",
+     "scale_sup": "SET/26",
+     "target_type": "data_marco",
+     "rational": "Contemplada a entrega dos templates de orçamento e de fechamento no EPM, utilizando o PBCS. (Fase 1)"
+    },
+    {
+     "seq": 3,
+     "title": "Implantação EPM - FCCS",
+     "target_label": "OUT/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "NOV/26",
+     "scale_obj": "OUT/26",
+     "scale_sup": "SET/26",
+     "target_type": "data_marco",
+     "rational": "Contemplada a entrega dos dados históricos de 2025 e 2026 até julho das empresas: Âmbar, Flora, LHG e J&F e a consoliudação societária da referidas empresas"
+    },
+    {
+     "seq": 4,
+     "title": "Implantação EPM - Narrative",
+     "target_label": "NOV/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 25.0,
+     "scale_min": "DEZ/26",
+     "scale_obj": "NOV/26",
+     "scale_sup": "OUT/26",
+     "target_type": "data_marco",
+     "rational": "Contempla a construção da DF de junho de 2026 (já publicada) feita no narrative e a entrega da DF de Setembro de 2026."
+    },
+    {
+     "seq": 5,
+     "title": "Automação do Capex no Oracle PBCS",
+     "target_label": "NOV/26",
+     "unit": "Mês",
+     "direction": "menor",
+     "weight": 15.0,
+     "scale_min": "DEZ/26",
+     "scale_obj": "NOV/26",
+     "scale_sup": "OUT/26",
+     "target_type": "data_marco",
+     "rational": "Construção do projeto que captura os dados realizados de capex do EPM para report no Qlik"
+    }
+   ]
+  }
+ ]
+}

@@ -12,10 +12,23 @@
     <h2>Definição</h2>
     <table class="tbl">
       <tr><th style="width:38%;">Dimensão</th><td>{{ i.dimension }}</td></tr>
-      <tr><th>Indicador</th><td>{{ i.target_label or '—' }}</td></tr>
+      <tr><th>Indicador</th><td><strong>{{ i.target_label or '—' }}</strong>{% if i.unit %} <span class="text-muted">· {{ i.unit }}</span>{% endif %}</td></tr>
+      {% if i.direction %}<tr><th>Sentido</th><td>{{ '↓ Menor melhor' if i.direction == 'menor' else '↑ Maior melhor' }}</td></tr>{% endif %}
+      {% if i.weight is not none %}<tr><th>Peso</th><td>{{ ('%g'|format(i.weight))|replace('.', ',') }}%</td></tr>{% endif %}
+      {% if i.scale_min or i.scale_obj or i.scale_sup %}
+      <tr><th>Escala de atendimento</th><td>
+        <div class="escala">
+          <span><small>Mínimo aceitável (80%)</small><strong>{{ i.scale_min or '—' }}</strong></span>
+          <span><small>Objetivo (100%)</small><strong>{{ i.scale_obj or '—' }}</strong></span>
+          <span><small>Superado (≥120%)</small><strong>{{ i.scale_sup or '—' }}</strong></span>
+        </div></td></tr>
+      {% endif %}
       <tr><th>Tipo</th><td>{{ {'manual':'Manual','prazo_du':'Prazo em dia útil (auto)','data_marco':'Data / marco','contagem':'Contagem','projeto':'Projeto'}.get(i.target_type, i.target_type) }}</td></tr>
       <tr><th>Ano</th><td>{{ i.year }}</td></tr>
     </table>
+    <style>.escala{display:flex;gap:.4rem;flex-wrap:wrap;}
+      .escala span{display:flex;flex-direction:column;padding:.35rem .6rem;border-radius:8px;background:var(--surface-2);min-width:6.5rem;}
+      .escala small{font-size:.72rem;color:var(--text-muted);}</style>
     {% if i.rational %}<div class="mt-2"><div class="field-label">Racional / considerações</div><p class="text-sm">{{ i.rational }}</p></div>{% endif %}
     {% if i.target_type == 'prazo_du' and consolidacao_ativa %}
     <form method="post" action="/indicador/{{ i.id }}/auto" class="mt-2">

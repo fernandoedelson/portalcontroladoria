@@ -64,6 +64,8 @@ def create_app(config=Config):
                 app.logger.info("Dados iniciais cadastrados: %s", r)
             for f in dados_iniciais.ajustes_unicos():
                 app.logger.info("Ajuste de cadastro: %s", f)
+            for f in dados_iniciais.atualiza_metas():
+                app.logger.info("Metas 2026: %s", f)
             n = dados_iniciais.liga_catalogo()
             if n:
                 app.logger.info("%s indicador(es) ligado(s) ao catálogo", n)
@@ -90,6 +92,11 @@ _COLUNAS_NOVAS = [
     ("personal_tasks", "remind_days", "INTEGER DEFAULT 0"),
     ("alert_channel_settings", "push", "BOOLEAN DEFAULT 1"),   # nasce ligado
     ("indicators", "weight", "FLOAT"),                          # peso (%) no painel
+    ("indicators", "unit", "VARCHAR(30)"),
+    ("indicators", "direction", "VARCHAR(10)"),
+    ("indicators", "scale_min", "VARCHAR(30)"),
+    ("indicators", "scale_obj", "VARCHAR(30)"),
+    ("indicators", "scale_sup", "VARCHAR(30)"),
 ]
 
 
