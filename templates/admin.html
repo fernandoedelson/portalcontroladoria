@@ -52,7 +52,7 @@
         <input class="input" name="name" required placeholder="Ex.: Maria Souza"/></div>
       <div class="form-row"><label class="field-label">Login vinculado</label>
         <select class="input" name="user_id"><option value="">— sem login ainda —</option>
-          {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}">{{ u.display_name }} — {{ perfil(u.role) }}</option>{% endif %}{% endfor %}
+          {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}" title="{{ perfil(u.role) }}">{{ u.display_name }}</option>{% endif %}{% endfor %}
         </select>
         <div class="help-txt">Somente contas de Administrador e Controladoria.</div></div>
       <div class="form-row"><label class="field-label">Painel</label>
@@ -89,7 +89,7 @@
           <input type="hidden" form="{{ F }}" name="color" value="{{ m.color }}"/>
         </div></td>
         <td data-rot="Login"><select class="input" form="{{ F }}" name="user_id"><option value="">—</option>
-          {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}" {{ 'selected' if m.user_id==u.id }}>{{ u.display_name }} — {{ perfil(u.role) }}</option>{% endif %}{% endfor %}
+          {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}" {{ 'selected' if m.user_id==u.id }} title="{{ perfil(u.role) }}">{{ u.display_name }}</option>{% endif %}{% endfor %}
         </select></td>
         <td data-rot="Painel"><select class="input" form="{{ F }}" name="panel_id"><option value="">— próprio —</option>
           {% for p in panels %}{% if p.active %}<option value="{{ p.id }}" {{ 'selected' if m.panel_id==p.id }}>{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
@@ -107,7 +107,7 @@
       {% endfor %}
       </tbody></table></div>
     {% else %}
-      <div class="empty-box"><div class="empty-ico">👥</div>
+      <div class="empty-box"><div class="empty-ico">{{ icone('users', 28) }}</div>
         <p><strong>Nenhum membro cadastrado.</strong></p>
         <p class="text-muted text-sm">Cadastre o time acima para distribuir a carteira e as atividades de fechamento.</p></div>
     {% endif %}
@@ -185,7 +185,7 @@
         </select></div>
       <div class="form-row"><label class="field-label">Indicador (do catálogo)</label>
         <select class="input" name="indicator_def_id" id="adm-ind-def" onchange="admIndDef()">
-          <option value="">➕ Cadastrar um novo indicador…</option>
+          <option value="">+ Novo indicador…</option>
           {% for d in defs %}<option value="{{ d.id }}">{{ d.title }} · {{ d.dimension }}</option>{% endfor %}
         </select></div>
       <div class="form-row adm-ind-novo"><label class="field-label">Novo indicador — nome</label>

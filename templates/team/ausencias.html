@@ -45,11 +45,11 @@
     <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Observação</label>
       <input class="input" name="note" placeholder="opcional"/></div>
     <div class="form-row"><label class="field-label">Quem aprova na ausência</label>
-      <select class="input" name="aprova_delegado_id"><option value="">— gestor do time (padrão) —</option>
+      <select class="input" name="aprova_delegado_id"><option value="">Gestor do time (padrão)</option>
         {% for m in membros %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
       <div class="help-txt">Importante para quem tem cargo de gestão: aprova realinhamentos no seu lugar.</div></div>
     <div class="form-row"><label class="field-label">Quem toca o andamento</label>
-      <select class="input" name="andamento_delegado_id"><option value="">— gestor do time (padrão) —</option>
+      <select class="input" name="andamento_delegado_id"><option value="">Gestor do time (padrão)</option>
         {% for m in membros %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
       <div class="help-txt">Responsável por conduzir a área/os projetos durante a ausência.</div></div>
     <div class="form-row" style="align-self:end;">
@@ -146,7 +146,7 @@
       </tr>
     {% endfor %}</tbody></table></div>
   {% else %}
-  <div class="empty-box"><div class="empty-ico">🌴</div>
+  <div class="empty-box"><div class="empty-ico">{{ icone('calendar', 28) }}</div>
     <p><strong>Nenhuma ausência aprovada no período.</strong></p></div>
   {% endif %}
 </div>

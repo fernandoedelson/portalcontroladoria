@@ -38,7 +38,7 @@
       {{ icone('table') }} {{ 'Sem agrupar' if group=='status' else 'Agrupar por status' }}</a>
     {% endif %}
     <a href="?{{ 'view=kanban' if view!='kanban' else 'view=tabela' }}{{ filtros }}" class="btn btn-outline btn-sm">
-      {{ '📋 Tabela' if view=='kanban' else '🗂️ Kanban' }}</a>
+      {{ icone('table') ~ ' Tabela' if view=='kanban' else icone('columns') ~ ' Kanban' }}</a>
   </form>
 </div>
 
@@ -66,7 +66,7 @@
     <div class="flex gap-1 items-center mb-2" id="barra-lote" style="display:none!important;">
       <strong class="text-sm"><span id="n-sel">0</span> selecionada(s)</strong>
       <button class="btn btn-primary btn-sm" type="submit"
-              onclick="return confirm('Concluir as atividades selecionadas?');">✓ Concluir selecionadas</button>
+              onclick="return confirm('Concluir as atividades selecionadas?');">{{ icone('check') }} Concluir selecionadas</button>
       <button class="btn btn-outline btn-sm" type="button" onclick="limparSel()">Limpar</button>
     </div>
     {% macro linha(a, grp='') %}
@@ -75,7 +75,7 @@
           <input type="checkbox" class="chk-act" name="ids" value="{{ a.id }}"/>{% endif %}</td>
         <td><a href="/atividade/{{ a.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ a.title }}</a>
           {% if a.company %}<div class="text-sm text-muted">{{ a.company.name }}</div>{% endif %}
-          {% if a.notes %}<span class="badge-soft" title="{{ a.notes[0].body[:120] }}">💬 {{ a.notes|length }}</span>{% endif %}
+          {% if a.notes %}<span class="badge-soft" title="{{ a.notes[0].body[:120] }}">{{ icone('message', 12) }} {{ a.notes|length }}</span>{% endif %}
           {% if a.files %}<span class="badge-soft">{{ icone("paperclip") }} {{ a.files|length }}</span>{% endif %}</td>
         <td class="ta-tipo"><span class="kind-chip">{{ a.kind_pt() }}</span></td>
         <td class="ta-resp">{% if a.member %}<span class="member-cell"><span class="mini-av" style="width:22px;height:22px;font-size:.62rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name.split()[0] }}</span>{% else %}—{% endif %}</td>
@@ -118,7 +118,7 @@
       {% endif %}
       </tbody></table></div>
   </form>
-  <p class="help-txt mt-1">{{ acts|length }} atividade(s). Use o ✓ para concluir na hora,
+  <p class="help-txt mt-1">{{ acts|length }} atividade(s). Use o botão de concluir para fechar na hora,
     ou marque várias e conclua de uma vez.</p>
 </div>
 

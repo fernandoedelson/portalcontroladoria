@@ -42,8 +42,8 @@
       <input class="input input-lg" name="title" placeholder="Ex.: Consolidar eliminações" required/></div>
     <div class="form-row"><label class="field-label">Escopo / empresa</label>
       <select class="input" name="escopo">
-        <option value="geral">Geral — uma atividade no mês</option>
-        <option value="todas">★ Todas as empresas da carteira ({{ n_empresas }})</option>
+        <option value="geral">Geral (uma no mês)</option>
+        <option value="todas">Todas as empresas da carteira ({{ n_empresas }})</option>
         <optgroup label="Empresa específica">
           {% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
         </optgroup>

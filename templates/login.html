@@ -1,33 +1,70 @@
 {% extends "base.html" %}
 {% block title %}Entrar · {{ APP_NAME }}{% endblock %}
 {% block auth_content %}
-<div class="login-wrap" style="min-height:100vh;display:grid;place-items:center;background:var(--grad-nav);padding:1.5rem;">
-  <div style="width:100%;max-width:400px;">
-    <div style="text-align:center;margin-bottom:1.6rem;color:#fff;">
-      <img src="/static/img/jf-logo.svg" alt="J&amp;F" style="height:52px;filter:brightness(0) invert(1);"/>
-      <h1 style="font-size:1.3rem;font-weight:700;margin-top:1rem;">Gestão Controladoria J&amp;F S.A.</h1>
-      <p style="opacity:.7;font-size:.85rem;margin-top:.3rem;">Gestão da área de Controladoria</p>
-    </div>
-    <div class="card" style="margin:0;">
+<div class="lg">
+  <aside class="lg-marca" aria-hidden="true">
+    <div class="lg-topo"><img src="/static/img/jf-logo.svg" alt=""/><span>J&amp;F S.A.</span></div>
+    <div class="lg-nome">Controla&shy;doria</div>
+    <p class="lg-frase">Fechamento, metas e rotina da área em um só lugar.</p>
+    <ol class="lg-regua">
+      <li class="f"><b>D+1</b></li><li class="f"><b>D+2</b></li><li class="h"><b>D+3</b><i>hoje</i></li><li><b>D+4</b></li><li class="p"><b>D+5</b><i>prazo</i></li>
+    </ol>
+  </aside>
+  <main class="lg-form">
+    <div class="lg-caixa">
+      <div class="lg-cel"><img src="/static/img/jf-logo.svg" alt="J&amp;F"/><b>Controladoria</b></div>
+      <h1>Entrar</h1>
+      <p class="lg-sub">Use seu e-mail corporativo.</p>
       {% with msgs = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in msgs %}<div class="alert alert-{{ cat }}">{{ msg }}</div>{% endfor %}
       {% endwith %}
       <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <label class="field-label">E-mail corporativo</label>
-        <input class="input" type="email" name="email" required autofocus placeholder="voce@jfsa.com.br"/>
-        <label class="field-label" style="margin-top:1rem;">Senha</label>
-        <input class="input" type="password" name="password" required/>
-        <button class="btn btn-primary" style="width:100%;margin-top:1.4rem;" type="submit">Entrar</button>
+        <label class="field-label" for="lg-email">E-mail corporativo</label>
+        <input class="input" id="lg-email" type="email" name="email" required autofocus autocomplete="username" placeholder="voce@jfsa.com.br"/>
+        <label class="field-label" for="lg-senha">Senha</label>
+        <input class="input" id="lg-senha" type="password" name="password" required autocomplete="current-password"/>
+        <button class="btn btn-primary lg-btn" type="submit">Entrar</button>
       </form>
+      <p class="lg-nota">Integração com Azure AD (SSO) prevista para produção.</p>
     </div>
-    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.75rem;margin-top:1rem;">
-      Integração com Azure AD (SSO) prevista para produção.</p>
-  </div>
+  </main>
 </div>
 <style>
-.field-label{display:block;font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:.4rem;}
-.input{width:100%;padding:.7rem .9rem;border:1px solid var(--border-2);border-radius:var(--radius-sm);font-size:.92rem;background:var(--surface);color:var(--text);font-family:inherit;}
-.input:focus{outline:none;border-color:var(--primary-lt);box-shadow:var(--ring);}
+  .lg{min-height:100vh;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);background:var(--bg);}
+  .lg-marca{background:#14273A;color:#fff;padding:44px 48px;display:flex;flex-direction:column;}
+  .lg-topo{display:flex;align-items:center;gap:12px;font-family:var(--r-mono);font-size:11px;letter-spacing:.12em;color:rgba(255,255,255,.62);}
+  .lg-topo img{width:40px;height:40px;background:#fff;border-radius:10px;padding:4px;}
+  .lg-nome{font-family:var(--r-display);font-stretch:72%;font-weight:760;font-size:clamp(56px,7vw,96px);line-height:.9;margin-top:auto;letter-spacing:-.01em;}
+  .lg-frase{font-size:16px;color:rgba(255,255,255,.72);margin:18px 0 0;max-width:30ch;}
+  .lg-regua{list-style:none;display:grid;grid-template-columns:repeat(5,1fr);margin:42px 0 0;padding:0;border-top:1px solid rgba(255,255,255,.16);max-width:420px;}
+  .lg-regua li{padding:10px 8px 0;border-left:1px solid rgba(255,255,255,.12);font-family:var(--r-mono);position:relative;}
+  .lg-regua li:first-child{border-left:0;padding-left:0;}
+  .lg-regua b{display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,.8);}
+  .lg-regua i{display:block;font-style:normal;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-top:4px;min-height:12px;}
+  .lg-regua li:not(.h):not(.p) b{margin-bottom:16px;}
+  .lg-regua li::after{content:"";display:block;width:10px;height:10px;border-radius:2px;border:1.5px solid rgba(255,255,255,.45);margin-top:10px;}
+  .lg-regua li.f::after{background:#74C3A0;border-color:#74C3A0;}
+  .lg-regua li.h b,.lg-regua li.h i{color:#DDAE58;} .lg-regua li.h::after{border-color:#DDAE58;}
+  .lg-regua li.h::before{content:"";position:absolute;left:-1px;right:0;top:-2px;height:3px;background:#DDAE58;}
+  .lg-regua li.p i{color:#fff;}
+  .lg-form{display:grid;place-items:center;padding:40px 24px;}
+  .lg-caixa{width:100%;max-width:380px;}
+  .lg-cel{display:none;}
+  .lg-caixa h1{font-family:var(--r-display);font-stretch:80%;font-weight:720;font-size:36px;margin:0;}
+  .lg-sub{color:var(--text-muted);margin:6px 0 24px;}
+  .lg-caixa form{display:flex;flex-direction:column;gap:6px;}
+  .lg-caixa .field-label{margin-top:12px;display:block;}
+  .lg-caixa .input{height:46px;font-size:16px;}
+  .lg-btn{height:46px;margin-top:22px;justify-content:center;font-size:15px;}
+  .lg-nota{font-size:12.5px;color:var(--text-soft);margin-top:22px;}
+  @media (max-width:820px){
+    .lg{grid-template-columns:1fr;}
+    .lg-marca{display:none;}
+    .lg-form{place-items:start center;padding:48px 20px;}
+    .lg-cel{display:flex;align-items:center;gap:10px;margin-bottom:34px;}
+    .lg-cel img{width:38px;height:38px;border-radius:9px;background:#fff;padding:3px;border:1px solid var(--border);}
+    .lg-cel b{font-family:var(--r-display);font-stretch:80%;font-weight:720;font-size:22px;}
+  }
 </style>
 {% endblock %}

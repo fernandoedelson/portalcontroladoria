@@ -157,12 +157,48 @@ def register_routes(app):
     @app.context_processor
     def inject_globals():
         unread = 0
+        topo = None
         if current_user.is_authenticated:
             unread = Notification.query.filter_by(
                 user_id=current_user.id, is_read=False).count()
+            try:                      # competência e dia útil na barra do topo
+                from models import current_competency
+                from team.engine import posicao_fechamento
+                c = current_competency()
+                if c:
+                    du_hoje, du_prazo = posicao_fechamento(c)
+                    from team.models import Activity
+                    pend = (Activity.query.filter_by(competency_id=c.id)
+                            .filter(Activity.kind.in_(["fechamento", "recorrente"]))
+                            .filter(Activity.status.in_(["pendente", "em_andamento", "bloqueada"]))
+                            .count())
+                    topo = {"label": c.label, "du_hoje": du_hoje, "du_prazo": du_prazo,
+                            "prazo": c.deadline, "pendentes": pend,
+                            "vencido": bool(c.deadline and fuso.hoje() > c.deadline and pend)}
+            except Exception:
+                topo = None
+            try:                      # selo de atrasadas no ícone "Hoje" (celular)
+                if current_user.is_team:
+                    from team.models import Activity, TeamMember
+                    q = Activity.query.filter(
+                        Activity.status.in_(["pendente", "em_andamento", "bloqueada"]),
+                        Activity.due_date < fuso.hoje(),
+                        db.or_(Activity.due_provisional.is_(False),
+                               Activity.due_provisional.is_(None)))
+                    if not current_user.is_controladoria:
+                        m = TeamMember.query.filter_by(user_id=current_user.id).first()
+                        q = q.filter(Activity.member_id == (m.id if m else -1))
+                    n_atr = q.count()
+                else:
+                    n_atr = 0
+            except Exception:
+                n_atr = 0
+        else:
+            n_atr = 0
         return {"APP_NAME": Config.APP_NAME, "ORG": Config.ORG,
-                "unread_notifications": unread, "app_version": "1.7.0",
-                "consolidacao_ativa": False, "now": datetime.utcnow()}
+                "unread_notifications": unread, "app_version": "1.8.0",
+                "consolidacao_ativa": False, "now": fuso.agora(), "topo": topo,
+                "n_atrasadas_topo": n_atr}
 
     # ---------------- Auth ----------------
     @app.route("/login", methods=["GET", "POST"])

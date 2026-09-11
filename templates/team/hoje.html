@@ -1,112 +1,145 @@
 {% extends "base.html" %}
 {% block title %}Painel do Dia{% endblock %}
-{% macro act_row(a) %}
-  <tr>
-    <td>
-      <a href="/atividade/{{ a.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ a.title }}</a>
-      <div class="text-sm text-muted">
-        <span class="kind-chip">{{ a.kind_pt() }}</span>
-        {% if a.company %}· {{ a.company.name }}{% endif %}
-        {% if a.competency %}· {{ a.competency.label }}{% endif %}
-      </div>
-    </td>
-    <td>{% if a.member %}<span class="member-cell"><span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span>{{ a.member.name }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-    <td><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
-    <td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}
-      {% set d = a.days_to_due(today) %}
-      {% if d is not none %}<div class="text-sm {{ 'neg' if d < 0 else 'text-muted' }}">{{ 'D+' ~ (-d) ~ ' atraso' if d < 0 else ('hoje' if d == 0 else 'em ' ~ d ~ ' d.u.') }}</div>{% endif %}
-    </td>
-    <td><span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','bloqueada':'Bloqueada'}.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
-    <td class="text-right">
-      <form method="post" action="/atividade/{{ a.id }}/status" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <input type="hidden" name="status" value="concluida"/>
-        <button class="btn btn-outline btn-sm" type="submit" title="Concluir">{{ icone("check") }}</button>
-      </form>
-    </td>
-  </tr>
+{% set SELO = {'atrasada':('atraso','atrasada'),'vence_hoje':('hoje','hoje'),'pendente':('nada','a fazer'),
+               'em_andamento':('and','em andamento'),'bloqueada':('atraso','bloqueada'),'aguardando':('nada','aguardando')} %}
+{% macro linha(a, grupo) %}
+  {% set est = a.effective_status(today) %}
+  {% set s = SELO.get(est, ('nada', est)) %}
+  <li class="fila-lin">
+    <div class="fl-txt">
+      <a href="/atividade/{{ a.id }}" class="fl-t">{{ a.title }}</a>
+      <div class="fl-m">{{ a.kind_pt() }}{% if a.company %} · {{ a.company.name }}{% endif %}{% if a.competency %} · {{ a.competency.label }}{% endif %}</div>
+    </div>
+    <div class="fl-quem">{% if a.member %}<span class="mini-av" style="background:{{ a.member.color }}">{{ a.member.initials }}</span><span class="fl-nome">{{ a.member.name }}</span>{% else %}<span class="text-muted">sem responsável</span>{% endif %}</div>
+    <span class="selo selo-{{ s[0] }}">{{ s[1] }}</span>
+    <div class="fl-pz {{ 'late' if grupo == 'atraso' }}">
+      {{ a.due_date.strftime('%d/%m') if a.due_date else '—' }}
+      <small>{% if a.due_date %}{% set du = du_entre(a.due_date, today) %}{% if grupo == 'atraso' %}{{ du if du and du > 0 else ((today - a.due_date).days) }} d.u. de atraso{% elif grupo == 'hoje' %}hoje{% else %}em {{ -du if du else '' }} d.u.{% endif %}{% endif %}</small>
+    </div>
+    <form method="post" action="/atividade/{{ a.id }}/status" class="fl-ok">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="status" value="concluida"/>
+      <button class="btn-concluir" type="submit" title="Concluir “{{ a.title }}”" aria-label="Concluir {{ a.title }}">{{ icone("check") }}</button>
+    </form>
+  </li>
 {% endmacro %}
 {% block content %}
 <div class="page-head">
   <div><h1>Painel do Dia</h1>
-    <div class="sub">{{ today|data_extenso|capitalize }} · visão de execução e cobrança do time.</div></div>
-  {% if comp %}<span class="deadline-pill">Competência aberta: {{ comp.label }}{% if comp.deadline %} · prazo {{ comp.deadline.strftime('%d/%m') }}{% endif %}</span>{% endif %}
+    <div class="sub">{{ today|dia_mes|capitalize }}{% if regua and regua.du_hoje %} · {{ regua.du_hoje }}º dia útil do fechamento de {{ comp.label }}{% endif %}</div></div>
+  {% if current_user.is_controladoria %}<a href="/resumo" class="btn btn-outline">{{ icone('send') }} Enviar resumo</a>{% endif %}
 </div>
 
-<div class="kpi-grid">
-  <div class="kpi bad"><div class="kpi-label">Atrasadas</div>
-    <div class="kpi-value">{{ panel.n_overdue }}</div><div class="kpi-foot">exigem ação imediata</div></div>
-  <div class="kpi warn"><div class="kpi-label">Vencem hoje</div>
-    <div class="kpi-value">{{ panel.n_today }}</div><div class="kpi-foot">no prazo do dia</div></div>
-  <div class="kpi accent"><div class="kpi-label">Próximas (3 d.u.)</div>
-    <div class="kpi-value">{{ panel.n_soon }}</div><div class="kpi-foot">planejar</div></div>
-  {% if farol %}
-  <div class="kpi ok"><div class="kpi-label">Fechamento {{ comp.label }}</div>
-    <div class="kpi-value">{{ farol.pct }}%</div>
-    <div class="progress"><span style="width:{{ farol.pct }}%"></span></div>
-    <div class="kpi-foot">{{ farol.concluida }} de {{ farol.total }} concluídas</div></div>
-  {% endif %}
-</div>
-
-<div class="card">
-  <h2>Carga por pessoa <span class="muted">· atividades em aberto (todas as competências)</span></h2>
-  <div class="board-grid">
-    {% for b in board %}
-    <a class="board-card" href="/atividades?member_id={{ b.member.id }}" style="text-decoration:none;color:inherit;display:block;">
-      <div class="bc-head">
-        <span class="mini-av" style="background:{{ b.member.color }}">{{ b.member.initials }}</span>
-        <div><div class="bc-name">{{ b.member.name }}</div></div>
-      </div>
-      <div class="board-stat">
-        <span title="Atrasadas" class="{{ 'neg' if b.f.atrasada }}"><b>{{ b.f.atrasada }}</b> atr.</span>
-        <span title="Vencem hoje"><b>{{ b.f.vence_hoje }}</b> hoje</span>
-        <span title="Em aberto"><b>{{ b.f.aberta }}</b> aberta(s)</span>
-      </div>
-    </a>
-    {% else %}<p class="text-muted text-sm">Nenhum membro cadastrado ainda.</p>{% endfor %}
+{% if regua and regua.total %}
+<section class="regua card" aria-label="Régua do fechamento {{ comp.label }}">
+  <div class="rg-topo">
+    <div>
+      <div class="rot">Régua do fechamento · {{ comp.label }}{% if sel %} · {{ (members|selectattr('id','equalto',sel)|first).name }}{% endif %}</div>
+      <div class="rg-pct"><b>{{ regua.pct }}%</b><span>{{ regua.feitas }} de {{ regua.total }} atividades conferidas</span></div>
+    </div>
+    <div class="rg-legenda" aria-hidden="true">
+      <span><i class="pt f"></i>concluída</span><span><i class="pt h"></i>vence hoje</span>
+      <span><i class="pt"></i>a fazer</span><span><i class="pt a"></i>atrasada</span>
+    </div>
   </div>
-</div>
-
-<div class="card">
-  <div class="flex gap-2 items-center" style="justify-content:space-between;flex-wrap:wrap;">
-    <h2 style="margin:0;">Fila do dia</h2>
-    <form method="get" class="flex gap-1 items-center" style="flex-wrap:wrap;">
-      <label class="field-label" style="margin:0;">Tipo:</label>
-      <select class="input" name="tipo" style="width:auto;" onchange="this.form.submit()">
-        <option value="">Fechamento e projetos</option>
-        <option value="fechamento" {{ 'selected' if tipo=='fechamento' }}>Só fechamento</option>
-        <option value="projeto" {{ 'selected' if tipo=='projeto' }}>Só projetos</option>
-      </select>
-      <label class="field-label" style="margin:0 0 0 .5rem;">Pessoa:</label>
-      <select class="input" name="member_id" style="width:auto;" onchange="this.form.submit()">
-        <option value="">Todas</option>
-        {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if sel==m.id }}>{{ m.name }}</option>{% endfor %}
-      </select>
-    </form>
+  <div class="rg-fio"><span style="width:{{ regua.pct }}%"></span></div>
+  {% set extras = (1 if regua.n_atrasadas else 0) + (1 if regua.antes else 0) + (1 if regua.depois else 0) %}
+  <div class="rg-dias" style="--n:{{ regua.cols|length + extras }};--nm:{{ regua.cols|length + extras - (1 if regua.n_atrasadas else 0) }}">
+    {% if regua.n_atrasadas %}
+    <div class="rg-col rg-stub"><div class="d">Atraso</div><div class="rg-big">{{ regua.n_atrasadas }}</div>
+      <div class="dt">desde {% if regua.atraso_du %}D+{{ regua.atraso_du }}{% else %}{{ regua.atraso_desde.strftime('%d/%m') }}{% endif %}</div></div>
+    {% endif %}
+    {% if regua.antes %}
+    <div class="rg-col"><div class="d">Antes</div><div class="dt">mês {{ comp.label }}</div>
+      <div class="pts">{% for p in regua.antes %}<i class="pt {{ p }}"></i>{% endfor %}</div></div>
+    {% endif %}
+    {% for c in regua.cols %}
+      {% if c.tipo == 'feriado' %}
+      <div class="rg-col rg-fer" title="Feriado — não conta como dia útil"><div class="d">—</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div><div class="rg-tag">feriado</div></div>
+      {% else %}
+      <div class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}" title="D+{{ c.du }} · {{ c.data.strftime('%d/%m/%Y') }} · {{ c.n }} atividade(s)">
+        <div class="d">D+{{ c.du }}</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div>
+        <div class="pts">{% for p in c.pts %}<i class="pt {{ p }}"></i>{% endfor %}</div>
+        {% if c.hoje %}<div class="rg-tag">hoje</div>{% elif c.prazo %}<div class="rg-tag">prazo</div>{% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+    {% if regua.depois %}
+    <div class="rg-col"><div class="d">Depois</div><div class="dt">após D+{{ regua.n_dias }}</div>
+      <div class="pts">{% for p in regua.depois %}<i class="pt {{ p }}"></i>{% endfor %}</div></div>
+    {% endif %}
   </div>
-
-  {% if panel.overdue %}
-  <div class="section-divider">🔴 Atrasadas ({{ panel.n_overdue }})</div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Atividade</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
-    <tbody>{% for a in panel.overdue %}{{ act_row(a) }}{% endfor %}</tbody></table></div>
+  {% if regua.n_atrasadas %}
+  <a class="rg-aviso" href="/atividades?status=atrasada"><span class="selo selo-atraso">{{ regua.n_atrasadas }}</span>
+    atividade{{ 's' if regua.n_atrasadas > 1 }} atrasada{{ 's' if regua.n_atrasadas > 1 }} desde {% if regua.atraso_du %}D+{{ regua.atraso_du }}{% else %}{{ regua.atraso_desde.strftime('%d/%m') }}{% endif %}</a>
   {% endif %}
+  {% if regua.sem_prazo %}<p class="help-txt rg-nota">{{ regua.sem_prazo }} atividade(s) sem prazo definido não aparecem na régua.</p>{% endif %}
+</section>
+{% elif comp %}
+<section class="card vazio-card">
+  <h2>Nenhuma atividade de fechamento em {{ comp.label }}</h2>
+  <p class="text-muted">A régua aparece quando o cronograma gera as atividades da competência.
+    {% if current_user.is_controladoria %}<a href="/cronograma">Gerar no Cronograma</a>.{% endif %}</p>
+</section>
+{% endif %}
 
-  {% if panel.today %}
-  <div class="section-divider">🟠 Vencem hoje ({{ panel.n_today }})</div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Atividade</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
-    <tbody>{% for a in panel.today %}{{ act_row(a) }}{% endfor %}</tbody></table></div>
-  {% endif %}
+<div class="painel-duas">
+  <section class="card fila">
+    <div class="fila-h">
+      <h2>Fila do dia</h2>
+      <div class="segmento" role="group" aria-label="Tipo de atividade">
+        <a href="?{{ 'member_id=%d'|format(sel) if sel }}" class="{{ 'on' if not tipo }}"{{ ' aria-current="true"'|safe if not tipo }}>Tudo</a>
+        <a href="?tipo=fechamento{{ '&member_id=%d'|format(sel) if sel }}" class="{{ 'on' if tipo=='fechamento' }}"{{ ' aria-current="true"'|safe if tipo=='fechamento' }}>Fechamento</a>
+        <a href="?tipo=projeto{{ '&member_id=%d'|format(sel) if sel }}" class="{{ 'on' if tipo=='projeto' }}"{{ ' aria-current="true"'|safe if tipo=='projeto' }}>Projetos</a>
+      </div>
+      <form method="get" class="fila-pessoa">
+        {% if tipo %}<input type="hidden" name="tipo" value="{{ tipo }}"/>{% endif %}
+        <label class="sr-only" for="fila-pessoa">Pessoa</label>
+        <select class="input" id="fila-pessoa" name="member_id" onchange="this.form.submit()">
+          <option value="">Todas as pessoas</option>
+          {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if sel==m.id }}>{{ m.name }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn btn-outline btn-sm" type="submit">Filtrar</button></noscript>
+      </form>
+    </div>
 
-  {% if panel.soon %}
-  <div class="section-divider">🔵 Próximas (até 3 dias úteis)</div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Atividade</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
-    <tbody>{% for a in panel.soon %}{{ act_row(a) }}{% endfor %}</tbody></table></div>
-  {% endif %}
+    {% if panel.overdue %}
+    <div class="fila-sec sec-atraso">Atrasadas <b>{{ panel.n_overdue }}</b></div>
+    <ul class="fila-lista">{% for a in panel.overdue %}{{ linha(a, 'atraso') }}{% endfor %}</ul>
+    {% endif %}
+    {% if panel.today %}
+    <div class="fila-sec sec-hoje">Vencem hoje <b>{{ panel.n_today }}</b></div>
+    <ul class="fila-lista">{% for a in panel.today %}{{ linha(a, 'hoje') }}{% endfor %}</ul>
+    {% endif %}
+    {% if panel.soon %}
+    <div class="fila-sec">Próximos 3 dias úteis <b>{{ panel.n_soon }}</b></div>
+    <ul class="fila-lista">{% for a in panel.soon %}{{ linha(a, 'prox') }}{% endfor %}</ul>
+    {% endif %}
+    {% if not panel.overdue and not panel.today and not panel.soon %}
+    <div class="fila-vazia">
+      <span class="selo selo-ok">em dia</span>
+      <div><b>Nada pendente para hoje.</b>
+        <span>Sem atrasos, vencimentos ou prazos nos próximos 3 dias úteis{{ ' para este filtro' if sel or tipo }}.</span></div>
+    </div>
+    {% endif %}
+  </section>
 
-  {% if not panel.overdue and not panel.today and not panel.soon %}
-  <div class="big-status ok"><span class="bs-ico">✅</span><div>
-    <div class="bs-title">Nada pendente para hoje</div>
-    <div class="bs-sub">Sem atrasos, vencimentos ou prazos nos próximos 3 dias úteis para este filtro.</div></div></div>
-  {% endif %}
+  <section class="card carga">
+    <div class="carga-h"><h2>Carga por pessoa</h2><span class="rot">em aberto</span></div>
+    <ul class="carga-lista">
+      {% for b in board %}
+      {% set f = b.f %}
+      {% set resto = f.aberta - f.atrasada - f.vence_hoje %}
+      <li>
+        <a href="/atividades?member_id={{ b.member.id }}" class="carga-lin{{ ' sel' if sel == b.member.id }}">
+          <span class="mini-av" style="background:{{ b.member.color }}">{{ b.member.initials }}</span>
+          <span class="cg-nome">{{ b.member.name }}
+            <span class="cg-barra" aria-hidden="true"><i class="b-atr" style="width:{{ (f.atrasada / maior_carga * 100)|round(1) }}%"></i><i class="b-hoje" style="width:{{ (f.vence_hoje / maior_carga * 100)|round(1) }}%"></i><i class="b-resto" style="width:{{ ((resto if resto > 0 else 0) / maior_carga * 100)|round(1) }}%"></i></span></span>
+          <span class="cg-num">{% if f.atrasada %}<b>{{ f.atrasada }} atr.</b> · {% elif f.vence_hoje %}<em>{{ f.vence_hoje }} hoje</em> · {% endif %}{{ f.aberta if f.aberta else '—' }}</span>
+        </a>
+      </li>
+      {% else %}<li class="text-muted" style="padding:14px 18px;">Nenhum membro cadastrado ainda.</li>{% endfor %}
+    </ul>
+  </section>
 </div>
 {% endblock %}

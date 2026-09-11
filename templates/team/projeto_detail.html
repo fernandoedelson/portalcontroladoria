@@ -50,7 +50,7 @@
         {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if p.owner_member_id==m.id }}>{{ m.name }}</option>{% endfor %}
       </select></div>
     <div class="form-row"><label class="field-label">Gestor do projeto</label>
-      <select class="input" name="manager_member_id"><option value="">— gestor do time (padrão) —</option>
+      <select class="input" name="manager_member_id"><option value="">Gestor do time (padrão)</option>
         {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if p.manager_member_id==m.id }}>{{ m.name }}</option>{% endfor %}
       </select>
       <div class="help-txt">Quem aprova/superviona. Pode ser diferente do líder.</div></div>
@@ -181,7 +181,7 @@
       <tr>
         <td><form method="post" action="/marco/{{ m.id }}/toggle" style="display:inline;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-          <button class="btn btn-outline btn-sm" type="submit">{{ '✓' if m.done else '○' }}</button></form></td>
+          <button class="btn btn-outline btn-sm" type="submit" aria-label="{{ 'Reabrir marco' if m.done else 'Concluir marco' }}">{{ icone('check') if m.done else icone('circle') }}</button></form></td>
         <td style="{{ 'text-decoration:line-through;color:var(--text-soft);' if m.done }}">
           <input class="input" form="ms-{{ m.id }}" name="title" value="{{ m.title }}" style="min-width:130px;"/></td>
         <td><input class="input" form="ms-{{ m.id }}" type="date" name="due_date"

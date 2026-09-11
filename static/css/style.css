@@ -6,7 +6,7 @@
    Tipografia: IBM Plex Sans + numeros tabulares.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+/* fonte: Public Sans/Archivo/Plex Mono carregadas no base.html (razao.css) */
 
 /* ===== RESET & TOKENS ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

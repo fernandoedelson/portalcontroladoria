@@ -300,6 +300,115 @@ def resolve_auto_metrics(competency):
 # --------------------------------------------------------------------------
 # Farol do fechamento
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Régua do fechamento: os dias úteis do mês seguinte à competência
+# --------------------------------------------------------------------------
+_DSEM = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+
+
+def _mes_seguinte(comp):
+    return (comp.year + 1, 1) if comp.month == 12 else (comp.year, comp.month + 1)
+
+
+def posicao_fechamento(comp, ref=None):
+    """(dia útil de hoje, dia útil do prazo) no mês de fechamento — D+n.
+
+    dia útil de hoje = None antes do 1º dia útil (ainda no mês da competência)
+    ou fora do mês de fechamento."""
+    if not comp:
+        return None, None
+    from engine.calendar_br import business_days
+    ref = ref or fuso.hoje()
+    dias = business_days(*_mes_seguinte(comp))
+    du_hoje = None
+    if dias and dias[0] <= ref <= dias[-1]:
+        du_hoje = sum(1 for d in dias if d <= ref)
+        if ref not in dias:                  # fim de semana/feriado: conta o último útil
+            du_hoje = du_hoje or None
+    du_prazo = (dias.index(comp.deadline) + 1) if comp.deadline in dias else None
+    return du_hoje, du_prazo
+
+
+def regua(comp, ref=None, member_id=None, kind_filter=None):
+    """Estrutura da régua do fechamento para o Painel do Dia.
+
+    Colunas = dias úteis D+1..D+N do mês seguinte (N cobre o prazo, as
+    atividades e o dia de hoje; mínimo 5). Feriados em dia de semana no meio
+    viram coluna listrada. Cada atividade vira um ponto no dia do vencimento:
+    'f' concluída · 'a' atrasada · 'h' vence hoje · '' a fazer.
+    """
+    if not comp:
+        return None
+    from engine.calendar_br import business_days
+    ref = ref or fuso.hoje()
+    dias = business_days(*_mes_seguinte(comp))
+    if not dias:
+        return None
+    q = (Activity.query.filter_by(competency_id=comp.id)
+         .filter(Activity.kind.in_(["fechamento", "recorrente"]))
+         .filter(Activity.status != "cancelada"))
+    if member_id:
+        q = q.filter(Activity.member_id == member_id)
+    acts = q.all()
+
+    def estado(a):
+        if a.status == "concluida":
+            return "f"
+        if a.due_date and a.due_date < ref:
+            return "a"
+        if a.due_date == ref:
+            return "h"
+        return ""
+
+    du_hoje, du_prazo = posicao_fechamento(comp, ref)
+    ult_ativ = max((dias.index(a.due_date) + 1 for a in acts if a.due_date in dias), default=0)
+    # janela: até o prazo + 3 dias úteis (o que vence depois vai para "Depois");
+    # uma atividade solta no fim do mês não pode esticar a régua para 20 colunas
+    limite = max(5, (du_prazo or 5) + 3)
+    n = max(5, du_prazo or 0, min(ult_ativ, limite))
+    if du_hoje and du_hoje <= limite + 2:
+        n = max(n, du_hoje)
+    n = min(n, len(dias))
+    cols_dias = dias[:n]
+    por_dia = {d: [] for d in cols_dias}
+    antes, depois, sem_prazo = [], [], []
+    for a in acts:
+        if not a.due_date:
+            sem_prazo.append(a)
+        elif a.due_date in por_dia:
+            por_dia[a.due_date].append(a)
+        elif a.due_date < cols_dias[0]:
+            antes.append(a)
+        else:
+            depois.append(a)
+    ordem = {"f": 0, "a": 1, "h": 2, "": 3}
+    cols = []
+    for i, d in enumerate(cols_dias):
+        if i:                                 # feriado em dia de semana entre dois úteis
+            x = cols_dias[i - 1] + timedelta(days=1)
+            while x < d:
+                if x.weekday() < 5:
+                    cols.append({"tipo": "feriado", "data": x, "dsem": _DSEM[x.weekday()]})
+                x += timedelta(days=1)
+        pts = sorted((estado(a) for a in por_dia[d]), key=lambda e: ordem[e])
+        cols.append({"tipo": "dia", "du": i + 1, "data": d, "dsem": _DSEM[d.weekday()],
+                     "pts": pts, "hoje": d == ref, "prazo": d == comp.deadline,
+                     "n": len(pts)})
+    total = len(acts)
+    feitas = sum(1 for a in acts if a.status == "concluida")
+    atrasadas = [a for a in acts if estado(a) == "a"]
+    return {
+        "comp": comp, "total": total, "feitas": feitas,
+        "pct": round(feitas / total * 100) if total else 0,
+        "cols": cols, "n_dias": n, "du_hoje": du_hoje, "du_prazo": du_prazo,
+        "antes": [estado(a) for a in antes], "depois": [estado(a) for a in depois],
+        "sem_prazo": len(sem_prazo), "n_atrasadas": len(atrasadas),
+        "atraso_desde": (min(a.due_date for a in atrasadas) if atrasadas else None),
+        "atraso_du": (dias.index(min(a.due_date for a in atrasadas)) + 1
+                      if atrasadas and min(a.due_date for a in atrasadas) in dias else None),
+    }
+
+
 def farol(competency, ref=None):
     """Contadores de status das atividades de fechamento da competencia."""
     ref = ref or fuso.hoje()

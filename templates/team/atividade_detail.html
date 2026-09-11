@@ -120,7 +120,7 @@
     <div class="mt-2">
       {% for n in a.notes %}
       <div class="nota {{ n.kind }}">
-        <div class="nota-ico">{{ n.icone }}</div>
+        <div class="nota-ico nota-{{ n.kind }}">{{ icone(n.icone) }}</div>
         <div class="nota-body">
           <div class="nota-txt">{{ n.body }}</div>
           <div class="nota-meta">{{ n.user.display_name if n.user else 'sistema' }} ·

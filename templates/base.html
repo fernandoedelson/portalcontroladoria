@@ -18,6 +18,10 @@
   <link rel="stylesheet" href="/static/css/style.css"/>
   <link rel="stylesheet" href="/static/css/portal.css"/>
   <link rel="stylesheet" href="/static/css/responsivo.css?v=2"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Public+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"/>
+  <link rel="stylesheet" href="/static/css/razao.css?v=1"/>
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
@@ -160,7 +164,7 @@
   <aside class="sidebar" id="sidebar">
     <a href="/" class="sb-brand">
       <span class="sb-logo"><img src="/static/img/jf-logo.svg" alt="J&amp;F"/></span>
-      <span class="sb-title">Controladoria J&amp;F S.A.</span>
+      <span class="sb-title"><b>Controladoria</b><small>J&amp;F S.A.</small></span>
     </a>
     <nav class="sb-nav">
       {% set cur = request.path %}
@@ -325,17 +329,22 @@
       <button type="button" class="nav-burger" onclick="openSb()" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
       </button>
-      <span class="topbar-crumb" id="topbar-crumb"></span>
+      {% if topo %}
+      <a class="topo-comp" href="/time" title="Competência atual e dia útil do fechamento">
+        <span class="tc-rot">Fechamento</span>
+        <b>{{ topo.label }}</b>
+        {% if topo.du_hoje %}<span class="tc-du {{ 'vencido' if topo.vencido }}{{ ' feito' if not topo.pendentes }}"
+          title="{{ topo.du_hoje }}º dia útil do fechamento{% if topo.du_prazo %}; prazo no {{ topo.du_prazo }}º{% endif %}">D+{{ topo.du_hoje }}{% if topo.du_prazo and topo.du_hoje <= topo.du_prazo %} de {{ topo.du_prazo }}{% endif %}</span>{% endif %}
+        {% if not topo.pendentes and topo.du_hoje %}<span class="tc-ok">concluído</span>{% endif %}
+        {% if topo.prazo %}<span class="tc-prazo">prazo {{ topo.prazo.strftime('%d/%m') }}</span>{% endif %}
+      </a>
+      {% endif %}
       <form class="search-box" action="/buscar" method="get" role="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input type="search" name="q" placeholder="Buscar…" aria-label="Buscar no portal"
                value="{{ request.args.get('q','') if request.path == '/buscar' }}"/>
       </form>
       <div class="nav-tools">
-        <span class="role-chip role-{{ current_user.role }}">
-          {{ {'admin':'Administrador','controladoria':'Controladoria','empresa':'Empresa'}[current_user.role] }}
-          {% if current_user.company %}· {{ current_user.company.name }}{% endif %}
-        </span>
         <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema claro/escuro">
           <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
           <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -355,14 +364,36 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+  {% if current_user.is_team %}
+  {% set cur = request.path %}
+  <nav class="tabbar" aria-label="Navegação principal">
+    <a href="/time" class="{{ 'on' if cur=='/time' }}"{{ ' aria-current="page"'|safe if cur=='/time' }}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+      <span>Hoje</span>{% if n_atrasadas_topo %}<i class="tb-bolha" aria-label="{{ n_atrasadas_topo }} atrasada(s)">{{ n_atrasadas_topo if n_atrasadas_topo < 100 else '99+' }}</i>{% endif %}</a>
+    <a href="/atividades" class="{{ 'on' if cur.startswith('/atividade') }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg>
+      <span>Atividades</span></a>
+    <a href="/tarefas" class="{{ 'on' if cur=='/tarefas' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3M16 6H3M16 18H3M18 9l3 3-3 3"/></svg>
+      <span>Tarefas</span></a>
+    <a href="/notas" class="{{ 'on' if cur=='/notas' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+      <span>Notas</span></a>
+    <button type="button" onclick="openSb()" aria-label="Abrir o menu completo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <span>Mais</span></button>
+  </nav>
+  {% endif %}
 </div>
 
 <div id="user-menu" class="user-menu" style="display:none;">
-  <div class="user-menu-head">{{ current_user.email }}</div>
-  <a href="#" id="menu-instalar" hidden onclick="instalarApp(event)">📲 Instalar aplicativo</a>
-  <a href="#" id="menu-push" hidden onclick="menuPush(event)">🔔 Ativar notificações</a>
-  <a href="/change-password">🔐 Alterar senha</a>
-  <a href="/logout" class="danger">🚪 Sair</a>
+  <div class="user-menu-head"><b>{{ current_user.display_name }}</b>
+    <span>{{ {'admin':'Administrador','controladoria':'Controladoria','profissional':'Profissional','empresa':'Empresa'}.get(current_user.role, current_user.role) }}{% if current_user.company %} · {{ current_user.company.name }}{% endif %}</span>
+    <span>{{ current_user.email }}</span></div>
+  <a href="#" id="menu-instalar" hidden onclick="instalarApp(event)">{{ icone('download') }}<span>Instalar aplicativo</span></a>
+  <a href="#" id="menu-push" hidden onclick="menuPush(event)">{{ icone('bell') }}<span>Ativar notificações</span></a>
+  <a href="/change-password">{{ icone('lock') }}<span>Alterar senha</span></a>
+  <a href="/logout" class="danger">{{ icone('logout') }}<span>Sair</span></a>
 </div>
 <script>
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('cp-theme',t);}
@@ -405,7 +436,6 @@ function toggleGrupo(btn){
 })();
 try{ localStorage.removeItem('cp-grupos'); }catch(e){}
 if(localStorage.getItem('cp-sb-mini')==='1')document.getElementById('app-shell').classList.add('sb-mini');
-(function(){var t=(document.title||'').split('·')[0].trim();var c=document.getElementById('topbar-crumb');if(c)c.textContent=t;})();
 var _um=false;
 function toggleUserMenu(e){e.stopPropagation();_um=!_um;document.getElementById('user-menu').style.display=_um?'block':'none';}
 document.addEventListener('click',function(e){if(_um&&!e.target.closest('#user-menu')){document.getElementById('user-menu').style.display='none';_um=false;}});
@@ -413,7 +443,7 @@ document.addEventListener('click',function(e){if(_um&&!e.target.closest('#user-m
 (function(){ var n={{ unread_notifications|int }};
   if(navigator.setAppBadge){ try{ if(n>0) navigator.setAppBadge(n); else navigator.clearAppBadge(); }catch(e){} } })();
 </script>
-<script src="/static/js/push.js?v=3" defer></script>
+<script src="/static/js/push.js?v=4" defer></script>
 <script src="/static/js/aviso-push.js?v=1" defer></script>
 {% else %}
   {% block auth_content %}{% endblock %}

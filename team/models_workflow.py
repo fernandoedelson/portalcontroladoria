@@ -31,8 +31,9 @@ class ActivityNote(db.Model):
 
     @property
     def icone(self):
-        return {"bloqueio": "⛔", "desbloqueio": "✅",
-                "sistema": "⚙"}.get(self.kind, "💬")
+        """Nome do ícone (icons.py) do tipo de nota."""
+        return {"bloqueio": "block", "desbloqueio": "ok-circle",
+                "sistema": "settings"}.get(self.kind, "message")
 
 
 class ActivityFile(db.Model):

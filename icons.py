@@ -12,6 +12,10 @@ from markupsafe import Markup
 _PATHS = {
     "plus": '<path d="M12 5v14M5 12h14"/>',
     "check": '<path d="M20 6 9 17l-5-5"/>',
+    "users": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    "columns": '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/>',
+    "settings": '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    "circle": '<circle cx="12" cy="12" r="8"/>',
     "arrow-left": '<path d="m12 19-7-7 7-7M19 12H5"/>',
     "gauge": '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
     "x": '<path d="M18 6 6 18M6 6l12 12"/>',

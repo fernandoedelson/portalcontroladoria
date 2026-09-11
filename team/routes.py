@@ -244,9 +244,13 @@ def register_team_routes(app):
             mf = mfarol.get(m.id, {"total": 0, "atrasada": 0,
                                    "vence_hoje": 0, "aberta": 0})
             board.append({"member": m, "f": mf})
+        rg = engine.regua(comp, ref, member_id=sel) if comp else None
+        # barra de cada pessoa proporcional à maior carga do time
+        maior = max([b["f"]["aberta"] for b in board] + [1])
         return render_template("team/hoje.html", panel=panel, members=members,
                                sel=sel, tipo=tipo, comp=comp, farol=fr, board=board,
-                               mm=mm, today=ref)
+                               mm=mm, today=ref, regua=rg, maior_carga=maior,
+                               du_entre=engine.business_days_between)
 
     # ==================================================================
     # ATIVIDADES (motor unico) — lista, kanban, CRUD
@@ -1558,6 +1562,127 @@ def register_team_routes(app):
     # ------------------------------------------------------------------
     def _companies():
         return Company.query.filter_by(active=True).order_by(Company.name).all()
+
+    # ==================================================================
+    # EXPORTAÇÕES PARA EXCEL (botões "Excel" das telas) — respeitam o escopo
+    # do perfil: profissional exporta só o que vê na tela.
+    # ==================================================================
+    def _planilha(nome, titulo, cabecalho, linhas, larguras=None):
+        import io
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        wb = Workbook()
+        ws = wb.active
+        ws.title = titulo[:31]
+        ws.append(cabecalho)
+        for c in ws[1]:
+            c.font = Font(bold=True, color="FFFFFF")
+            c.fill = PatternFill("solid", fgColor="14273A")
+            c.alignment = Alignment(vertical="center")
+        for ln in linhas:
+            ws.append(list(ln))
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = ws.dimensions
+        for i, _ in enumerate(cabecalho, 1):
+            w = (larguras or {}).get(i)
+            if not w:
+                w = min(60, max([len(str(cabecalho[i - 1]))] +
+                                [len(str(r[i - 1])) for r in linhas if r[i - 1] is not None] or [10]) + 2)
+            ws.column_dimensions[get_column_letter(i)].width = w
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        log_audit(current_user.id, "exportou_excel", "export", nome)
+        return send_file(buf, as_attachment=True,
+                         download_name=f"{nome}_{fuso.hoje():%Y-%m-%d}.xlsx",
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    def _d(v):
+        return v.strftime("%d/%m/%Y") if v else None
+
+    @app.route("/export/indicadores.xlsx")
+    @team_required
+    def team_export_indicadores():
+        from team.models_workflow import Panel
+        q = Indicator.query.filter_by(active=True)
+        sid = _scoped_member_id()
+        if sid is not None:
+            me = _current_member()
+            ids = {me.panel_id} if me and me.panel_id else set()
+            proprio = Panel.query.filter_by(kind="pessoal", owner_member_id=me.id).first() if me else None
+            if proprio:
+                ids.add(proprio.id)
+            q = q.filter(Indicator.panel_id.in_(ids or {-1}))
+        pmap = {p.id: p.name for p in Panel.query.all()}
+        linhas = []
+        for i in q.order_by(Indicator.panel_id, Indicator.seq).all():
+            ult = max(i.results, key=lambda r: r.recorded_at, default=None) if i.results else None
+            linhas.append([pmap.get(i.panel_id, ""), i.seq, i.title, i.dimension, i.target_label,
+                           i.unit, {"menor": "menor melhor", "maior": "maior melhor"}.get(i.direction or "", ""),
+                           i.weight, i.scale_min, i.scale_obj, i.scale_sup,
+                           (ult.outcome if ult else None), (ult.period_label if ult else None)])
+        return _planilha("indicadores", "Indicadores",
+                         ["Painel", "Nº", "Meta", "Dimensão", "Indicador", "Unidade", "Sentido",
+                          "Peso (%)", "Mínimo", "Objetivo", "Superado", "Último resultado", "Período"], linhas)
+
+    @app.route("/export/atividades.xlsx")
+    @team_required
+    def team_export_atividades():
+        q = Activity.query
+        sid = _scoped_member_id()
+        if sid is not None:
+            q = q.filter(Activity.member_id == sid)
+        cid = request.args.get("competency_id", type=int)
+        if cid:
+            q = q.filter(Activity.competency_id == cid)
+        ref = fuso.hoje()
+        st = {"atrasada": "Atrasada", "vence_hoje": "Vence hoje", "pendente": "Pendente",
+              "em_andamento": "Em andamento", "aguardando": "Aguardando insumo",
+              "bloqueada": "Bloqueada", "concluida": "Concluída", "cancelada": "Cancelada"}
+        linhas = [[a.title, a.kind_pt(), (a.member.name if a.member else None),
+                   (a.company.name if a.company else None),
+                   (a.competency.label if a.competency else None), _d(a.due_date),
+                   st.get(a.effective_status(ref), a.effective_status(ref)), a.priority,
+                   (fuso.local(a.done_at).strftime("%d/%m/%Y %H:%M") if a.done_at else None)]
+                  for a in q.order_by(Activity.due_date.is_(None), Activity.due_date, Activity.id).all()]
+        return _planilha("atividades", "Atividades",
+                         ["Atividade", "Tipo", "Responsável", "Empresa", "Competência", "Prazo",
+                          "Situação", "Prioridade", "Concluída em"], linhas)
+
+    @app.route("/export/carteira.xlsx")
+    @team_required
+    def team_export_carteira():
+        q = CompanyAssignment.query.join(Company).order_by(Company.name)
+        sid = _scoped_member_id()
+        if sid is not None:
+            q = q.filter(CompanyAssignment.member_id == sid)
+        linhas = [[a.company.name, a.company.code, a.segment, (a.member.name if a.member else None),
+                   a.flow, a.responsibility, ", ".join(a.deliverables), a.load_real, a.load_ideal,
+                   a.production, a.note] for a in q.all()]
+        return _planilha("carteira", "Carteira",
+                         ["Empresa", "Código", "Segmento", "Responsável", "Fluxo", "Responsabilidade",
+                          "Entregas", "Suportes", "Suporte ideal", "Produção", "Observação"], linhas)
+
+    @app.route("/export/projetos.xlsx")
+    @team_required
+    def team_export_projetos():
+        pq = Project.query
+        sid = _scoped_member_id()
+        if sid is not None:
+            pq = pq.filter(Project.owner_member_id == sid)
+        linhas = []
+        for p in pq.order_by(Project.status, Project.sort_order, Project.name).all():
+            ms = p.milestones
+            feitos = sum(1 for m in ms if m.done)
+            linhas.append([p.name, p.code, p.status_pt, (p.owner.name if p.owner else None),
+                           (p.manager.name if p.manager else None), _d(p.start_date), _d(p.target_date),
+                           f"{feitos}/{len(ms)}" if ms else "0/0",
+                           Activity.query.filter_by(project_id=p.id)
+                           .filter(Activity.status.in_(["pendente", "em_andamento", "bloqueada"])).count()])
+        return _planilha("projetos", "Projetos",
+                         ["Projeto", "Código", "Situação", "Líder", "Gestor", "Início", "Meta",
+                          "Marcos concluídos", "Atividades em aberto"], linhas)
 
     def _comps():
         return Competency.query.order_by(Competency.year.desc(),

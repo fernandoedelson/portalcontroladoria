@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Minhas tarefas</h1>
-    <div class="sub">Suas pendências do dia — privadas, só você vê. Marque o aviso 🔔 para ser lembrado no vencimento.</div></div>
+    <div class="sub">Suas pendências — privadas, só você vê. Em cada tarefa, escolha quando quer ser avisado do vencimento.</div></div>
   <form method="post" action="/tarefas/lista/nova" class="flex gap-1 items-center">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <input class="input" type="text" name="name" placeholder="Nome da lista" style="width:170px;"/>
@@ -63,28 +63,26 @@
               </div>
             </div>
             <div class="tl-acoes">
+            {% if t.due_date and t.grupo != 'concluido' %}
+            <span class="tl-chip {{ 'atras' if t.atrasada }}{{ ' hoje' if t.vence_hoje }}" title="{% if t.atrasada %}Venceu em {% elif t.vence_hoje %}Vence hoje, {% else %}Vence em {% endif %}{{ t.due_date.strftime('%d/%m/%Y') }}">{{ icone('calendar') }}{% if t.vence_hoje %}hoje{% else %}{{ t.due_date.strftime('%d/%m') }}{% endif %}</span>
+            {% endif %}
             {% if t.grupo != 'concluido' %}
             {% if t.due_date %}
-            <form method="post" action="/tarefa/{{ t.id }}/lembrete">
+            <form method="post" action="/tarefa/{{ t.id }}/lembrete" class="tl-avisoform">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-              <button class="btn-icone tl-bell-btn {{ 'on' if t.remind }}" type="submit"
-                      aria-pressed="{{ 'true' if t.remind else 'false' }}"
-                      title="{{ 'Aviso ativo — clique para desligar' if t.remind else 'Ativar aviso no vencimento' }}"
-                      aria-label="{{ 'Desligar aviso de vencimento' if t.remind else 'Ativar aviso de vencimento' }}">{{ icone('bell') }}</button>
+              <label class="tl-aviso-chip {{ 'on' if t.remind }}" title="Quando avisar do vencimento">
+                {{ icone('bell') }}
+                <select name="dias" onchange="this.form.submit()" aria-label="Aviso de vencimento de “{{ t.title }}”">
+                  <option value="-1" {{ 'selected' if not t.remind }}>Sem aviso</option>
+                  {% for d, lbl in t.ANTECEDENCIAS %}<option value="{{ d }}" {{ 'selected' if t.remind and (t.remind_days or 0) == d }}>{{ lbl }}</option>{% endfor %}
+                </select>
+              </label>
+              <noscript><button class="btn btn-outline btn-sm" type="submit">Salvar</button></noscript>
             </form>
-            {% if t.remind %}
-            <form method="post" action="/tarefa/{{ t.id }}/lembrete">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-              <select class="input tl-aviso-sel" name="dias" onchange="this.form.submit()"
-                      title="Quando avisar" aria-label="Antecedência do aviso">
-                {% for d, lbl in t.ANTECEDENCIAS %}<option value="{{ d }}" {{ 'selected' if (t.remind_days or 0) == d }}>{{ lbl }}</option>{% endfor %}
-              </select>
-            </form>
-            {% endif %}
             {% else %}
-            <span class="btn-icone tl-bell-btn off-dis" title="Defina um vencimento para poder ativar o aviso"
-                  aria-label="Aviso indisponível: tarefa sem vencimento">{{ icone('bell') }}</span>
+            <span class="tl-chip tl-chip-mudo" title="Defina um vencimento para poder ativar o aviso">{{ icone('bell') }}sem vencimento</span>
             {% endif %}
+            <span class="tl-quebra" aria-hidden="true"></span>
             <form method="post" action="/tarefa/{{ t.id }}/status" class="tl-statusform">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <select class="input tl-status-sel" name="status" onchange="this.form.submit()" title="Situação" aria-label="Situação">

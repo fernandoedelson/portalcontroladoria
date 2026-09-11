@@ -31,7 +31,7 @@
     {% else %}Sem painel{% endif %}
   </h2>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col">Dimensão</th><th scope="col">Indicador</th><th scope="col" class="col-peso">Peso</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
+    <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col">Dimensão</th><th scope="col">Indicador</th><th scope="col" class="col-peso">Peso</th><th scope="col" class="col-escala" title="Mínimo aceitável (80%) · objetivo (100%) · superado (120%)">Escala</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
     {% set total_peso = totais.get(panel_id, 0) %}
     <tbody data-painel="{{ panel_id }}">
     {% for i in inds %}
@@ -45,6 +45,7 @@
             value="{{ ('%g'|format(i.weight))|replace('.', ',') if i.weight is not none else '' }}"
             inputmode="decimal" placeholder="—" aria-label="Peso de {{ i.title }} (%)"/><span>%</span></span>
           {% else %}{{ (('%g'|format(i.weight))|replace('.', ',') ~ '%') if i.weight is not none else '—' }}{% endif %}</td>
+      <td class="col-escala">{% if i.scale_min or i.scale_obj or i.scale_sup %}<span class="escala-mini" title="{{ '↓ menor melhor' if i.direction == 'menor' else ('↑ maior melhor' if i.direction == 'maior' else '') }}"><span>{{ i.scale_min or '—' }}</span><span class="o">{{ i.scale_obj or '—' }}</span><span>{{ i.scale_sup or '—' }}</span></span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
       <td>{% if last %}<span class="st st-{{ last.outcome }}">{{ {'atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'—'}.get(last.outcome, last.outcome) }}</span> <span class="text-sm text-muted">{{ last.period_label or '' }}</span>{% else %}<span class="text-muted">sem registro</span>{% endif %}</td>
       <td class="text-right"><a href="/indicador/{{ i.id }}" class="btn btn-outline btn-sm">Abrir</a></td>
     </tr>
@@ -54,7 +55,7 @@
       <td></td><td colspan="3" class="text-right text-muted">Soma dos pesos do painel</td>
       <td class="col-peso"><strong class="peso-total {{ 'peso-ok' if total_peso == 100 else ('peso-alerta' if total_peso else '') }}"
           data-painel="{{ panel_id }}">{{ ('%g'|format(total_peso))|replace('.', ',') }}%</strong></td>
-      <td colspan="2" class="text-sm text-muted peso-dica" data-painel="{{ panel_id }}">{% if total_peso and total_peso != 100 %}deveria somar 100%{% endif %}</td>
+      <td colspan="3" class="text-sm text-muted peso-dica" data-painel="{{ panel_id }}">{% if total_peso and total_peso != 100 %}deveria somar 100%{% endif %}</td>
     </tr></tfoot></table></div>
 </div>
 {% else %}
@@ -79,10 +80,10 @@
   .col-peso{width:7.5rem;white-space:nowrap;}
   .peso-campo{display:inline-flex;align-items:center;gap:.3rem;}
   .peso-in{width:4.6rem;padding:.3rem .5rem;text-align:right;}
-  .peso-in.salvo{border-color:#2e9d5b;box-shadow:0 0 0 3px rgba(46,157,91,.15);}
-  .peso-in.erro{border-color:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.15);}
-  .peso-total.peso-ok{color:#2e9d5b;}
-  .peso-total.peso-alerta{color:#b7791f;}
+  .peso-in.salvo{border-color:var(--r-verde);box-shadow:0 0 0 3px var(--success-lt);}
+  .peso-in.erro{border-color:var(--r-carimbo);box-shadow:0 0 0 3px var(--danger-lt);}
+  .peso-total.peso-ok{color:var(--r-verde);}
+  .peso-total.peso-alerta{color:var(--r-ouro);}
   .peso-total-linha td{border-top:2px solid var(--border);}
 </style>
 {% if not escopo %}

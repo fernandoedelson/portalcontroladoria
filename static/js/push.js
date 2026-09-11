@@ -113,8 +113,8 @@
     var m = document.getElementById('menu-push');
     if (m) {
       m.hidden = (st === 'nao-suportado');
-      m.textContent = st === 'ativo' ? '🔕 Desativar notificações neste aparelho'
-        : st === 'bloqueado' ? '🔔 Notificações bloqueadas no navegador' : '🔔 Ativar notificações';
+      (m.querySelector('span') || m).textContent = st === 'ativo' ? 'Desativar notificações neste aparelho'
+        : st === 'bloqueado' ? 'Notificações bloqueadas no navegador' : 'Ativar notificações';
       m.dataset.st = st;
     }
     return st;

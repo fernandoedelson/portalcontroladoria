@@ -753,10 +753,13 @@ def register_workflow_routes(app):
     def tarefa_lembrete(tid):
         """Liga/desliga o aviso de uma tarefa existente, ou muda a antecedencia.
 
-        Com `dias` no formulario: liga o aviso com essa antecedencia.
+        Com `dias` no formulario: liga o aviso com essa antecedencia
+        (`dias=-1` desliga — é a opção "Sem aviso" da lista).
         Sem `dias`: alterna ligado/desligado."""
         t = _minha_tarefa(tid)
-        if "dias" in request.form:
+        if request.form.get("dias") == "-1":
+            t.remind = False
+        elif "dias" in request.form:
             t.remind = True
             t.remind_days = _parse_dias(request.form.get("dias"))
         else:
