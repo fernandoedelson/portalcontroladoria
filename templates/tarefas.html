@@ -49,6 +49,16 @@
               <input class="tl-chk" type="checkbox" {{ 'checked' if t.grupo=='concluido' }}
                      onchange="this.form.submit()" aria-label="Concluir tarefa"/>
             </form>
+            <form method="post" action="/tarefa/{{ t.id }}/editar" class="tl-edita" hidden>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <input class="input" type="text" name="title" value="{{ t.title }}" required maxlength="300" aria-label="Título da tarefa"/>
+              <div class="tl-edita-lin">
+                <label class="tl-edita-data">{{ icone('calendar') }}
+                  <input class="input" type="date" name="due_date" value="{{ t.due_date.isoformat() if t.due_date else '' }}" aria-label="Vencimento (vazio = sem vencimento)"/></label>
+                <button class="btn btn-primary btn-sm" type="submit">{{ icone('check') }} Salvar</button>
+                <button class="btn btn-outline btn-sm tl-cancela" type="button">Cancelar</button>
+              </div>
+            </form>
             <div class="tl-txt">
               <div class="tl-titulo">{{ t.title }}</div>
               <div class="tl-meta">
@@ -64,7 +74,7 @@
             </div>
             <div class="tl-acoes">
             {% if t.due_date and t.grupo != 'concluido' %}
-            <span class="tl-chip {{ 'atras' if t.atrasada }}{{ ' hoje' if t.vence_hoje }}" title="{% if t.atrasada %}Venceu em {% elif t.vence_hoje %}Vence hoje, {% else %}Vence em {% endif %}{{ t.due_date.strftime('%d/%m/%Y') }}">{{ icone('calendar') }}{% if t.vence_hoje %}hoje{% else %}{{ t.due_date.strftime('%d/%m') }}{% endif %}</span>
+            <button type="button" class="tl-chip tl-abre-edicao {{ 'atras' if t.atrasada }}{{ ' hoje' if t.vence_hoje }}" title="{% if t.atrasada %}Venceu em {% elif t.vence_hoje %}Vence hoje, {% else %}Vence em {% endif %}{{ t.due_date.strftime('%d/%m/%Y') }} — toque para mudar">{{ icone('calendar') }}{% if t.vence_hoje %}hoje{% else %}{{ t.due_date.strftime('%d/%m') }}{% endif %}</button>
             {% endif %}
             {% if t.grupo != 'concluido' %}
             {% if t.due_date %}
@@ -80,7 +90,7 @@
               <noscript><button class="btn btn-outline btn-sm" type="submit">Salvar</button></noscript>
             </form>
             {% else %}
-            <span class="tl-chip tl-chip-mudo" title="Defina um vencimento para poder ativar o aviso">{{ icone('bell') }}sem vencimento</span>
+            <button type="button" class="tl-chip tl-chip-mudo tl-abre-edicao" title="Definir um vencimento (e poder ativar o aviso)">{{ icone('calendar') }}sem vencimento</button>
             {% endif %}
             <span class="tl-quebra" aria-hidden="true"></span>
             <form method="post" action="/tarefa/{{ t.id }}/status" class="tl-statusform">
@@ -90,6 +100,7 @@
               </select>
             </form>
             {% endif %}
+            <button type="button" class="btn-icone tl-editar tl-abre-edicao" title="Editar título e vencimento" aria-label="Editar {{ t.title }}">{{ icone('edit') }}</button>
             <form method="post" action="/tarefa/{{ t.id }}/excluir">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <button class="btn-icone" type="submit" title="Excluir tarefa"
@@ -133,4 +144,32 @@
   .tl-aviso-sel{width:auto;min-width:0;padding:.2rem .4rem;font-size:.82rem;height:auto;}
   .tl-aviso-novo{display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap;}
 </style>
+<script>
+/* editar tarefa no lugar: título e vencimento (Enter salva, Esc cancela) */
+(function(){
+  function abre(li){
+    document.querySelectorAll('.tl-tarefa.editando').forEach(function(o){ if(o!==li) fecha(o); });
+    var f=li.querySelector('.tl-edita'); if(!f) return;
+    f.dataset.t=f.elements['title'].value; f.dataset.d=f.elements['due_date'].value;
+    li.classList.add('editando'); f.hidden=false;
+    var t=f.querySelector('input[name="title"]'); t.focus(); t.select();
+  }
+  function fecha(li){
+    var f=li.querySelector('.tl-edita'); if(!f) return;
+    if(f.dataset.t!==undefined){ f.elements['title'].value=f.dataset.t; f.elements['due_date'].value=f.dataset.d; }
+    f.hidden=true; li.classList.remove('editando');
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('.tl-abre-edicao'); if(b){ e.preventDefault(); abre(b.closest('.tl-tarefa')); return; }
+    var c=e.target.closest('.tl-cancela'); if(c){ fecha(c.closest('.tl-tarefa')); }
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Escape') return;
+    var li=e.target.closest && e.target.closest('.tl-tarefa.editando'); if(li){ e.preventDefault(); fecha(li); }
+  });
+  document.querySelectorAll('.tl-edita').forEach(function(f){
+    f.addEventListener('submit',function(e){ var t=f.elements['title']; if(!t.value.trim()){ e.preventDefault(); t.focus(); } });
+  });
+})();
+</script>
 {% endblock %}

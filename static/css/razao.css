@@ -610,3 +610,23 @@ html.nota-cheia .ne-titulo{font-size:22px;}
   html.nota-cheia .main-content{padding:0 !important;}
   html.nota-cheia #notas-editor{padding-top:max(10px,env(safe-area-inset-top));}
 }
+
+/* tarefa em edição: o formulário ocupa o lugar do texto e das etiquetas */
+.tl-edita{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;gap:8px;margin:0;}
+.tl-edita[hidden]{display:none;}
+.tl-edita-lin{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.tl-edita-data{display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);}
+.tl-edita-data input{width:auto;height:34px;min-height:34px;}
+.tl-tarefa.editando .tl-txt,.tl-tarefa.editando .tl-acoes{display:none !important;}
+.tl-tarefa.editando{background:var(--surface-2);}
+button.tl-chip{cursor:pointer;font-family:inherit;}
+button.tl-chip:hover{border-color:var(--text-soft);}
+.tl-editar{color:var(--text-soft);}
+.tl-editar:hover{color:var(--text) !important;}
+.tl-tarefa .tl-acoes .tl-editar{margin-left:auto;}
+.tl-tarefa .tl-acoes .tl-editar + form{margin-left:0 !important;}
+@media (max-width:760px){
+  .tl-edita input[type=text],.tl-edita-data input{font-size:16px;}
+  .tl-edita-lin .btn{flex:1 1 auto;justify-content:center;min-height:40px;}
+  .tl-edita-data{flex:1 1 100%;} .tl-edita-data input{flex:1;height:40px;}
+}
