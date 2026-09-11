@@ -20,6 +20,22 @@ ARQUIVO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 CHAVE = "dados_iniciais_versao"
 
 
+def ajustes_unicos():
+    """Correções de cadastro pedidas pelo usuário, aplicadas UMA vez cada
+    (marcadas em Setting) — edições posteriores feitas no portal ficam."""
+    from team.models import IndicatorDef, Indicator
+    feitos = []
+    # 2026-09-10: "todos os indicadores são prazo" (vieram como RESULTADO)
+    chave = "ajuste_dimensao_prazo_v1"
+    if get_setting(chave) != "ok":
+        n = IndicatorDef.query.update({IndicatorDef.dimension: "PRAZO"}, synchronize_session=False)
+        n += Indicator.query.update({Indicator.dimension: "PRAZO"}, synchronize_session=False)
+        db.session.commit()
+        set_setting(chave, "ok")
+        feitos.append(f"dimensão PRAZO em {n} registro(s)")
+    return feitos
+
+
 def liga_catalogo():
     """Indicador sem ligação ao catálogo -> liga à definição de MESMO nome, se
     existir (não cria definição). Sem a ligação, a medição única (um indicador

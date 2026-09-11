@@ -62,6 +62,8 @@ def create_app(config=Config):
             r = dados_iniciais.aplica()
             if r:
                 app.logger.info("Dados iniciais cadastrados: %s", r)
+            for f in dados_iniciais.ajustes_unicos():
+                app.logger.info("Ajuste de cadastro: %s", f)
             n = dados_iniciais.liga_catalogo()
             if n:
                 app.logger.info("%s indicador(es) ligado(s) ao catálogo", n)

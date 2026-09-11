@@ -715,7 +715,7 @@ def register_team_routes(app):
             if not d:
                 d = IndicatorDef(
                     title=titulo,
-                    dimension=request.form.get("dimension") or "RESULTADO",
+                    dimension=request.form.get("dimension") or "PRAZO",
                     target_type=request.form.get("target_type") or "manual",
                     rational=request.form.get("rational") or None)
                 db.session.add(d)
@@ -753,7 +753,7 @@ def register_team_routes(app):
                 .order_by(IndicatorDef.active.desc(), IndicatorDef.sort_order,
                           IndicatorDef.title).all())
         return render_template("team/catalogo.html", defs=defs,
-                               dimensions=["RESULTADO", "PROCESSO", "PRAZO", "QUALIDADE"],
+                               dimensions=["PRAZO", "RESULTADO", "PROCESSO", "QUALIDADE"],
                                target_types=[("manual", "Manual"),
                                              ("prazo_du", "Prazo (dia útil)"),
                                              ("contagem", "Contagem"),
@@ -762,7 +762,7 @@ def register_team_routes(app):
 
     def _def_from_form(d, form):
         d.title = (form.get("title") or "").strip() or d.title or "Novo indicador"
-        d.dimension = form.get("dimension") or "RESULTADO"
+        d.dimension = form.get("dimension") or "PRAZO"
         d.target_type = form.get("target_type") or "manual"
         d.unit = form.get("unit") or None
         d.rational = form.get("rational") or None
