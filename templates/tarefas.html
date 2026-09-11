@@ -43,7 +43,7 @@
         <div class="tl-grupo-h"><span class="tl-dot"></span>{{ blabel }} <span class="tl-n">{{ items|length }}</span></div>
         <ul class="tl-items">
           {% for t in items %}
-          <li class="tl-item grupo-{{ t.grupo }}">
+          <li class="tl-item tl-tarefa grupo-{{ t.grupo }}">
             <form method="post" action="/tarefa/{{ t.id }}/toggle" class="tl-check">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <input class="tl-chk" type="checkbox" {{ 'checked' if t.grupo=='concluido' }}
@@ -62,6 +62,7 @@
                 {% endif %}
               </div>
             </div>
+            <div class="tl-acoes">
             {% if t.grupo != 'concluido' %}
             {% if t.due_date %}
             <form method="post" action="/tarefa/{{ t.id }}/lembrete">
@@ -96,6 +97,7 @@
               <button class="btn-icone" type="submit" title="Excluir tarefa"
                       aria-label="Excluir tarefa">{{ icone('x') }}</button>
             </form>
+            </div>
           </li>
           {% endfor %}
         </ul>
@@ -107,8 +109,8 @@
     <form method="post" action="/tarefa/nova" class="tl-add">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="list_id" value="{{ l.id }}"/>
-      <input type="text" name="title" placeholder="Nova tarefa…" required aria-label="Título da tarefa"/>
-      <input type="date" name="due_date" title="Vencimento (opcional)" aria-label="Vencimento"/>
+      <input class="input" type="text" name="title" placeholder="Nova tarefa…" required aria-label="Título da tarefa"/>
+      <input class="input" type="date" name="due_date" title="Vencimento (opcional)" aria-label="Vencimento"/>
       <label class="tl-aviso-novo" title="Quando avisar (precisa de vencimento)">
         {{ icone('bell') }}
         <select class="input tl-aviso-sel" name="remind_days" aria-label="Aviso da tarefa">
