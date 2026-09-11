@@ -62,9 +62,29 @@ def weekly_digest_text():
             f"  Atrasadas: {len(atrasadas)}",
         ]
     if comp.deadline:
-        d = (comp.deadline - hoje).days
-        linhas.append(f"  Prazo: {comp.deadline.strftime('%d/%m/%Y')} "
-                      f"({'vencido há ' + str(-d) + ' dia(s)' if d < 0 else str(d) + ' dia(s)'})")
+        prazo = comp.deadline.strftime('%d/%m/%Y')
+        pendentes = total - concluidas
+        concluido = (total > 0 and pendentes == 0) or comp.status == "fechada"
+        if concluido:
+            # terminou: diz QUANDO terminou frente ao prazo, nada de "vencido"
+            fim = max((a.done_at for a in acts if a.done_at), default=None) or comp.closed_at
+            if fim:
+                atraso = (fim.date() - comp.deadline).days
+                quando = ("no prazo" if atraso <= 0
+                          else f"{atraso} dia(s) após o prazo")
+                linhas.append(f"  Prazo do fechamento: {prazo} — concluído em "
+                              f"{fim.strftime('%d/%m/%Y')} ({quando})")
+            else:
+                linhas.append(f"  Prazo do fechamento: {prazo} — concluído")
+        else:
+            d = (comp.deadline - hoje).days
+            if d < 0:
+                situacao = f"vencido há {-d} dia(s), {pendentes} atividade(s) em aberto"
+            elif d == 0:
+                situacao = f"vence hoje, {pendentes} atividade(s) em aberto"
+            else:
+                situacao = f"faltam {d} dia(s)"
+            linhas.append(f"  Prazo do fechamento: {prazo} ({situacao})")
     if atrasadas:
         cnt = Counter((a.member.name if a.member else "sem responsável")
                       for a in atrasadas)
