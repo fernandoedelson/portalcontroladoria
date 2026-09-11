@@ -129,7 +129,7 @@
         else if(e.target===f) fecha(false);                   // clicou fora = cancelar
       });
       document.addEventListener('keydown',tecla,true);
-      document.body.appendChild(f); aberto=f;
+      (document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(f); aberto=f;   // em tela cheia, a janela precisa estar dentro dela
       // exclusao: foco no "Cancelar" (Enter nao apaga sem querer)
       (f.querySelector(vermelho?'[data-r="nao"]':'[data-r="sim"]')||f.querySelector('button')).focus();
     }

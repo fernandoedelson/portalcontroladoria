@@ -35,6 +35,10 @@
                   data-cor="{{ v }}" title="{{ lbl }}" aria-label="Cor {{ lbl }}"></button>
           {% endfor %}
         </div>
+        <button type="button" class="btn btn-outline btn-toque ne-cheia" id="ne-cheia" aria-pressed="false"
+                title="Tela cheia (Esc para sair)" aria-label="Tela cheia">
+          <span class="ico-abre">{{ icone('maximize') }}</span><span class="ico-fecha">{{ icone('minimize') }}</span>
+          <span class="so-desktop ne-cheia-txt">Tela cheia</span></button>
         <button class="btn btn-outline btn-toque" type="submit"
                 formaction="/nota/{{ atual.id }}/fixar"
                 title="{{ 'Desafixar' if atual.pinned else 'Fixar no topo' }}">
@@ -642,6 +646,55 @@
 
   var rt=null;
   window.addEventListener('resize',function(){ fimFerr(); if(painel.hidden) return; clearTimeout(rt); rt=setTimeout(dimensiona,150); });
+})();
+</script>
+{% endif %}
+{% if atual %}
+<script>
+/* ---------- nota em tela cheia ----------
+   Com suporte (computador, Android): tela cheia de verdade no editor — some até o
+   navegador. Sem suporte (iPhone): a nota ocupa a janela inteira (modo CSS).
+   O modo fica lembrado nesta aba: depois de salvar (a página recarrega) a nota
+   volta aberta em tela cheia. */
+(function(){
+  var btn=document.getElementById('ne-cheia'), ed=document.getElementById('notas-editor'), raiz=document.documentElement;
+  if(!btn || !ed) return;
+  var CH='nota-tela-cheia';
+  function redesenha(){ setTimeout(function(){ window.dispatchEvent(new Event('resize')); },60); }
+  function marca(on){
+    raiz.classList.toggle('nota-cheia', on);
+    btn.setAttribute('aria-pressed', on?'true':'false');
+    btn.title = on ? 'Sair da tela cheia (Esc)' : 'Tela cheia (Esc para sair)';
+    btn.setAttribute('aria-label', on ? 'Sair da tela cheia' : 'Tela cheia');
+    var t=btn.querySelector('.ne-cheia-txt'); if(t) t.textContent = on ? 'Sair' : 'Tela cheia';
+    try{ on ? sessionStorage.setItem(CH,'1') : sessionStorage.removeItem(CH); }catch(e){}
+    redesenha();
+  }
+  function real(){ return document.fullscreenElement || document.webkitFullscreenElement; }
+  var estavaReal=false;   // true enquanto a tela cheia REAL está ativa (Esc do navegador sai dos dois modos)
+  function entra(){
+    marca(true);
+    var f=ed.requestFullscreen || ed.webkitRequestFullscreen;
+    if(f){ try{ var p=f.call(ed); if(p && p.catch) p.catch(function(){}); }catch(e){} }
+  }
+  function sai(){
+    if(real()){ var x=document.exitFullscreen || document.webkitExitFullscreen; try{ x.call(document); }catch(e){} }
+    marca(false);
+  }
+  btn.addEventListener('click',function(){ raiz.classList.contains('nota-cheia') ? sai() : entra(); });
+  // Esc do navegador sai da tela cheia real; acompanha para sair também do modo
+  ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){
+    document.addEventListener(ev,function(){ if(!real() && raiz.classList.contains('nota-cheia') && estavaReal) marca(false); estavaReal=!!real(); redesenha(); });
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && raiz.classList.contains('nota-cheia') && !real()){
+      if(document.querySelector('.dlg-fundo')) return;      // janela de confirmação aberta
+      e.preventDefault(); sai();
+    }
+  });
+  // salvar recarrega a página: volta no modo janela-inteira (tela cheia real exige um toque)
+  var voltou=false; try{ voltou=sessionStorage.getItem(CH)==='1'; }catch(e){}
+  if(voltou) marca(true);
 })();
 </script>
 {% endif %}
