@@ -77,7 +77,14 @@
       <span class="ne-sep" aria-hidden="true"></span>
       <button type="button" class="ne-f" id="ink-desfazer" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
-      <button type="button" class="ne-f" id="ink-pagina" title="Mais espaço (nova folha)" aria-label="Mais espaço">{{ icone('plus') }}</button>
+      <button type="button" class="ne-f" id="ink-pagina" title="Nova página" aria-label="Nova página">{{ icone('plus') }}</button>
+      <div class="ne-dir" role="group" aria-label="Como as páginas rolam">
+        <button type="button" class="ne-f" data-dir="v" aria-pressed="true" title="Páginas empilhadas: rola para cima e para baixo" aria-label="Rolagem vertical">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="8" rx="1.5"/><rect x="6" y="14" width="12" height="8" rx="1.5"/></svg></button>
+        <button type="button" class="ne-f" data-dir="h" aria-pressed="false" title="Páginas lado a lado: rola para a esquerda e para a direita" aria-label="Rolagem horizontal">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="8" height="12" rx="1.5"/><rect x="14" y="6" width="8" height="12" rx="1.5"/></svg></button>
+      </div>
+      <span class="ne-pag-ind" id="ink-pag-ind" aria-live="polite">1 / 1</span>
       <button type="button" class="ne-f" id="ink-limpar" title="Apagar tudo" aria-label="Apagar tudo">{{ icone('trash') }}</button>
       <span class="ne-sep" aria-hidden="true"></span>
       <div class="ne-zoom" role="group" aria-label="Zoom da folha">
@@ -211,12 +218,15 @@
   .ne-caderno{position:relative;height:68vh;overflow:auto;border-radius:10px;
               border:1px solid rgba(0,0,0,.12);background:#e9e7df;-webkit-overflow-scrolling:touch;
               touch-action:pan-x pan-y}          /* sem zoom do navegador sobre a folha */
-  .ne-folha{position:relative;width:100%;margin:0 auto;background-color:#fffef8;
-    box-shadow:0 1px 4px rgba(0,0,0,.12);will-change:transform;
-    --pauta:32px;--margem:56px;
+  .ne-folha{position:relative;width:100%;margin:0 auto;will-change:transform;--pauta:32px;--margem:56px}
+  .ne-pag{position:absolute;background-color:#fffef8;box-shadow:0 1px 4px rgba(0,0,0,.14);pointer-events:none;
     background-image:
       linear-gradient(to right,transparent calc(var(--margem) - 1px),rgba(214,86,86,.55) calc(var(--margem) - 1px),rgba(214,86,86,.55) var(--margem),transparent var(--margem)),
       repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--pauta) - 1px),rgba(29,93,168,.2) calc(var(--pauta) - 1px),rgba(29,93,168,.2) var(--pauta))}
+  .ne-pag-num{position:absolute;right:10px;bottom:6px;font:500 11px/1 ui-monospace,Consolas,monospace;color:rgba(0,0,0,.35)}
+  .ne-dir{display:inline-flex;gap:.25rem}
+  .ne-dir .ne-f[aria-pressed="true"]{border-color:#c9962e;box-shadow:0 0 0 2px rgba(201,150,46,.45)}
+  .ne-pag-ind{font:500 .82rem ui-monospace,Consolas,monospace;min-width:52px;text-align:center;opacity:.75;white-space:nowrap}
   .ne-folha canvas{position:absolute;left:0;top:0;display:block;touch-action:none;cursor:crosshair}
   #ne-caneta{position:relative}
   .ne-toast{position:absolute;left:50%;top:3.6rem;transform:translateX(-50%);z-index:5;
@@ -276,11 +286,28 @@
   });
 
   /* =================== CADERNO: escrita a mao =================== */
-  var W=1000, PAUTA=32, MARGEM=56, GANHO=650;      // unidades logicas da folha
+  // Páginas A4 (W x PH, unidades lógicas). Os traços ficam numa coluna contínua:
+  // página p = y entre p*PH e (p+1)*PH. Só a DISPOSIÇÃO na tela muda:
+  // empilhadas (dir 'v') ou lado a lado (dir 'h'), com um vão entre elas.
+  var W=1000, PH=1414, VAO=28, MAXPAG=50, PAUTA=32, MARGEM=56;
   var doc=null;
   try{ doc=JSON.parse(document.getElementById('ink-data').textContent); }catch(e){}
   if(!doc||!Array.isArray(doc.strokes)) doc={h:1300,strokes:[]};
-  if(!doc.h) doc.h=1300;
+  if(!doc.pag){                                // nota antiga (folha contínua): cabe em quantas páginas?
+    var maxY=0; doc.strokes.forEach(function(s){ (s.p||[]).forEach(function(q){ if(q[1]>maxY) maxY=q[1]; }); });
+    doc.pag=Math.max(1, Math.ceil(Math.max(maxY+1, Math.min(doc.h||0, PH))/PH));
+  }
+  doc.pag=Math.min(MAXPAG, Math.max(1, doc.pag|0));
+  doc.dir=(doc.dir==='h') ? 'h' : 'v';
+  doc.h=doc.pag*PH;
+  var pgAtual=0;                               // página do traço em andamento
+  function origem(p){ return doc.dir==='h' ? [p*(W+VAO),0] : [0,p*(PH+VAO)]; }
+  function largTotal(){ return doc.dir==='h' ? doc.pag*W+(doc.pag-1)*VAO : W; }
+  function altTotal(){ return doc.dir==='h' ? PH : doc.pag*PH+(doc.pag-1)*VAO; }
+  var faixa=new WeakMap();                     // [yMin,yMax] de cada traço (não vai para o JSON)
+  function faixaDe(s){ var f=faixa.get(s); if(f && f[2]===s.p.length) return f;
+    var a=1e9,b=-1e9; s.p.forEach(function(q){ if(q[1]<a)a=q[1]; if(q[1]>b)b=q[1]; });
+    f=[a-40,b+40,s.p.length]; faixa.set(s,f); return f; }
 
   var painel=document.getElementById('ne-caneta'), caderno=document.getElementById('ne-caderno');
   var folha=document.getElementById('ne-folha'), cv=document.getElementById('ne-canvas');
@@ -327,40 +354,96 @@
     }
     c.restore();
   }
+  // desenha os traços dentro da página p: recorta a página e desloca a coluna contínua
+  function naPagina(c,p,lista){
+    var o=origem(p), y0=p*PH, y1=y0+PH;
+    c.save(); c.setTransform(dpr,0,0,dpr,0,0);
+    c.beginPath(); c.rect(o[0]*escala,o[1]*escala,W*escala,PH*escala); c.clip();
+    c.translate(o[0]*escala,(o[1]-y0)*escala);
+    for(var i=0;i<lista.length;i++){ var f=faixaDe(lista[i]); if(f[1]>=y0 && f[0]<=y1) desenha(c,lista[i],escala); }
+    c.restore();
+  }
   function redesenhaBase(){
     bctx.setTransform(1,0,0,1,0,0); bctx.clearRect(0,0,base.width,base.height);
-    bctx.setTransform(dpr,0,0,dpr,0,0);
-    for(var i=0;i<doc.strokes.length;i++) desenha(bctx,doc.strokes[i],escala);
+    for(var p=0;p<doc.pag;p++) naPagina(bctx,p,doc.strokes);
   }
   function compoe(){
     quadro=null;
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(base,0,0);
-    if(traco){ ctx.setTransform(dpr,0,0,dpr,0,0); desenha(ctx,traco,escala); }
+    if(traco) naPagina(ctx,pgAtual,[traco]);
   }
   function agenda(){ if(!quadro) quadro=requestAnimationFrame(compoe); }
+  function montaPaginas(){
+    var ja=folha.querySelectorAll('.ne-pag');
+    if(ja.length!==doc.pag){
+      ja.forEach(function(d){ d.remove(); });
+      for(var p=0;p<doc.pag;p++){
+        var d=document.createElement('div'); d.className='ne-pag';
+        var n=document.createElement('span'); n.className='ne-pag-num';
+        d.appendChild(n); folha.insertBefore(d,cv);
+      }
+    }
+    folha.querySelectorAll('.ne-pag').forEach(function(d,p){
+      var o=origem(p);
+      d.style.left=(o[0]*escala)+'px'; d.style.top=(o[1]*escala)+'px';
+      d.style.width=(W*escala)+'px'; d.style.height=(PH*escala)+'px';
+      d.firstChild.textContent=(p+1)+' / '+doc.pag;
+    });
+  }
   function dimensiona(){
     var bw=caderno.clientWidth; if(!bw) return;
-    var l=Math.round(bw*z);
-    escala=l/W;
-    var a=doc.h*escala;
-    // teto de memoria: em zoom alto numa nota longa, reduz a densidade de pixels
-    dpr=Math.min(window.devicePixelRatio||1, Math.sqrt(PIXMAX/(l*a)));
+    escala=Math.round(bw*z)/W;                  // zoom 100% = uma página na largura da tela
+    var l=Math.round(largTotal()*escala), a=Math.round(altTotal()*escala);
+    // teto de memória e de tamanho do canvas: muitas páginas ou zoom alto reduzem a densidade
+    dpr=Math.min(window.devicePixelRatio||1, Math.sqrt(PIXMAX/(l*a)), 16000/Math.max(l,a));
     folha.style.width=l+'px';
     folha.style.height=a+'px';
     var zv=document.getElementById('ink-zoom-val'); if(zv) zv.textContent=Math.round(z*100)+'%';
     folha.style.setProperty('--pauta',(PAUTA*escala)+'px');
     folha.style.setProperty('--margem',(MARGEM*escala)+'px');
+    caderno.classList.toggle('dir-h', doc.dir==='h');
+    montaPaginas();
     cv.style.width=l+'px'; cv.style.height=a+'px';
     cv.width=base.width=Math.round(l*dpr); cv.height=base.height=Math.round(a*dpr);
-    redesenhaBase(); compoe(); pronto=true;
+    redesenhaBase(); compoe(); pronto=true; indicaPagina();
   }
-  function ponto(ev){
+  function paginaNaTela(){                     // página no centro da área visível
+    var cx=(caderno.scrollLeft-folha.offsetLeft+caderno.clientWidth/2)/escala;
+    var cy=(caderno.scrollTop-folha.offsetTop+caderno.clientHeight/2)/escala;
+    var p=doc.dir==='h' ? Math.floor(cx/(W+VAO)) : Math.floor(cy/(PH+VAO));
+    return Math.min(doc.pag-1, Math.max(0,p));
+  }
+  function indicaPagina(){
+    var e=document.getElementById('ink-pag-ind'); if(e) e.textContent=(paginaNaTela()+1)+' / '+doc.pag;
+  }
+  function vaiPagina(p){
+    var o=origem(p);
+    if(doc.dir==='h'){ caderno.scrollLeft=folha.offsetLeft+o[0]*escala; caderno.scrollTop=0; }
+    else caderno.scrollTop=folha.offsetTop+o[1]*escala;
+    indicaPagina();
+  }
+  caderno.addEventListener('scroll',indicaPagina,{passive:true});
+  // página sob o ponteiro (no vão, a mais próxima)
+  function paginaDoPonto(ev){
     var r=cv.getBoundingClientRect();
-    var pr=ev.pointerType==='pen' ? (ev.pressure||0.5) : 0.5;
-    return [Math.round((ev.clientX-r.left)/escala*10)/10, Math.round((ev.clientY-r.top)/escala*10)/10,
-            Math.round(pr*100)/100];
+    var dx=(ev.clientX-r.left)/escala, dy=(ev.clientY-r.top)/escala;
+    var p=doc.dir==='h' ? Math.floor((dx+VAO/2)/(W+VAO)) : Math.floor((dy+VAO/2)/(PH+VAO));
+    return Math.min(doc.pag-1, Math.max(0,p));
   }
-  function cresce(y){ if(y>doc.h-180){ doc.h+=GANHO; dimensiona(); } }
+  // ponto na coluna contínua, preso à página onde o traço começou
+  function ponto(ev){
+    var r=cv.getBoundingClientRect(), o=origem(pgAtual);
+    var pr=ev.pointerType==='pen' ? (ev.pressure||0.5) : 0.5;
+    var lx=Math.min(W, Math.max(0,(ev.clientX-r.left)/escala-o[0]));
+    var ly=Math.min(PH-0.1, Math.max(0,(ev.clientY-r.top)/escala-o[1]));
+    return [Math.round(lx*10)/10, Math.round((ly+pgAtual*PH)*10)/10, Math.round(pr*100)/100];
+  }
+  // escrevendo no fim da última página: já abre a próxima
+  function cresce(y){
+    if(pgAtual===doc.pag-1 && y-pgAtual*PH>PH*0.8 && doc.pag<MAXPAG){
+      doc.pag++; doc.h=doc.pag*PH; dimensiona();
+    }
+  }
   // tamanho da borracha acompanha os botoes de espessura (fina/media/grossa)
   function largBorracha(){ return ({1.6:12, 2.6:22, 4.4:40})[esp] || 22; }
   function novoTraco(tipo,pt){
@@ -515,6 +598,7 @@
     if(previa) return;                          // zoom em andamento
     if(ev.button!==0 && ev.button!==5 && ev.pointerType==='mouse') return;
     ev.preventDefault(); cv.setPointerCapture(ev.pointerId);
+    pgAtual=paginaDoPonto(ev);
     var pt=ponto(ev);
     // ponta-borracha (bit 32) ou botao lateral apertado (bit 2): apaga enquanto apertado
     var botaoCaneta=ev.pointerType==='pen' && ((ev.buttons & 32) || (ev.buttons & 2) || ev.button===2 || ev.button===5);
@@ -596,8 +680,23 @@
     redesenhaBase(); compoe(); mudou();
   });
   document.getElementById('ink-pagina').addEventListener('click',function(){
-    doc.h+=GANHO; dimensiona(); caderno.scrollTop=caderno.scrollHeight; mudou();
+    if(doc.pag>=MAXPAG){ avisa('Limite de '+MAXPAG+' páginas por nota'); return; }
+    doc.pag++; doc.h=doc.pag*PH; dimensiona(); vaiPagina(doc.pag-1); mudou();
+    avisa('Página '+doc.pag+' criada');
   });
+  function aplicaDir(){
+    document.querySelectorAll('.ne-dir .ne-f').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.dir===doc.dir ? 'true' : 'false'); });
+  }
+  document.querySelectorAll('.ne-dir .ne-f').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(doc.dir===b.dataset.dir) return;
+      var p=paginaNaTela();
+      doc.dir=b.dataset.dir; aplicaDir(); dimensiona(); vaiPagina(p); mudou();
+      avisa(doc.dir==='h' ? 'Páginas lado a lado' : 'Páginas empilhadas');
+    });
+  });
+  aplicaDir();
   document.getElementById('ink-socaneta').addEventListener('change',function(){
     soCaneta=this.checked; try{ localStorage.setItem('nota-so-caneta',soCaneta?'1':'0'); }catch(e){}
   });

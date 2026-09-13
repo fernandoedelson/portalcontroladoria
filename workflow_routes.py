@@ -586,9 +586,14 @@ def register_workflow_routes(app):
         if not isinstance(d, dict) or not isinstance(d.get("strokes"), list):
             return None
         try:
-            h = min(max(float(d.get("h") or 1300), 400.0), 40000.0)
+            h = min(max(float(d.get("h") or 1300), 400.0), 80000.0)
         except (TypeError, ValueError):
             h = 1300.0
+        try:                                   # páginas (A4) e rolagem: v = para baixo, h = para o lado
+            pag = min(max(int(d.get("pag") or 0), 0), 50)
+        except (TypeError, ValueError):
+            pag = 0
+        direcao = "h" if d.get("dir") == "h" else "v"
         tracos = []
         for s in d["strokes"][:20000]:
             if not isinstance(s, dict):
@@ -610,7 +615,10 @@ def register_workflow_routes(app):
                     pts.append([x, y, pr])
             if pts:
                 tracos.append({"c": cor, "w": w, "t": tool, "p": pts})
-        return {"h": h, "strokes": tracos}
+        out = {"h": h, "strokes": tracos, "dir": direcao}
+        if pag:
+            out["pag"] = pag
+        return out
 
     @app.route("/nota/<int:nid>/fixar", methods=["POST"])
     @login_required
