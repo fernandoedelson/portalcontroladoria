@@ -634,6 +634,9 @@ def register_admin_routes(app):
     def admin_scheduler_run():
         import scheduler as sched
         res = sched.run_daily_tasks(app, force=True)
+        if res.get("pulado"):
+            flash("Hoje não é dia útil: o portal não envia avisos em fim de semana e feriado. O ciclo roda no próximo dia útil (e na véspera já avisa o que cairia nesses dias).", "info")
+            return _back("sistema")
         flash(f"Tarefas executadas agora — resumo: "
               f"{'sim' if res.get('resumo') else 'não'}.", "success")
         return _back("sistema")

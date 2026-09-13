@@ -299,9 +299,16 @@ def run_alert_cycle(ref=None, dry_run=False):
     """
     from team.engine import add_business_days
     ref = ref or fuso.hoje()
+    # dia útil cobre os dias não úteis seguintes: o que vence sáb/dom/feriado sai hoje
+    cobre = set(fuso.cobertura(ref)) or {ref}
     settings = {s.event_key: s for s in AlertChannelSetting.query.all()}
     summary = {"lembrete_previo": 0, "vence_hoje": 0, "atraso": 0,
                "por_canal": {}, "detalhe": []}
+    if not dry_run and not fuso.pode_avisar(ref):
+        # fim de semana/feriado (inclusive "Rodar ciclo agora"): nada sai; o dia útil
+        # anterior já cobriu estes dias e o próximo dia útil cobra os atrasos
+        summary["pulado"] = "dia não útil"
+        return summary
 
     open_acts = (Activity.query
                  .filter(Activity.status.in_(["pendente", "em_andamento", "bloqueada"]))
@@ -321,7 +328,7 @@ def run_alert_cycle(ref=None, dry_run=False):
         s = settings.get("lembrete_previo")
         if s and a.due_date:
             trigger = add_business_days(a.due_date, -(s.lead_days or 1))
-            if trigger == ref and a.due_date > ref:
+            if trigger == ref and a.due_date > ref and a.due_date not in cobre:
                 subject = f"Lembrete: “{a.title}” vence em {a.due_date.strftime('%d/%m')}"
                 body = _body(a)
                 summary["lembrete_previo"] += 1
@@ -332,8 +339,9 @@ def run_alert_cycle(ref=None, dry_run=False):
 
         # --- vence hoje ---
         s = settings.get("vence_hoje")
-        if s and a.due_date == ref:
-            subject = f"Vence hoje: “{a.title}”"
+        if s and a.due_date in cobre:
+            subject = (f"Vence hoje: “{a.title}”" if a.due_date == ref else
+                       f"Vence {fuso.rotulo_dia(a.due_date)} (fim de semana/feriado): “{a.title}”")
             body = _body(a)
             summary["vence_hoje"] += 1
             if not dry_run:

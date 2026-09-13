@@ -1632,6 +1632,9 @@ def register_team_routes(app):
     def team_alertas_run():
         dry = bool(request.form.get("dry_run"))
         summary = team_alerts.run_alert_cycle(dry_run=dry)
+        if summary.get("pulado"):
+            flash("Hoje não é dia útil: o portal não envia avisos em fim de semana e feriado. O ciclo roda no próximo dia útil (e na véspera já avisa o que cairia nesses dias).", "info")
+            return redirect(url_for("team_alertas"))
         canais = ", ".join(f"{k}={v}" for k, v in summary["por_canal"].items()) or "nenhum"
         flash(f"Ciclo {'(simulação) ' if dry else ''}concluído — "
               f"lembretes: {summary['lembrete_previo']}, vencem hoje: "

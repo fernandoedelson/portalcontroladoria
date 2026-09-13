@@ -177,8 +177,19 @@ def envia_para_usuario(user_id, titulo, corpo, url="/", tag=None, itens=None):
 # --------------------------------------------------------------------------
 # Gancho: toda Notification nova tambem vira push (depois do commit)
 # --------------------------------------------------------------------------
-def _envia_lote(app, fila):
+def _envia_lote(app, fila, forcar=False):
     with app.app_context():
+        import fuso
+        if not forcar and not fuso.pode_avisar():
+            # fim de semana/feriado: guarda para o próximo dia útil (o sininho já registrou)
+            from models import db
+            from team.models_workflow import PushAdiado
+            for i in fila:
+                db.session.add(PushAdiado(user_id=i["user_id"], title=(i.get("title") or "")[:160],
+                                          message=(i.get("message") or "")[:400],
+                                          url=(i.get("url") or "/")[:200], kind=i.get("kind")))
+            db.session.commit()
+            return
         por_usuario = {}
         for item in fila:
             por_usuario.setdefault(item["user_id"], []).append(item)
@@ -197,6 +208,26 @@ def _envia_lote(app, fila):
                                            tag=i["kind"])
             except Exception as e:                        # push nunca derruba o portal
                 app.logger.warning("Falha ao enviar push para o usuario %s: %s", uid, e)
+
+
+def libera_adiados(app):
+    """Primeiro dia útil: entrega os pushes guardados do fim de semana/feriado
+    (agrupados por pessoa) e limpa a fila. Retorna quantos foram liberados."""
+    import fuso
+    from models import db
+    from team.models_workflow import PushAdiado
+    if not fuso.pode_avisar():
+        return 0
+    guardados = PushAdiado.query.order_by(PushAdiado.id).all()
+    if not guardados:
+        return 0
+    fila = [{"user_id": g.user_id, "title": g.title, "message": g.message,
+             "url": g.url, "kind": g.kind} for g in guardados]
+    for g in guardados:
+        db.session.delete(g)
+    db.session.commit()
+    _envia_lote(app, fila, forcar=True)
+    return len(fila)
 
 
 def enfileira(sessao, user_id, titulo, mensagem, url="/", tipo=None):

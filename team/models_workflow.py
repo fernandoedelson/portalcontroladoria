@@ -258,6 +258,18 @@ class Definition(db.Model):
     editor = db.relationship("User", foreign_keys=[updated_by])
 
 
+class PushAdiado(db.Model):
+    """Push gerado em fim de semana/feriado: fica guardado e sai no próximo dia útil."""
+    __tablename__ = "push_adiados"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(160))
+    message = db.Column(db.String(400))
+    url = db.Column(db.String(200))
+    kind = db.Column(db.String(40))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class PushSubscription(db.Model):
     """Aparelho que ativou as notificacoes push (um por navegador/celular).
 

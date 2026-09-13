@@ -52,8 +52,21 @@ def run_daily_tasks(app, force=False):
     from models import db, User, notify
     from team import alerts as team_alerts
 
-    resultado = {"alertas": None, "cobrancas": 0, "resumo": False, "tarefas": 0}
+    resultado = {"alertas": None, "cobrancas": 0, "resumo": False, "tarefas": 0, "push_liberados": 0}
     hoje = fuso.hoje()
+    # portal corporativo: nada de aviso em fim de semana nem feriado nacional.
+    # O dia útil anterior já avisou o que cairia nesses dias (fuso.cobertura).
+    if not fuso.pode_avisar(hoje):              # vale também para "executar agora"
+        resultado["pulado"] = "dia não útil"
+        return resultado
+    cobre = fuso.cobertura(hoje) or [hoje]
+
+    # 0) pushes guardados do fim de semana/feriado
+    try:
+        from team import push as _push
+        resultado["push_liberados"] = _push.libera_adiados(app)
+    except Exception:
+        _log(app, "falha ao liberar pushes adiados:\n" + traceback.format_exc())
 
     # 1) ciclo de alertas do time (lembrete previo, vence hoje, atraso)
     if force or not _already_ran(app, "alertas", hoje):
@@ -67,7 +80,7 @@ def run_daily_tasks(app, force=False):
     # 1b) aviso de vencimento das tarefas pessoais
     if force or not _already_ran(app, "tarefas", hoje):
         try:
-            resultado["tarefas"] = _avisar_tarefas(app, hoje)
+            resultado["tarefas"] = _avisar_tarefas(app, hoje, cobre[-1])
             _mark(app, "tarefas", hoje)
             if resultado["tarefas"]:
                 _log(app, f"avisos de tarefa: {resultado['tarefas']}")
@@ -78,12 +91,17 @@ def run_daily_tasks(app, force=False):
 
     # 3) resumo semanal para a controladoria
     dia_resumo = int(_get(app, "digest_weekday", 0))
-    if (force or hoje.weekday() == dia_resumo) and (
+    pendente = _s(_get(app, "resumo_pendente", "")) == "1"      # pedido manual em dia não útil
+    cai_hoje = any(d.weekday() == dia_resumo for d in cobre)    # dia do resumo cai hoje ou no fim de semana/feriado seguinte
+    if (force or cai_hoje or pendente) and (
             force or not _already_ran(app, "resumo", hoje)):
         try:
             from workflow_routes import envia_resumo
             snap = envia_resumo()
             _mark(app, "resumo", hoje)
+            if pendente:
+                from models import set_setting
+                set_setting("resumo_pendente", "")
             resultado["resumo"] = True
             _log(app, f"resumo semanal enviado (e-mail {snap.email_ok}/{snap.destinos})"
                  + (f"\n{snap.email_falhas}" if snap.email_falhas else ""))
@@ -93,7 +111,7 @@ def run_daily_tasks(app, force=False):
     return resultado
 
 
-def _avisar_tarefas(app, hoje):
+def _avisar_tarefas(app, hoje, ate=None):
     """Notifica o dono de cada tarefa com aviso ligado.
 
     Comeca na data do aviso (vencimento - antecedencia escolhida) e continua
@@ -104,20 +122,24 @@ def _avisar_tarefas(app, hoje):
     from team.models import TeamMember
     from team.models_workflow import PersonalTask
     from team import alerts as canais
+    canais_dia_util = fuso.dia_util
 
+    ate = ate or hoje                         # último dia coberto (sexta cobre sáb e dom)
     maior_antecedencia = max(d for d, _ in PersonalTask.ANTECEDENCIAS)
     candidatas = PersonalTask.query.filter(
         PersonalTask.remind.is_(True),
         PersonalTask.done.is_(False),
         PersonalTask.due_date.isnot(None),
-        PersonalTask.due_date <= hoje + timedelta(days=maior_antecedencia),
+        PersonalTask.due_date <= ate + timedelta(days=maior_antecedencia),
         db.or_(PersonalTask.reminded_on.is_(None),
                PersonalTask.reminded_on < hoje)).all()
-    pend = [t for t in candidatas if t.data_do_aviso() <= hoje]
+    pend = [t for t in candidatas if t.data_do_aviso() <= ate]
     enviados = 0
     for t in pend:
         faltam = (t.due_date - hoje).days
-        if faltam > 0:
+        if faltam > 0 and not canais_dia_util(t.due_date):
+            quando, titulo = f"vence {fuso.rotulo_dia(t.due_date)} (fim de semana/feriado)", "Tarefa a vencer"
+        elif faltam > 0:
             quando, titulo = f"vence em {faltam} dia(s)", "Tarefa a vencer"
         elif faltam == 0:
             quando, titulo = "vence hoje", "Tarefa vence hoje"

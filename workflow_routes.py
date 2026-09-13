@@ -478,6 +478,14 @@ def register_workflow_routes(app):
     @app.route("/resumo", methods=["GET", "POST"])
     @team_required
     def wf_resumo():
+        if request.method == "POST" and not fuso.pode_avisar():
+            from models import set_setting
+            set_setting("resumo_pendente", "1")
+            log_audit(current_user.id, "resumo_agendado", "digest", "dia não útil")
+            flash("Hoje não é dia útil: o resumo sai automaticamente na manhã do "
+                  "próximo dia útil (o portal não envia avisos em fim de semana e feriado).",
+                  "info")
+            return redirect(url_for("wf_resumo"))
         if request.method == "POST":
             snap = envia_resumo(current_user.id, request.url_root)
             n = snap.destinos

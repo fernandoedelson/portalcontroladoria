@@ -105,6 +105,9 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <button class="btn btn-primary" type="submit">Rodar ciclo agora</button></form>
   </div>
+  <p class="help-txt mt-1"><strong>Fim de semana e feriado nacional:</strong> nenhum aviso sai (push, e-mail ou WhatsApp).
+    O que venceria nesses dias é avisado no dia útil anterior (ex.: sexta avisa o que vence sábado e domingo);
+    avisos gerados nesses dias ficam guardados e saem na manhã do próximo dia útil.</p>
   <p class="help-txt mt-1">O ciclo varre as atividades abertas e dispara lembretes, vencimentos e atrasos conforme a matriz. É idempotente: cada evento por atividade/pessoa/dia sai uma única vez.</p>
 </div>
 

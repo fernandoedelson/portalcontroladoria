@@ -72,6 +72,51 @@ def dia_mes(d):
     return f"{DIAS[d.weekday()]}, {d.day} de {MESES[d.month - 1]}"
 
 
+# --------------------------------------------------------------------------
+# Calendário de avisos: portal corporativo não avisa em fim de semana nem
+# feriado nacional. O que cairia nesses dias é avisado no dia útil anterior.
+# --------------------------------------------------------------------------
+def dia_util(d=None):
+    d = d or hoje()
+    if isinstance(d, _dt.datetime):
+        d = d.date()
+    if d.weekday() >= 5:
+        return False
+    from engine.calendar_br import _br_holidays
+    return d not in _br_holidays(d.year)
+
+
+def cobertura(d=None):
+    """Dias que o aviso de hoje cobre: hoje + os dias não úteis seguidos até o
+    próximo dia útil. Sexta 12/09 -> [12/09, 13/09, 14/09]; véspera de feriado
+    na quarta -> [quarta, quinta-feriado]. Em dia não útil devolve []."""
+    from datetime import timedelta
+    d = d or hoje()
+    if not dia_util(d):
+        return []
+    dias = [d]
+    x = d + timedelta(days=1)
+    while not dia_util(x):
+        dias.append(x)
+        x += timedelta(days=1)
+    return dias
+
+
+def pode_avisar(d=None):
+    """Hoje pode sair push/e-mail/WhatsApp? PORTAL_AVISOS_SEM_CALENDARIO=1 desliga a regra (testes)."""
+    if os.environ.get("PORTAL_AVISOS_SEM_CALENDARIO") == "1":
+        return True
+    return dia_util(d)
+
+
+DSEM_CURTO = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+
+
+def rotulo_dia(d):
+    """'sáb 13/09'"""
+    return f"{DSEM_CURTO[d.weekday()]} {d.strftime('%d/%m')}"
+
+
 def registra(app):
     app.jinja_env.filters["local"] = local
     app.jinja_env.filters["data_extenso"] = data_extenso
