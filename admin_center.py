@@ -82,7 +82,7 @@ def register_admin_routes(app):
         clusters = Cluster.query.order_by(Cluster.sort_order, Cluster.name).all()
         ordem_cl = {c.id: i for i, c in enumerate(clusters)}
         assignments = sorted(CompanyAssignment.query.join(Company).all(),
-                             key=lambda a: (ordem_cl.get(a.cluster_id, 10**6),
+                             key=lambda a: (ordem_cl.get(a.cluster_id, 10**6), (a.segment or "~").lower(),
                                             a.company.name.lower()))
         comps = Competency.query.order_by(Competency.year.desc(),
                                           Competency.month.desc()).all()

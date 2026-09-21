@@ -338,56 +338,62 @@
         <button class="btn btn-primary btn-toque" type="submit">
           {{ icone('check') }} Salvar alterações</button>
       </div>
-      <div class="tbl-wrap"><table class="tbl tbl-ancora">
-        <thead><tr>
-          <th scope="col"><label class="chk chk-sm" style="display:inline-flex;"><input type="checkbox" data-sel id="sel-todas" aria-label="Marcar todas"/></label> Empresa</th><th scope="col">Cluster</th><th scope="col">Responsável</th><th scope="col">Assento</th>
-          <th scope="col">Segmento</th><th scope="col">Fluxo</th><th scope="col">Resp.</th>
-          <th scope="col">Entregas</th><th scope="col">Real/Ideal</th><th scope="col">Remover</th>
-        </tr></thead>
-        <tbody>
-        {% set ns = namespace(cl=-1) %}
+      <label class="chk chk-sm mb-1" style="display:inline-flex;"><input type="checkbox" data-sel id="sel-todas"/> Marcar todas</label>
+      <div class="ent-lista">
+        {% set ns = namespace(cl=-1, seg=-1) %}
         {% for a in assignments %}
         {% set P = 'a' ~ a.id ~ '_' %}
-        {% if a.cluster_id != ns.cl %}{% set ns.cl = a.cluster_id %}
-        <tr class="cl-grupo"><td colspan="10"><strong>{{ a.cluster.name if a.cluster else 'Sem cluster' }}</strong>
-          {% if a.cluster %}<span class="text-muted text-sm"> · {{ a.cluster.member.name if a.cluster.member else 'responsável a definir' }}</span>{% endif %}</td></tr>
+        {% if a.cluster_id != ns.cl %}
+          {% if ns.cl != -1 %}</div></section>{% endif %}
+          {% set ns.cl = a.cluster_id %}{% set ns.seg = -1 %}
+          {% set qtd = assignments|selectattr('cluster_id','equalto',a.cluster_id)|list|length %}
+          <section class="ent-cluster">
+          <header class="ent-cl-tit">
+            <span class="ent-cl-nome">{{ a.cluster.name if a.cluster else 'Sem cluster' }}</span>
+            <span class="ent-cl-info">{{ qtd }} entidade(s){% if a.cluster %} · {{ a.cluster.member.name if a.cluster.member else 'responsável a definir' }}{% endif %}</span>
+          </header>
+          <div>
         {% endif %}
-        <tr data-linha="{{ a.id }}">
-          <th scope="row" class="col-ancora"><label class="ent-sel">
+        {% if (a.segment or '') != ns.seg %}{% set ns.seg = a.segment or '' %}
+          <div class="ent-seg-tit"><span>{{ a.segment or 'Sem segmento' }}</span></div>
+        {% endif %}
+        <div class="ent-linha" data-linha="{{ a.id }}">
+          <label class="ent-sel">
             <input type="checkbox" data-sel name="sel" value="{{ a.id }}" form="form-mover" aria-label="Marcar {{ a.company.name }}"/>
-            <span><span class="ent-nome">{{ a.company.name }}</span>
-            <span class="ent-cod">{{ a.company.code }}</span></span></label></th>
-          <td data-rot="Cluster"><select class="input" name="{{ P }}cluster_id" style="min-width:170px;"><option value="">— sem cluster —</option>
-            {% for cl in clusters %}<option value="{{ cl.id }}" {{ 'selected' if a.cluster_id==cl.id }}>{{ cl.name }}</option>{% endfor %}
-          </select></td>
-          <td data-rot="Responsável"><select class="input" name="{{ P }}member_id" style="min-width:150px;"><option value="">— a definir —</option>
-            {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
-          </select>
-          {% if a.member_excecao %}<div><span class="kind-chip" title="Responsável escolhido à mão: não muda quando o responsável do cluster muda. Para voltar a seguir o cluster, escolha a pessoa do cluster.">exceção</span></div>{% endif %}</td>
-          <td data-rot="Assento"><input class="input" type="number" name="{{ P }}seat" value="{{ a.seat or '' }}" style="width:72px;"/></td>
-          <td data-rot="Segmento"><select class="input" name="{{ P }}segment" style="min-width:140px;">
-            <option value="">—</option>
-            {% for s in segments %}<option value="{{ s }}" {{ 'selected' if a.segment==s }}>{{ s }}</option>{% endfor %}
-            {% if a.segment and a.segment not in segments %}<option value="{{ a.segment }}" selected>{{ a.segment }} (inativo)</option>{% endif %}
-          </select></td>
-          <td data-rot="Fluxo"><select class="input" name="{{ P }}flow" style="min-width:118px;"><option value="">—</option>
-            {% for f in flows %}<option value="{{ f }}" {{ 'selected' if a.flow==f }}>{{ f }}</option>{% endfor %}</select></td>
-          <td data-rot="Responsabilidade"><select class="input" name="{{ P }}responsibility" style="min-width:110px;"><option value="">—</option>
-            {% for r in responsibilities %}<option value="{{ r }}" {{ 'selected' if a.responsibility==r }}>{{ r }}</option>{% endfor %}</select></td>
-          <td data-rot="Entregas"><div class="chk-col">
-            {% for d in deliverables %}<label class="chk chk-sm"><input type="checkbox" name="{{ P }}deliverables" value="{{ d }}" {{ 'checked' if d in a.deliverables }}/> {{ d }}</label>{% endfor %}
-          </div></td>
-          <td data-rot="Carga real / ideal"><div class="flex gap-1">
-            <input class="input" type="number" name="{{ P }}load_real" value="{{ a.load_real or 0 }}" style="width:66px;" aria-label="Carga real"/>
-            <input class="input" type="number" name="{{ P }}load_ideal" value="{{ a.load_ideal or 0 }}" style="width:66px;" aria-label="Carga ideal"/></div></td>
-          <td data-rot="Remover" class="col-perigo">
-            <button class="btn btn-outline btn-danger btn-toque" type="submit"
-                    form="asgdel-{{ a.id }}" title="Remover {{ a.company.name }} do grupo"
-                    aria-label="Remover {{ a.company.name }} do grupo">{{ icone('trash') }}</button>
-          </td>
-        </tr>
+            <span class="ent-nome">{{ a.company.name }}</span></label>
+          <div class="ent-resp">
+            <select class="input input-sm" name="{{ P }}member_id" aria-label="Responsável por {{ a.company.name }}"><option value="">— a definir —</option>
+              {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+            </select>
+            {% if a.member_excecao %}<span class="kind-chip" title="Responsável escolhido à mão: não muda quando o responsável do cluster muda. Para voltar a seguir o cluster, escolha a pessoa do cluster.">exceção</span>{% endif %}
+          </div>
+          <div class="ent-entregas" role="group" aria-label="Entregas exigidas">
+            {% for d in deliverables %}<label class="ent-pill" title="{{ d }}"><input type="checkbox" name="{{ P }}deliverables" value="{{ d }}" {{ 'checked' if d in a.deliverables }}/><span>{{ d }}</span></label>{% endfor %}
+          </div>
+          <div class="ent-acoes">
+            <button type="button" class="btn btn-outline btn-sm ent-mais" aria-expanded="false" aria-controls="det-{{ a.id }}">Detalhes</button>
+            <button class="btn btn-outline btn-danger btn-sm" type="submit" form="asgdel-{{ a.id }}"
+                    title="Remover {{ a.company.name }} do grupo" aria-label="Remover {{ a.company.name }} do grupo">{{ icone('trash') }}</button>
+          </div>
+          <div class="ent-det" id="det-{{ a.id }}" hidden>
+            <label>Cluster<select class="input input-sm" name="{{ P }}cluster_id"><option value="">— sem cluster —</option>
+              {% for cl in clusters %}<option value="{{ cl.id }}" {{ 'selected' if a.cluster_id==cl.id }}>{{ cl.name }}</option>{% endfor %}</select></label>
+            <label>Segmento<select class="input input-sm" name="{{ P }}segment"><option value="">—</option>
+              {% for s in segments %}<option value="{{ s }}" {{ 'selected' if a.segment==s }}>{{ s }}</option>{% endfor %}
+              {% if a.segment and a.segment not in segments %}<option value="{{ a.segment }}" selected>{{ a.segment }} (inativo)</option>{% endif %}</select></label>
+            <label>Assento<input class="input input-sm" type="number" name="{{ P }}seat" value="{{ a.seat or '' }}"/></label>
+            <label>Fluxo<select class="input input-sm" name="{{ P }}flow"><option value="">—</option>
+              {% for f in flows %}<option value="{{ f }}" {{ 'selected' if a.flow==f }}>{{ f }}</option>{% endfor %}</select></label>
+            <label>Responsabilidade<select class="input input-sm" name="{{ P }}responsibility"><option value="">—</option>
+              {% for r in responsibilities %}<option value="{{ r }}" {{ 'selected' if a.responsibility==r }}>{{ r }}</option>{% endfor %}</select></label>
+            <label>Carga real<input class="input input-sm" type="number" name="{{ P }}load_real" value="{{ a.load_real or 0 }}"/></label>
+            <label>Carga ideal<input class="input input-sm" type="number" name="{{ P }}load_ideal" value="{{ a.load_ideal or 0 }}"/></label>
+            <span class="ent-cod">Código {{ a.company.code }}</span>
+          </div>
+        </div>
         {% endfor %}
-        </tbody></table></div>
+        </div></section>
+      </div>
     </form>
     <p class="help-txt mt-1">Edite quantas linhas quiser e salve tudo de uma vez —
       as linhas alteradas ficam destacadas. Trocar só o cluster de uma linha faz ela assumir o
@@ -627,6 +633,13 @@
 </section>
 
 <script>
+// ==== Entidades: abrir/fechar detalhes ====
+document.querySelectorAll('.ent-mais').forEach(function(b){
+  b.addEventListener('click', function(){
+    var d=document.getElementById(b.getAttribute('aria-controls')), abre=d.hidden;
+    d.hidden=!abre; b.setAttribute('aria-expanded', abre); b.textContent=abre?'Fechar':'Detalhes';
+  });
+});
 // ==== Carteira: marcar entidades para mover de cluster ====
 (function(){
   var todas=document.getElementById('sel-todas'), btn=document.getElementById('btn-mover'), n=document.getElementById('n-sel');
@@ -651,10 +664,10 @@
     var linhas=new Set();
     inicial.forEach(function(v,el){
       var atual = el.type==='checkbox'?el.checked:el.value;
-      var tr=el.closest('tr');
+      var tr=el.closest('tr,[data-linha]');
       if(atual!==v && tr) linhas.add(tr);
     });
-    form.querySelectorAll('tr').forEach(function(tr){tr.classList.remove('linha-alterada');});
+    form.querySelectorAll('tr,[data-linha]').forEach(function(tr){tr.classList.remove('linha-alterada');});
     linhas.forEach(function(tr){tr.classList.add('linha-alterada');});
     var n=linhas.size;
     barra.classList.toggle('ativa', n>0);
