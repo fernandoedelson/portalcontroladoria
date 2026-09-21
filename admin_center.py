@@ -21,7 +21,7 @@ from werkzeug.utils import secure_filename
 from config import Config
 from models import (db, User, Company, Competency,
                     get_setting, set_setting, log_audit)
-from team.models import TeamMember, CompanyAssignment
+from team.models import TeamMember, CompanyAssignment, Cluster
 from team.models_workflow import Segment, Panel
 from team.models import Indicator
 
@@ -79,8 +79,11 @@ def register_admin_routes(app):
         users = User.query.order_by(User.role, User.display_name).all()
         members = TeamMember.query.order_by(TeamMember.sort_order,
                                             TeamMember.name).all()
-        assignments = (CompanyAssignment.query.join(Company)
-                       .order_by(CompanyAssignment.seat, Company.name).all())
+        clusters = Cluster.query.order_by(Cluster.sort_order, Cluster.name).all()
+        ordem_cl = {c.id: i for i, c in enumerate(clusters)}
+        assignments = sorted(CompanyAssignment.query.join(Company).all(),
+                             key=lambda a: (ordem_cl.get(a.cluster_id, 10**6),
+                                            a.company.name.lower()))
         comps = Competency.query.order_by(Competency.year.desc(),
                                           Competency.month.desc()).all()
         # empresas ainda sem linha na carteira (o furo que travava a operacao)
@@ -97,7 +100,7 @@ def register_admin_routes(app):
                 .order_by(IndicatorDef.sort_order, IndicatorDef.title).all())
         return render_template(
             "admin.html", companies=companies, users=users, members=members,
-            defs=defs,
+            defs=defs, clusters=clusters,
             assignments=assignments, competencies=comps,
             orphan_companies=orphan_companies, tpl=tpl_info, man=man,
             role_labels=ROLE_LABELS, deliverables=DELIVERABLES, flows=FLOWS,
@@ -232,7 +235,11 @@ def register_admin_routes(app):
             return _back("carteira")
         a = CompanyAssignment(company_id=cid)
         _apply_assignment(a, request.form)
+        a.cluster_id = _int(request.form.get("cluster_id"))
         db.session.add(a)
+        db.session.flush()
+        if a.cluster_id:
+            _regra_cluster(a, None, None)     # sem pessoa escolhida: herda a do cluster
         db.session.commit()
         log_audit(current_user.id, "carteira_criada", "assignment", str(cid))
         flash(f"{a.company.name} incluída na carteira.", "success")
@@ -242,7 +249,9 @@ def register_admin_routes(app):
     @admin_required
     def admin_assignment_update(aid):
         a = db.session.get(CompanyAssignment, aid) or abort(404)
+        membro_antes = a.member_id
         _apply_assignment(a, request.form)
+        _regra_cluster(a, membro_antes, a.cluster_id)
         db.session.commit()
         log_audit(current_user.id, "carteira_editada", "assignment", str(aid))
         flash(f"Carteira de {a.company.name} atualizada.", "success")
@@ -262,7 +271,12 @@ def register_admin_routes(app):
             if not any(k.startswith(pref) for k in request.form):
                 continue
             antes = (a.member_id, a.seat, a.segment, a.flow, a.responsibility,
-                     tuple(a.deliverables), a.load_real, a.load_ideal)
+                     tuple(a.deliverables), a.load_real, a.load_ideal, a.cluster_id)
+            membro_antes, cluster_antes = a.member_id, a.cluster_id
+            if (pref + "cluster_id") in request.form:
+                a.cluster_id = _int(request.form.get(pref + "cluster_id"))
+                if a.cluster_id != cluster_antes:
+                    a.cluster = db.session.get(Cluster, a.cluster_id) if a.cluster_id else None
             a.member_id = _int(request.form.get(pref + "member_id"))
             a.seat = _int(request.form.get(pref + "seat"))
             a.segment = (request.form.get(pref + "segment") or "").strip() or None
@@ -271,8 +285,9 @@ def register_admin_routes(app):
             a.deliverables = request.form.getlist(pref + "deliverables")
             a.load_real = _int(request.form.get(pref + "load_real")) or 0
             a.load_ideal = _int(request.form.get(pref + "load_ideal")) or 0
+            _regra_cluster(a, membro_antes, cluster_antes)
             depois = (a.member_id, a.seat, a.segment, a.flow, a.responsibility,
-                      tuple(a.deliverables), a.load_real, a.load_ideal)
+                      tuple(a.deliverables), a.load_real, a.load_ideal, a.cluster_id)
             if antes != depois:
                 alterados += 1
         db.session.commit()
@@ -280,6 +295,126 @@ def register_admin_routes(app):
                   f"{alterados} alteradas")
         flash(f"{alterados} linha(s) da carteira salva(s)." if alterados
               else "Nenhuma alteração para salvar.", "success" if alterados else "info")
+        return _back("carteira")
+
+    def _regra_cluster(a, membro_antes, cluster_antes):
+        """Trocou só o cluster -> assume a pessoa do cluster novo.
+        Escolheu pessoa diferente da do cluster -> vira exceção (não é sobrescrita)."""
+        cl = a.cluster
+        if a.member_id != membro_antes:                  # pessoa escolhida à mão
+            a.member_excecao = bool(cl and cl.member_id and a.member_id != cl.member_id)
+        elif a.cluster_id != cluster_antes:              # só trocou o cluster
+            a.member_excecao = False
+            a.segue_cluster()
+
+    # ==================================================================
+    # CLUSTERS — agrupam entidades para atribuir pessoas em bloco
+    # ==================================================================
+    @app.route("/admin/cluster", methods=["POST"])
+    @admin_required
+    def admin_cluster_create():
+        nome = (request.form.get("name") or "").strip()[:120]
+        if not nome:
+            flash("Informe o nome do cluster.", "danger")
+            return _back("carteira")
+        if Cluster.query.filter(db.func.lower(Cluster.name) == nome.lower()).first():
+            flash("Já existe um cluster com esse nome.", "warning")
+            return _back("carteira")
+        ult = db.session.query(db.func.max(Cluster.sort_order)).scalar() or 0
+        cl = Cluster(name=nome, sort_order=ult + 1,
+                     member_id=_int(request.form.get("member_id")))
+        db.session.add(cl)
+        db.session.commit()
+        log_audit(current_user.id, "cluster_criado", "cluster", str(cl.id))
+        flash(f"Cluster “{cl.name}” criado. Mova as entidades para ele na tabela abaixo.",
+              "success")
+        return _back("carteira")
+
+    @app.route("/admin/clusters/salvar", methods=["POST"])
+    @admin_required
+    def admin_clusters_salvar():
+        """Nome, ordem e responsável de todos os clusters de uma vez. Trocar o
+        responsável repassa a pessoa às entidades do cluster (menos as exceções)."""
+        alterados, repassadas, nomes = 0, 0, set()
+        for cl in Cluster.query.order_by(Cluster.sort_order).all():
+            pref = f"c{cl.id}_"
+            if (pref + "name") not in request.form:
+                continue
+            nome = (request.form.get(pref + "name") or "").strip()[:120] or cl.name
+            if nome.lower() in nomes:
+                db.session.rollback()
+                flash(f"Nome repetido: “{nome}”. Cada cluster precisa de um nome diferente.",
+                      "danger")
+                return _back("carteira")
+            nomes.add(nome.lower())
+            ordem = _int(request.form.get(pref + "sort_order"))
+            membro = _int(request.form.get(pref + "member_id"))
+            antes = (cl.name, cl.sort_order, cl.member_id)
+            cl.name = nome
+            if ordem is not None:
+                cl.sort_order = ordem
+            if membro != cl.member_id:
+                cl.member_id = membro
+                for a in cl.assignments:
+                    if a.member_excecao:
+                        if a.member_id == membro:          # exceção deixou de ser
+                            a.member_excecao = False
+                    elif membro and a.member_id != membro:
+                        a.member_id = membro
+                        repassadas += 1
+            if antes != (cl.name, cl.sort_order, cl.member_id):
+                alterados += 1
+        db.session.commit()
+        log_audit(current_user.id, "clusters_salvos", "cluster",
+                  f"{alterados} alterados, {repassadas} entidades")
+        if alterados:
+            msg = f"{alterados} cluster(s) salvo(s)."
+            if repassadas:
+                msg += f" Responsável repassado a {repassadas} entidade(s)."
+            flash(msg, "success")
+        else:
+            flash("Nenhuma alteração nos clusters.", "info")
+        return _back("carteira")
+
+    @app.route("/admin/cluster/<int:cid>/excluir", methods=["POST"])
+    @admin_required
+    def admin_cluster_delete(cid):
+        cl = db.session.get(Cluster, cid) or abort(404)
+        if cl.assignments:
+            flash(f"“{cl.name}” ainda tem {len(cl.assignments)} entidade(s). "
+                  "Mova-as para outro cluster antes de excluir.", "warning")
+            return _back("carteira")
+        nome = cl.name
+        db.session.delete(cl)
+        db.session.commit()
+        log_audit(current_user.id, "cluster_excluido", "cluster", str(cid))
+        flash(f"Cluster “{nome}” excluído.", "success")
+        return _back("carteira")
+
+    @app.route("/admin/carteira/mover", methods=["POST"])
+    @admin_required
+    def admin_carteira_mover():
+        """Move as entidades marcadas para um cluster ("0" = sem cluster)."""
+        destino = request.form.get("destino")
+        ids = [i for i in (_int(x) for x in request.form.getlist("sel")) if i]
+        if not ids or destino in (None, ""):
+            flash("Marque as entidades e escolha o cluster de destino.", "warning")
+            return _back("carteira")
+        cl = None
+        if destino != "0":
+            cl = db.session.get(Cluster, _int(destino)) or abort(404)
+        n = 0
+        for a in CompanyAssignment.query.filter(CompanyAssignment.id.in_(ids)).all():
+            if a.cluster_id == (cl.id if cl else None):
+                continue
+            a.cluster = cl
+            a.member_excecao = False
+            a.segue_cluster()
+            n += 1
+        db.session.commit()
+        log_audit(current_user.id, "carteira_movida", "cluster", f"{n} -> {destino}")
+        flash(f"{n} entidade(s) movida(s) para “{cl.name if cl else 'sem cluster'}”.",
+              "success")
         return _back("carteira")
 
     @app.route("/admin/assignment/<int:aid>/excluir", methods=["POST"])

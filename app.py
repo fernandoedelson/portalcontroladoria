@@ -25,7 +25,7 @@ from models import (db, User, Company, Notification, get_setting,
 import team.models  # noqa: F401
 import team.models_workflow  # noqa: F401
 from team.models_workflow import ensure_segments_defaults, ensure_panels_defaults
-from team.models import ensure_alert_defaults
+from team.models import ensure_alert_defaults, ensure_clusters_defaults
 from team.routes import register_team_routes
 from admin_center import register_admin_routes
 from workflow_routes import register_workflow_routes
@@ -74,6 +74,11 @@ def create_app(config=Config):
         except Exception as e:
             db.session.rollback()
             app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
+        try:                          # depois da carteira existir
+            ensure_clusters_defaults()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning("Nao foi possivel semear os clusters: %s", e)
 
     register_icons(app)
     fuso.registra(app)       # filtros |local, |data_extenso, |dia_mes
@@ -101,6 +106,8 @@ _COLUNAS_NOVAS = [
     ("indicators", "scale_obj", "VARCHAR(30)"),
     ("indicators", "scale_sup", "VARCHAR(30)"),
     ("closing_template_items", "company_ids_json", "TEXT"),   # várias empresas por item
+    ("company_assignments", "cluster_id", "INTEGER"),
+    ("company_assignments", "member_excecao", "BOOLEAN DEFAULT 0"),
 ]
 
 

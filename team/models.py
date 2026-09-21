@@ -57,6 +57,23 @@ class TeamMember(db.Model):
 # --------------------------------------------------------------------------
 # Carteira: alocacao empresa x pessoa x entregas (o "pilotar paineis")
 # --------------------------------------------------------------------------
+class Cluster(db.Model):
+    """Agrupamento de entidades para atribuir pessoas em bloco.
+
+    Quantidade e composicao sao livres (tela Administracao > Entidades).
+    O responsavel do cluster vale para todas as entidades dele, exceto as
+    marcadas como excecao (responsavel escolhido a mao na linha da entidade).
+    """
+    __tablename__ = "clusters"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
+    member_id = db.Column(db.Integer, db.ForeignKey("team_members.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    member = db.relationship("TeamMember")
+
+
 class CompanyAssignment(db.Model):
     """Quem cuida de qual empresa e quais entregas ela exige.
 
@@ -77,9 +94,17 @@ class CompanyAssignment(db.Model):
     load_ideal = db.Column(db.Integer, default=4)    # 'Suporte Ideal'
     production = db.Column(db.Integer, default=0)     # 'Producao'
     note = db.Column(db.String(255))
+    cluster_id = db.Column(db.Integer, db.ForeignKey("clusters.id"), nullable=True)
+    member_excecao = db.Column(db.Boolean, default=False)   # responsavel fora do cluster
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     company = db.relationship("Company")
+    cluster = db.relationship("Cluster", backref="assignments")
+
+    def segue_cluster(self):
+        """Responsavel = o do cluster (quando o cluster tem um e a linha nao e excecao)."""
+        if self.cluster and self.cluster.member_id and not self.member_excecao:
+            self.member_id = self.cluster.member_id
     member = db.relationship("TeamMember", backref="assignments")
 
     @property
@@ -493,3 +518,40 @@ def ensure_alert_defaults():
             changed = True
     if changed:
         db.session.commit()
+
+
+# Divisao inicial combinada com o gestor (21/09/2026). Depois disso e livre na tela.
+CLUSTERS_INICIAIS = [
+    ("Energia", ["AMBAR_GER", "AMBAR_DIS", "FLUXUS", "GLOBE", "GREENCARGO", "LOGAS", "MGAS"]),
+    ("Financeiro e Tecnologia", ["ORIGINAL", "ORIGINAL_CORRETORA", "PICPAY", "KOVR",
+                                 "J_F_PARTICIPACOES", "INOVTI", "LIONX", "PHIZ"]),
+    ("Holdings e Investimentos", ["J_F_CAYMAN", "VLMB", "VNMB", "VVMB", "JJMB", "WWMB", "ZMF",
+                                  "J_F_INTERNATIONAL", "LAGUZ", "J_F_LUX", "FAZENDA_LUTA",
+                                  "MAIS55", "JF_URB", "MUNDO_NOVO"]),
+    ("Mineração, Bens de Consumo, Serviços e Diversos",
+     ["LHG", "FLORA", "AERONAVE", "SAK_SEGURANCA", "SAK_SERVICOS", "CANAL", "ARAGUAIA",
+      "ARROSSENSAL", "VB_AGRO", "INSTITUTO_J_F"]),
+    ("Grandes Operações", ["JBS", "JF_SA", "ELDORADO"]),
+]
+
+
+def ensure_clusters_defaults():
+    """Semeia os clusters uma unica vez (se o gestor apagar tudo, nao volta)."""
+    from models import Company, get_setting, set_setting
+    if get_setting("clusters_semeados") == "1" or Cluster.query.count():
+        return 0
+    por_codigo = {c.code: c.id for c in Company.query.all()}
+    linhas = {a.company_id: a for a in CompanyAssignment.query.all()}
+    n = 0
+    for i, (nome, codigos) in enumerate(CLUSTERS_INICIAIS, start=1):
+        cl = Cluster(name=nome, sort_order=i)
+        db.session.add(cl)
+        db.session.flush()
+        for cod in codigos:
+            a = linhas.get(por_codigo.get(cod))
+            if a and a.cluster_id is None:
+                a.cluster_id = cl.id
+                n += 1
+    db.session.commit()
+    set_setting("clusters_semeados", "1")
+    return n

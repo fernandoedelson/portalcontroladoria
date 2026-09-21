@@ -25,6 +25,11 @@
           onsubmit="return confirm('Remover {{ m.name }}? Se tiver empresas na carteira, será apenas inativado.');">{{ csrf() }}</form>
   {% endfor %}
   {# a carteira agora salva em lote (form-carteira); aqui fica so o excluir #}
+  {% for cl in clusters %}
+    <form id="cldel-{{ cl.id }}" method="post" action="/admin/cluster/{{ cl.id }}/excluir"
+          onsubmit="return confirm('Excluir o cluster {{ cl.name }}?');">{{ csrf() }}</form>
+  {% endfor %}
+  <form id="form-mover" method="post" action="/admin/carteira/mover">{{ csrf() }}</form>
   {% for a in assignments %}
     <form id="asgdel-{{ a.id }}" method="post" action="/admin/assignment/{{ a.id }}/excluir"
           onsubmit="return confirm('Remover {{ a.company.name }} da carteira?');">{{ csrf() }}</form>
@@ -231,6 +236,50 @@
   {% endif %}
 
   <div class="card">
+    <h2>Clusters</h2>
+    <p class="text-muted text-sm mb-2">O responsável do cluster vale para todas as entidades dele.
+      Trocar a pessoa aqui repassa a todas, menos as marcadas como <em>exceção</em>
+      (responsável escolhido direto na linha da entidade).</p>
+    <form method="post" action="/admin/clusters/salvar">
+      {{ csrf() }}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th scope="col" style="width:70px;">Ordem</th><th scope="col">Cluster</th>
+          <th scope="col">Responsável</th><th scope="col">Entidades</th><th scope="col">Excluir</th></tr></thead>
+        <tbody>
+        {% for cl in clusters %}
+        {% set P = 'c' ~ cl.id ~ '_' %}
+        {% set exc = cl.assignments|selectattr('member_excecao')|list %}
+        <tr>
+          <td data-rot="Ordem"><input class="input" type="number" name="{{ P }}sort_order" value="{{ cl.sort_order or 0 }}" style="width:64px;" aria-label="Ordem de {{ cl.name }}"/></td>
+          <td data-rot="Cluster"><input class="input" name="{{ P }}name" value="{{ cl.name }}" maxlength="120" required style="min-width:220px;" aria-label="Nome do cluster"/></td>
+          <td data-rot="Responsável"><select class="input" name="{{ P }}member_id" style="min-width:160px;" aria-label="Responsável de {{ cl.name }}">
+            <option value="">— a definir —</option>
+            {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if cl.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
+          </select></td>
+          <td data-rot="Entidades"><strong>{{ cl.assignments|length }}</strong>
+            {% if exc %}<span class="text-muted text-sm"> · {{ exc|length }} exceção(ões)</span>{% endif %}</td>
+          <td data-rot="Excluir" class="col-perigo">
+            <button class="btn btn-outline btn-danger btn-toque" type="submit" form="cldel-{{ cl.id }}"
+                    {% if cl.assignments %}disabled title="Mova as entidades para outro cluster antes de excluir"{% endif %}
+                    aria-label="Excluir {{ cl.name }}">{{ icone('trash') }}</button></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted" style="text-align:center;padding:1rem;">Nenhum cluster. Crie o primeiro abaixo.</td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      {% if clusters %}<div class="flex gap-1 mt-1"><button class="btn btn-primary" type="submit">Salvar clusters</button></div>{% endif %}
+    </form>
+    <form method="post" action="/admin/cluster" class="flex gap-1 items-center mt-2" style="flex-wrap:wrap;">
+      {{ csrf() }}
+      <input class="input" name="name" required maxlength="120" placeholder="Nome do novo cluster" aria-label="Nome do novo cluster" style="width:260px;max-width:100%;"/>
+      <select class="input" name="member_id" aria-label="Responsável do novo cluster" style="width:200px;max-width:100%;">
+        <option value="">— responsável a definir —</option>
+        {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+      <button class="btn btn-outline" type="submit">{{ icone('plus') }} Novo cluster</button>
+    </form>
+  </div>
+
+  <div class="card">
     <h2>Incluir empresa no grupo J&amp;F</h2>
     <form method="post" action="/admin/assignment" class="adm-grid">
       {{ csrf() }}
@@ -243,6 +292,10 @@
         <select class="input" name="member_id"><option value="">— a definir —</option>
           {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
         </select></div>
+      <div class="form-row"><label class="field-label">Cluster</label>
+        <select class="input" name="cluster_id"><option value="">— sem cluster —</option>
+          {% for cl in clusters %}<option value="{{ cl.id }}">{{ cl.name }}</option>{% endfor %}</select>
+        <div class="help-txt">Sem responsável escolhido, assume o do cluster.</div></div>
       <div class="form-row"><label class="field-label">Assento</label>
         <input class="input" type="number" name="seat" min="1" placeholder="1"/></div>
       <div class="form-row"><label class="field-label">Segmento</label>
@@ -269,6 +322,15 @@
   <div class="card">
     <h2>Entidades ({{ assignments|length }})</h2>
     {% if assignments %}
+    <div class="flex gap-1 items-center mb-2" id="barra-mover" style="flex-wrap:wrap;">
+      <span class="text-sm"><strong id="n-sel">0</strong> marcada(s) →</span>
+      <select class="input" name="destino" form="form-mover" required aria-label="Cluster de destino" style="width:260px;max-width:100%;">
+        <option value="">— mover para o cluster… —</option>
+        {% for cl in clusters %}<option value="{{ cl.id }}">{{ cl.name }}</option>{% endfor %}
+        <option value="0">(sem cluster)</option></select>
+      <button class="btn btn-outline" type="submit" form="form-mover" id="btn-mover" disabled>Mover marcadas</button>
+      <span class="help-txt">Ao mudar de cluster, a entidade assume o responsável do cluster novo.</span>
+    </div>
     <form method="post" action="/admin/carteira/salvar" id="form-carteira">
       {{ csrf() }}
       <div class="barra-salvar" id="barra-carteira">
@@ -278,20 +340,30 @@
       </div>
       <div class="tbl-wrap"><table class="tbl tbl-ancora">
         <thead><tr>
-          <th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Assento</th>
+          <th scope="col"><label class="chk chk-sm" style="display:inline-flex;"><input type="checkbox" data-sel id="sel-todas" aria-label="Marcar todas"/></label> Empresa</th><th scope="col">Cluster</th><th scope="col">Responsável</th><th scope="col">Assento</th>
           <th scope="col">Segmento</th><th scope="col">Fluxo</th><th scope="col">Resp.</th>
           <th scope="col">Entregas</th><th scope="col">Real/Ideal</th><th scope="col">Remover</th>
         </tr></thead>
         <tbody>
+        {% set ns = namespace(cl=-1) %}
         {% for a in assignments %}
         {% set P = 'a' ~ a.id ~ '_' %}
+        {% if a.cluster_id != ns.cl %}{% set ns.cl = a.cluster_id %}
+        <tr class="cl-grupo"><td colspan="10"><strong>{{ a.cluster.name if a.cluster else 'Sem cluster' }}</strong>
+          {% if a.cluster %}<span class="text-muted text-sm"> · {{ a.cluster.member.name if a.cluster.member else 'responsável a definir' }}</span>{% endif %}</td></tr>
+        {% endif %}
         <tr data-linha="{{ a.id }}">
-          <th scope="row" class="col-ancora">
-            <div class="ent-nome">{{ a.company.name }}</div>
-            <div class="ent-cod">{{ a.company.code }}</div></th>
+          <th scope="row" class="col-ancora"><label class="ent-sel">
+            <input type="checkbox" data-sel name="sel" value="{{ a.id }}" form="form-mover" aria-label="Marcar {{ a.company.name }}"/>
+            <span><span class="ent-nome">{{ a.company.name }}</span>
+            <span class="ent-cod">{{ a.company.code }}</span></span></label></th>
+          <td data-rot="Cluster"><select class="input" name="{{ P }}cluster_id" style="min-width:170px;"><option value="">— sem cluster —</option>
+            {% for cl in clusters %}<option value="{{ cl.id }}" {{ 'selected' if a.cluster_id==cl.id }}>{{ cl.name }}</option>{% endfor %}
+          </select></td>
           <td data-rot="Responsável"><select class="input" name="{{ P }}member_id" style="min-width:150px;"><option value="">— a definir —</option>
             {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if a.member_id==m.id }}>{{ m.name }}</option>{% endfor %}
-          </select></td>
+          </select>
+          {% if a.member_excecao %}<div><span class="kind-chip" title="Responsável escolhido à mão: não muda quando o responsável do cluster muda. Para voltar a seguir o cluster, escolha a pessoa do cluster.">exceção</span></div>{% endif %}</td>
           <td data-rot="Assento"><input class="input" type="number" name="{{ P }}seat" value="{{ a.seat or '' }}" style="width:72px;"/></td>
           <td data-rot="Segmento"><select class="input" name="{{ P }}segment" style="min-width:140px;">
             <option value="">—</option>
@@ -318,7 +390,8 @@
         </tbody></table></div>
     </form>
     <p class="help-txt mt-1">Edite quantas linhas quiser e salve tudo de uma vez —
-      as linhas alteradas ficam destacadas.</p>
+      as linhas alteradas ficam destacadas. Trocar só o cluster de uma linha faz ela assumir o
+      responsável do cluster novo; escolher outra pessoa na linha a marca como <em>exceção</em>.</p>
     {% else %}
       <div class="empty-box"><div class="empty-ico">{{ icone('table', 30) }}</div>
         <p><strong>Nenhuma entidade cadastrada.</strong></p>
@@ -554,6 +627,15 @@
 </section>
 
 <script>
+// ==== Carteira: marcar entidades para mover de cluster ====
+(function(){
+  var todas=document.getElementById('sel-todas'), btn=document.getElementById('btn-mover'), n=document.getElementById('n-sel');
+  if(!btn) return;
+  var caixas=function(){ return document.querySelectorAll('input[data-sel][name="sel"]'); };
+  function conta(){ var k=0; caixas().forEach(function(c){ if(c.checked) k++; }); n.textContent=k; btn.disabled=!k; }
+  todas.addEventListener('change', function(){ caixas().forEach(function(c){ c.checked=todas.checked; }); conta(); });
+  caixas().forEach(function(c){ c.addEventListener('change', conta); });
+})();
 // ==== Carteira: marca linhas alteradas e avisa se sair sem salvar ====
 (function(){
   var form=document.getElementById('form-carteira');
@@ -562,7 +644,7 @@
   var cont=document.getElementById('cont-carteira');
   var inicial=new Map();
   form.querySelectorAll('input,select').forEach(function(el){
-    if(el.type==='hidden') return;
+    if(el.type==='hidden' || el.hasAttribute('data-sel')) return;   // marcar p/ mover não é alteração
     inicial.set(el, el.type==='checkbox'?el.checked:el.value);
   });
   function revisar(){

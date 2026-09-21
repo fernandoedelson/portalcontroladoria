@@ -483,3 +483,11 @@ table.tbl-empilha td > .flex{flex-wrap:wrap;justify-content:flex-end;}
 .aviso-push-lista .aviso-push-texto{font-size:.86rem;color:var(--text-muted);}
 @keyframes avisoEntra{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
 @media (prefers-reduced-motion:reduce){.aviso-push{animation:none;}}
+
+/* Entidades agrupadas por cluster */
+tr.cl-grupo > td{background:var(--r-folha-2);border-top:2px solid var(--border-2);
+  padding:.45rem .7rem;font-size:.86rem;letter-spacing:.01em;}
+@media (max-width:760px){ tr.cl-grupo{display:block;} tr.cl-grupo > td{display:block;} }
+.ent-sel{display:flex;align-items:flex-start;gap:.55rem;cursor:pointer;font-weight:inherit;margin:0;}
+.ent-sel input{margin-top:.2rem;flex-shrink:0;}
+.ent-sel .ent-nome,.ent-sel .ent-cod{display:block;}
