@@ -473,3 +473,4 @@ mark{background:var(--warning-lt);color:var(--warning-text);padding:0 .15rem;bor
 .sb-mini .sb-group:first-child .sb-group-head{border-top:none;margin-top:.2rem;}
 .sb-mini .sb-group + .sb-group{border-top:none;margin-top:0;padding-top:0;}
 .sb-mini .sb-group.fechado > .sb-group-items{display:block;}
+.st-superado{background:var(--success-lt);color:var(--success-text);}

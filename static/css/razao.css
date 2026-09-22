@@ -670,7 +670,7 @@ a.rg-col:hover{background:var(--surface-hi);}
 .pes-dia-cab.hoje{color:var(--accent);} .pes-dia-cab.prazo{color:var(--text);font-weight:700;}
 .pes-cab .pes-nums span{font-weight:400;}
 .pes-bar.bn{background:var(--primary-2);opacity:.55;}
-.pes-cab .pes-nums{font-size:10px;gap:6px;}
+.pes-cab .pes-nums{font-size:10px;gap:0;}
 @media (max-width:760px){ .pes-dia-cab i{display:none;} .pes-cab{font-size:10px;} }
 /* Metas no Painel do Dia */
 .met-bloco{border-top:1px solid var(--border);padding:10px 0 4px;}
@@ -702,3 +702,25 @@ a.rg-col:hover{background:var(--surface-hi);}
 a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 .met-item{grid-template-columns:1fr 170px 190px 48px;}
 .met-esc{flex-wrap:wrap;justify-content:flex-start;}
+/* Por pessoa: números alinhados com o cabeçalho (3 colunas fixas) */
+.pes-nums{display:grid;grid-template-columns:repeat(3,42px);gap:0;justify-content:end;text-align:right;}
+.pes-cab .pes-nums span{font-size:10px;}
+.pes-lin{grid-template-columns:120px 1fr 132px;}
+@media (max-width:760px){ .pes-lin{grid-template-columns:92px 1fr 120px;} .pes-nums{grid-template-columns:repeat(3,38px);} }
+/* aba Indicadores dentro do bloco por pessoa */
+.pes-det{border-top:1px solid var(--border);}
+.pes-det > summary{list-style:none;cursor:pointer;}
+.pes-det > summary::-webkit-details-marker{display:none;}
+.pes-lin.pes-ind{grid-template-columns:120px 1fr 132px;border-top:none;}
+.pes-det[open] > summary{background:var(--surface-hi);}
+.pes-prog{display:block;height:8px;border-radius:5px;background:var(--surface-hi);overflow:hidden;}
+.pes-prog i{display:block;height:100%;background:#639922;border-radius:5px;}
+.pes-nums .n-ok{color:#3B6D11;font-weight:700;}
+.pes-det .met-itens{padding:2px 0 10px 30px;}
+.rg-pessoas .segmento{flex-wrap:wrap;}
+.st-superado{color:var(--r-verde) !important;font-weight:700;}
+.pes-nums > span{display:block;width:100%;text-align:right;}
+.pes-nums{grid-template-columns:repeat(3,48px);}
+.pes-nums > span{white-space:nowrap;overflow:hidden;}
+.pes-lin{grid-template-columns:120px 1fr 150px;}
+.pes-lin.pes-ind{grid-template-columns:120px 1fr 150px;}

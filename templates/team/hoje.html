@@ -76,14 +76,70 @@
   {% endif %}
   {% if regua.sem_prazo %}<p class="help-txt rg-nota">{{ regua.sem_prazo }} atividade(s) sem prazo definido não aparecem na régua.</p>{% endif %}
 </section>
-{% if pessoas %}
-<section class="card regua rg-pessoas" aria-label="Fechamento por pessoa">
+{% if comp and not eu_sozinho %}
+<section class="card regua rg-pessoas" aria-label="Por pessoa">
   <div class="rg-topo">
     <div><div class="rot">Por pessoa · {{ comp.label }}</div>
-      <div class="rg-pct"><b>{{ pessoas|length }}</b><span>pessoa(s) com atividades no fechamento</span></div></div>
-    <div class="rg-legenda" aria-hidden="true">
-      <span><i class="pt a"></i>atrasada</span><span><i class="pt h"></i>hoje</span><span><i class="pt"></i>a fazer</span></div>
+      <div class="rg-pct"><b>{{ pessoas|length if vis != 'indicadores' else metas|length }}</b>
+        <span>pessoa(s) {{ 'com indicadores' if vis == 'indicadores' else ('com atividades de projeto' if vis == 'projetos' else 'com atividades no fechamento') }}</span></div></div>
+    <div class="segmento" role="group" aria-label="O que mostrar">
+      <a href="?{{ 'member_id=%d&'|format(sel) if sel }}vis=fechamento" class="{{ 'on' if vis=='fechamento' }}">Fechamento</a>
+      <a href="?{{ 'member_id=%d&'|format(sel) if sel }}vis=projetos" class="{{ 'on' if vis=='projetos' }}">Projetos</a>
+      <a href="?{{ 'member_id=%d&'|format(sel) if sel }}vis=indicadores" class="{{ 'on' if vis=='indicadores' }}">Indicadores</a>
+    </div>
   </div>
+  {% if vis == 'indicadores' %}
+  <div class="pes-lista">
+    <div class="pes-lin pes-ind pes-cab">
+      <span>Pessoa</span><span>Indicadores da competência</span>
+      <div class="pes-nums"><span title="Medidos">medidos</span><span title="Pendentes">pend.</span><span title="Peso somado">peso</span></div>
+    </div>
+    {% for l in metas %}
+    <details class="pes-det">
+      <summary class="pes-lin pes-ind">
+        <span class="pes-nome"><span class="mini-av" style="background:{{ l.member.color }}">{{ l.member.initials }}</span>
+          <span>{{ l.member.name.split()[0] }}</span></span>
+        <span class="pes-prog" title="{{ l.medidos }} de {{ l.total }} medidos">
+          <i style="width:{{ (l.medidos / l.total * 100)|round(1) if l.total else 0 }}%"></i></span>
+        <span class="pes-nums">
+          <span class="{{ 'n-ok' if l.medidos }}">{{ l.medidos }}</span>
+          <span class="{{ 'n-a' if l.total - l.medidos }}">{{ l.total - l.medidos }}</span>
+          <span class="n-f">{{ l.peso|round|int }}%</span></span>
+      </summary>
+      <div class="met-itens">
+        {% for it in l.itens %}
+        <div class="met-item">
+          <span class="met-tit">{{ it.ind.title }}</span>
+          <span class="met-esc" title="mínimo · objetivo · superação">
+            {% if it.ind.scale_min or it.ind.scale_obj or it.ind.scale_sup %}
+            {% set esc = it.ind.escala_curta %}
+            <i>{{ esc[0] }}</i><i class="o">{{ esc[1] }}</i><i>{{ esc[2] }}</i>
+            {% else %}<i class="text-muted">sem escala</i>{% endif %}
+          </span>
+          <span class="met-res">
+            {% if it.outcome == 'sem' %}{% if current_user.is_controladoria %}<a class="st st-pendente met-medir"
+              href="/indicadores/medir?def_id={{ it.ind.indicator_def_id or 0 }}{{ '&competency_id=%d'|format(comp.id) if comp }}"
+              title="Medir “{{ it.ind.title }}”">medir agora</a>{% else %}<span class="st st-pendente">não medido</span>{% endif %}
+            {% else %}<span class="st st-{{ 'atingido' if it.outcome in ['atingido','superado'] else ('parcial' if it.outcome=='parcial' else ('cancelada' if it.outcome=='na' else 'reprovado')) }}">
+              {{ {'superado':'superado','atingido':'atingido','parcial':'parcial','nao_atingido':'não atingido','na':'não se aplica'}.get(it.outcome, it.outcome) }}</span>
+              {% if it.valor %}<span class="text-muted text-sm">{{ it.valor }}</span>{% endif %}
+            {% endif %}
+          </span>
+          <span class="met-peso">{{ it.ind.weight|round|int if it.ind.weight else '—' }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+  </div>
+  {% if current_user.is_controladoria %}
+  <p class="help-txt rg-nota">{{ metas|sum(attribute='medidos') }} de {{ metas|sum(attribute='total') }} medidos ·
+    <a href="/indicadores/medir">abrir a fila de medição</a>. Clique numa pessoa para ver os indicadores dela.</p>
+  {% endif %}
+  {% elif not pessoas %}
+  <p class="text-muted text-sm" style="padding:10px 0 4px;">Nenhuma atividade de
+    {{ 'projeto' if vis == 'projetos' else 'fechamento' }} com prazo neste mês.</p>
+  {% else %}
   <div class="pes-lista">
     <div class="pes-lin pes-cab">
       <span>Pessoa</span>
@@ -92,7 +148,7 @@
         <span class="pes-dia-cab{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}">D+{{ c.du }}<i>{{ c.data.strftime('%d/%m') }}</i></span>
         {% endfor %}
       </div>
-      <div class="pes-nums"><span title="Atrasadas">atras.</span><span title="Vencem hoje">hoje</span><span title="A fazer">a fazer</span></div>
+      <div class="pes-nums"><span title="Atrasadas">atras.</span><span title="Vencem hoje">hoje</span><span title="A fazer">fazer</span></div>
     </div>
     {% for l in pessoas %}
     <div class="pes-lin">
@@ -116,50 +172,7 @@
     </div>
     {% endfor %}
   </div>
-</section>
-{% endif %}
-{% if metas %}
-<section class="card regua rg-metas" aria-label="Metas do mês">
-  <div class="rg-topo">
-    <div><div class="rot">Metas · {{ comp.label if comp else 'sem competência' }}</div>
-      <div class="rg-pct"><b>{{ metas|sum(attribute='medidos') }}/{{ metas|sum(attribute='total') }}</b>
-        <span>indicador(es) já medido(s) na competência</span></div></div>
-    {% if current_user.is_controladoria %}
-    <a class="btn btn-outline btn-sm" href="/indicadores/medir">{{ icone('check') }} Medir indicadores</a>
-    {% endif %}
-  </div>
-  {% for l in metas %}
-  <div class="met-bloco">
-    <div class="met-pessoa">
-      <span class="mini-av" style="background:{{ l.member.color }}">{{ l.member.initials }}</span>
-      <span class="met-nome">{{ l.member.name }}</span>
-      <span class="text-muted text-sm">{{ l.total }} indicador(es) · peso {{ l.peso }}%</span>
-    </div>
-    <div class="met-itens">
-      {% for it in l.itens %}
-      <div class="met-item">
-        <span class="met-tit">{{ it.ind.title }}</span>
-        <span class="met-esc" title="mínimo · objetivo · superação">
-          {% if it.ind.scale_min or it.ind.scale_obj or it.ind.scale_sup %}
-          {% set esc = it.ind.escala_curta %}
-          <i>{{ esc[0] }}</i><i class="o">{{ esc[1] }}</i><i>{{ esc[2] }}</i>
-          {% else %}<i class="text-muted">sem escala</i>{% endif %}
-        </span>
-        <span class="met-res">
-          {% if it.outcome == 'sem' %}{% if current_user.is_controladoria %}<a class="st st-pendente met-medir"
-            href="/indicadores/medir?def_id={{ it.ind.indicator_def_id or 0 }}{{ '&competency_id=%d'|format(comp.id) if comp }}"
-            title="Medir “{{ it.ind.title }}”">medir agora</a>{% else %}<span class="st st-pendente">não medido</span>{% endif %}
-          {% else %}<span class="st st-{{ 'aprovado' if it.outcome=='atingido' else ('validando' if it.outcome=='parcial' else ('cancelada' if it.outcome=='na' else 'reprovado')) }}">
-            {{ {'atingido':'atingido','parcial':'parcial','nao_atingido':'não atingido','na':'não se aplica'}.get(it.outcome, it.outcome) }}</span>
-            {% if it.valor %}<span class="text-muted text-sm">{{ it.valor }}</span>{% endif %}
-          {% endif %}
-        </span>
-        <span class="met-peso">{{ it.ind.weight|round|int if it.ind.weight else '—' }}%</span>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endfor %}
+  {% endif %}
 </section>
 {% endif %}
 {% elif comp %}

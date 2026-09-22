@@ -46,7 +46,7 @@
             inputmode="decimal" placeholder="—" aria-label="Peso de {{ i.title }} (%)"/><span>%</span></span>
           {% else %}{{ (('%g'|format(i.weight))|replace('.', ',') ~ '%') if i.weight is not none else '—' }}{% endif %}</td>
       <td class="col-escala">{% if i.scale_min or i.scale_obj or i.scale_sup %}{% set esc = i.escala_curta %}<span class="escala-mini" title="mínimo {{ i.scale_min or '—' }} · objetivo {{ i.scale_obj or '—' }} · superação {{ i.scale_sup or '—' }}{{ ' ↓ menor melhor' if i.direction == 'menor' else (' ↑ maior melhor' if i.direction == 'maior' else '') }}"><span>{{ esc[0] }}</span><span class="o">{{ esc[1] }}</span><span>{{ esc[2] }}</span></span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-      <td>{% if last %}<span class="st st-{{ last.outcome }}">{{ {'atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'—'}.get(last.outcome, last.outcome) }}</span> <span class="text-sm text-muted">{{ last.period_label or '' }}</span>{% else %}<span class="text-muted">sem registro</span>{% endif %}</td>
+      <td>{% if last %}<span class="st st-{{ last.outcome }}">{{ {'superado':'Superado','atingido':'Atingido','parcial':'Parcial','nao_atingido':'Não atingido','na':'—'}.get(last.outcome, last.outcome) }}</span> <span class="text-sm text-muted">{{ last.period_label or '' }}</span>{% else %}<span class="text-muted">sem registro</span>{% endif %}</td>
       <td class="text-right"><a href="/indicador/{{ i.id }}" class="btn btn-outline btn-sm">Abrir</a></td>
     </tr>
     {% endfor %}

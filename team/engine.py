@@ -342,7 +342,11 @@ def posicao_fechamento(comp, ref=None):
     return du_hoje, du_prazo
 
 
-def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None):
+KINDS_FECHAMENTO = ["fechamento", "recorrente"]
+KINDS_PROJETO = ["projeto", "spot", "transversal", "indicador"]
+
+
+def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None, kinds=None):
     """Estrutura da régua do fechamento para o Painel do Dia.
 
     Colunas = dias úteis D+1..D+N do mês seguinte (N cobre o prazo, as
@@ -357,9 +361,13 @@ def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None):
     dias = business_days(*_mes_seguinte(comp))
     if not dias:
         return None
-    q = (Activity.query.filter_by(competency_id=comp.id)
-         .filter(Activity.kind.in_(["fechamento", "recorrente"]))
-         .filter(Activity.status != "cancelada"))
+    kinds = kinds or KINDS_FECHAMENTO
+    q = Activity.query.filter(Activity.kind.in_(kinds)).filter(Activity.status != "cancelada")
+    if set(kinds) & set(KINDS_FECHAMENTO):        # fechamento: preso à competência
+        q = q.filter(Activity.competency_id == comp.id)
+    else:                                         # projetos: o que vence no mês da régua
+        q = q.filter(Activity.due_date.isnot(None),
+                     Activity.due_date >= dias[0], Activity.due_date <= dias[-1])
     if member_id:
         q = q.filter(Activity.member_id == member_id)
     acts = q.all()
@@ -427,13 +435,13 @@ def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None):
     }
 
 
-def regua_por_pessoa(comp, ref=None, membros=None):
+def regua_por_pessoa(comp, ref=None, membros=None, kinds=None):
     """Uma régua por pessoa, todas com as mesmas colunas (D+1..D+N do time).
 
     Responde 'quem está afogado hoje?': a faixa mostra onde estão as atividades
     de cada um e os contadores separam atrasadas, de hoje e a fazer.
     """
-    geral = regua(comp, ref)
+    geral = regua(comp, ref, kinds=kinds)
     if not geral:
         return []
     from team.models import TeamMember
@@ -441,7 +449,7 @@ def regua_por_pessoa(comp, ref=None, membros=None):
                           .order_by(db.func.lower(TeamMember.name)).all())
     linhas = []
     for m in membros:
-        r = regua(comp, ref, member_id=m.id, n_fixo=geral["n_cols"])
+        r = regua(comp, ref, member_id=m.id, n_fixo=geral["n_cols"], kinds=kinds)
         if not r or not r["total"]:
             continue
         dias_ = [c for c in r["cols"] if c["tipo"] == "dia"]
@@ -573,7 +581,7 @@ def metas_painel(comp, member_id=None):
                                "valor": (r.value_label if r else None)})
         if r and r.outcome != "na":
             linha["medidos"] += 1
-            if r.outcome == "atingido":
+            if r.outcome in ("atingido", "superado"):
                 linha["atingidos"] += 1
     linhas = list(por_membro.values())
     for l in linhas:

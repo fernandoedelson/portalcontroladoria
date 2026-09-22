@@ -473,7 +473,7 @@ class IndicatorResult(db.Model):
     indicator_id = db.Column(db.Integer, db.ForeignKey("indicators.id"), nullable=False)
     competency_id = db.Column(db.Integer, db.ForeignKey("competencies.id"), nullable=True)
     period_label = db.Column(db.String(20))     # "Jun/2026" ou "2026"
-    # 'atingido' | 'parcial' | 'nao_atingido' | 'na'
+    # 'superado' | 'atingido' | 'parcial' | 'nao_atingido' | 'na'
     outcome = db.Column(db.String(20), default="na")
     value_label = db.Column(db.String(60))      # ex.: "D+2 (entregue em D+1)"
     computed = db.Column(db.Boolean, default=False)   # True = derivado do motor

@@ -246,14 +246,23 @@ def register_team_routes(app):
             board.append({"member": m, "f": mf})
         rg = engine.regua(comp, ref, member_id=sel) if comp else None
         # visão por pessoa (só para quem enxerga o time inteiro)
-        pessoas = (engine.regua_por_pessoa(comp, ref, membros=members)
-                   if comp and _scoped_member_id() is None else [])
+        # bloco "por pessoa": fechamento | projetos | indicadores
+        vis = request.args.get("vis")
+        if vis not in ("projetos", "indicadores"):
+            vis = "fechamento"
+        eu_sozinho = _scoped_member_id() is not None
+        pessoas = []
+        if comp and not eu_sozinho and vis != "indicadores":
+            pessoas = engine.regua_por_pessoa(
+                comp, ref, membros=members,
+                kinds=(engine.KINDS_PROJETO if vis == "projetos" else None))
         metas = engine.metas_painel(comp, member_id=_scoped_member_id() or sel)
         # barra de cada pessoa proporcional à maior carga do time
         maior = max([b["f"]["aberta"] for b in board] + [1])
         return render_template("team/hoje.html", panel=panel, members=members,
                                sel=sel, tipo=tipo, comp=comp, farol=fr, board=board,
                                mm=mm, today=ref, regua=rg, pessoas=pessoas, metas=metas,
+                               vis=vis, eu_sozinho=eu_sozinho,
                                maior_carga=maior,
                                du_entre=engine.business_days_between)
 
