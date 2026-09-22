@@ -60,12 +60,7 @@
       <a class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}" href="/atividades?venc={{ c.data }}{{ '&member_id=%d'|format(sel) if sel }}"
          title="D+{{ c.du }} · {{ c.data.strftime('%d/%m/%Y') }} · {{ c.n }} atividade(s) — ver a lista do dia">
         <div class="d">D+{{ c.du }}</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div>
-        <div class="rg-barra" aria-hidden="true">
-          {% set rotulo = {'f':'concluída(s)','a':'atrasada(s)','h':'vence(m) hoje'} %}
-          {% for k in ['f','a','h',''] %}{% if c.c[k] %}<i class="bs b{{ k or 'n' }}" style="height:{{ (c.c[k] / regua.pico * 100)|round(1) }}%"
-             title="{{ c.c[k] }} {{ rotulo.get(k, 'a fazer') }}"></i>{% endif %}{% endfor %}
-        </div>
-        <div class="rg-n">{{ c.n or '—' }}</div>
+        <div class="pts">{% for p in c.pts %}<i class="pt {{ p }}"></i>{% endfor %}</div>
         {% if c.hoje %}<div class="rg-tag">hoje</div>{% elif c.prazo %}<div class="rg-tag">prazo</div>{% endif %}
       </a>
       {% endif %}
