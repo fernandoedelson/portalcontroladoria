@@ -293,6 +293,7 @@ input[type="checkbox"],input[type="radio"]{accent-color:var(--r-verde);}
 .rg-col .d{font-family:var(--r-mono);font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
 .rg-col .dt{font-family:var(--r-mono);font-size:11px;color:var(--text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rg-col .pts{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;min-height:14px;}
+.rg-col .d{padding-right:42px;}          /* espaço do selo "hoje"/"prazo" */
 .rg-tag{position:absolute;top:9px;right:8px;font-family:var(--r-mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;}
 .rg-col.hoje{background:linear-gradient(var(--warning-lt),transparent 75%);}
 .rg-col.hoje::before{content:"";position:absolute;left:-1px;right:0;top:-1px;height:3px;background:var(--r-ouro-ui);}
@@ -735,53 +736,34 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 .ev-x{border:none;background:none;color:var(--r-carimbo);cursor:pointer;font-size:15px;line-height:1;padding:0 4px;}
 
 /* ==========================================================================
-   TABLET (641–1100px): as tabelas de cadastro continuam TABELA — só encolhem.
-   Antes viravam cartões empilhados e a tela ficava enorme e quebrada.
+   TABLET (641–1100px): as tabelas continuam TABELA. Só respiro menor — sem
+   largura fixa, que era o que fazia os campos se sobreporem. O que não couber
+   rola de lado (.rola-lado), nunca vira cartão gigante.
    ========================================================================== */
 @media (min-width:641px) and (max-width:1100px){
-  .tbl-cron{font-size:.8rem;}
-  .tbl-cron td,.tbl-cron th{padding:7px 4px;}
-  .tbl-cron input[name$="title"]{min-width:92px;}
-  .tbl-cron .esc{min-width:96px;max-width:118px;}
-  .tbl-cron td select.input[name$="member_id"]{min-width:92px;max-width:116px;}
-  .tbl-cron select[name$="priority"]{min-width:0;width:74px;}
-  .tbl-cron .cr-du{width:46px;}
-  .tbl-cron .cr-ativo span{display:none;}          /* só a caixinha */
-  .tbl-cron .cr-acoes .btn{padding:0 5px;min-width:28px;height:30px;min-height:30px;}
-  .tbl-cron .cr-acoes{gap:3px;}
-  .tbl-cron .cr-resp-emp{max-width:120px;font-size:11px;}
-  .tbl-cron .cr-selo{font-size:.66rem;padding:.1rem .4rem;}
-  .tbl-cron .cr-macro-tit{font-size:.84rem;}
-  /* cadastros da Administração: mesma ideia */
-  .tbl-cartao{font-size:.82rem;}
+  /* régua: o selo desce para baixo da data (na coluna estreita ele montava no D+n) */
+  .rg-col .d{padding-right:0;}
+  .rg-tag{position:static;display:block;margin-top:3px;}
+  .rg-col.hoje::before{top:0;}
+  .tbl-cron{font-size:.82rem;}
+  .tbl-cron td,.tbl-cron th{padding:7px 5px;}
+  .tbl-cron .cr-ativo span{display:none;}           /* só a caixinha */
+  .tbl-cron .cr-acoes .btn{padding:0 8px;min-width:32px;}
+  .tbl-cartao{font-size:.84rem;}
   .tbl-cartao td,.tbl-cartao th{padding:7px 6px;}
-  .tbl-cartao .input{padding:.32rem .45rem;font-size:.82rem;}
-  .adm-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
-  /* Usuários: e-mail e empresa encolhem; o último acesso vira só a data */
-  .tbl-cartao td select.input,.tbl-cartao td input.input{min-width:0 !important;}
-  [data-pane="org"] .tbl-cartao td:nth-child(2) .input{width:140px;}
-  [data-pane="org"] .tbl-cartao td:nth-child(6){font-size:.72rem;white-space:nowrap;}
-  [data-pane="org"] .tbl-cartao td:nth-child(3) .input{width:104px;}
-  [data-pane="org"] .tbl-cartao td:nth-child(4) .input{width:118px;}
-  [data-pane="org"] .tbl-cartao td:nth-child(1) .input{width:112px;}
-  /* Indicadores & Metas: some a coluna Dimensão (repetida) e aperta a escala */
-  .tbl .col-dim{display:none;}
-  table.tbl thead th:first-child[style*="32px"],table.tbl tbody td.col-seq{display:none;}
-  table.tbl tbody td.col-escala,table.tbl thead th.col-escala{font-size:.72rem;}
-  table.tbl tbody td.col-peso,table.tbl thead th.col-peso{width:70px;}
-  /* Carteira do Time: fluxo e carga ficam menores */
-  .tbl-carteira{font-size:.82rem;}
+  .tbl .col-dim{display:none;}                      /* dimensão se repete */
+  .tbl-carteira{font-size:.84rem;}
   .tbl-carteira td,.tbl-carteira th{padding:6px 5px;}
-  /* Capacidade: o calendário do mês encolhe em vez de virar cartões */
-  table.cap{font-size:.72rem;}
+  table.cap{font-size:.74rem;}
   table.cap th,table.cap td{padding:3px 2px;}
-  table.cap .cap-cell,table.cap thead th:not(.cap-name):not(.cap-atr):not(.cap-tot){
-    width:21px !important;min-width:21px !important;}
-  table.cap .cap-name{min-width:124px !important;max-width:150px;font-size:.74rem;}
-  table.cap .cap-atr{width:36px !important;min-width:36px !important;}
-  /* painel do dia: duas colunas continuam lado a lado no tablet deitado */
-  .ent-linha{grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) auto auto;}
+  .adm-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  /* Entidades: volta ao formato do computador, só que mais estreito */
+  .ent-linha{grid-template-columns:minmax(150px,1.1fr) minmax(130px,1fr) auto auto;}
+  .ent-resp{grid-column:auto;}
+  .ent-entregas{grid-column:auto;}
+  .ent-pill span{font-size:.68rem;padding:.15rem .42rem;}
 }
+
 /* tablet: quadro que não cabe rola de lado (em vez de virar cartão gigante) */
 .tbl-wrap.rola-lado{overflow-x:auto;-webkit-overflow-scrolling:touch;
   background:linear-gradient(90deg,var(--surface) 70%,rgba(0,0,0,0)) right/26px 100% no-repeat;}
