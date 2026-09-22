@@ -31,15 +31,15 @@
     {% else %}Sem painel{% endif %}
   </h2>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col">Dimensão</th><th scope="col">Indicador</th><th scope="col" class="col-peso">Peso</th><th scope="col" class="col-escala" title="Mínimo aceitável (80%) · objetivo (100%) · superado (120%)">Escala</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
+    <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col" class="col-dim">Dimensão</th><th scope="col">Indicador</th><th scope="col" class="col-peso">Peso</th><th scope="col" class="col-escala" title="Mínimo aceitável (80%) · objetivo (100%) · superado (120%)">Escala</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
     {% set total_peso = totais.get(panel_id, 0) %}
     <tbody data-painel="{{ panel_id }}">
     {% for i in inds %}
     {% set last = i.results|sort(attribute='recorded_at')|last if i.results else none %}
     <tr>
-      <td>{{ i.seq }}</td>
+      <td class="col-seq">{{ i.seq }}</td>
       <td><a href="/indicador/{{ i.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ i.title }}</a></td>
-      <td><span class="kind-chip">{{ i.dimension }}</span></td>
+      <td class="col-dim"><span class="kind-chip">{{ i.dimension }}</span></td>
       <td><strong>{{ i.target_label or '—' }}</strong>{% if i.auto_source or i.target_type=='prazo_du' %} <span class="badge-soft">auto</span>{% endif %}</td>
       <td class="col-peso">{% if not escopo %}<span class="peso-campo"><input class="input peso-in" data-ind="{{ i.id }}"
             value="{{ ('%g'|format(i.weight))|replace('.', ',') if i.weight is not none else '' }}"

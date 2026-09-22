@@ -33,7 +33,7 @@
       <option value="">Todos os segmentos</option>{% for s in segments %}<option value="{{ s }}" {{ 'selected' if f_seg==s }}>{{ s }}</option>{% endfor %}</select>
   </form>
   {% endif %}
-  <div class="tbl-wrap"><table class="tbl">
+  <div class="tbl-wrap"><table class="tbl tbl-carteira">
     <thead><tr><th scope="col">Empresa</th><th scope="col">Segmento</th><th scope="col">Fluxo</th><th scope="col">Entregas</th><th class="num">Carga</th><th scope="col">Profissional</th></tr></thead>
     <tbody>
     {% for a in rows %}
