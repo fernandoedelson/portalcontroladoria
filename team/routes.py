@@ -1053,7 +1053,6 @@ def register_team_routes(app):
 
     def _grava_medicao():
         from team.models import IndicatorDef
-        import shutil
         d = db.session.get(IndicatorDef, _int(request.form.get("def_id"))) or abort(404)
         unica = (d.frequencia or "unica") != "mensal"
         comp_id = None if unica else _int(request.form.get("competency_id"))
@@ -1080,12 +1079,12 @@ def register_team_routes(app):
                                     competency_id=comp.id if comp else None))
         valor = (request.form.get("value_label") or "").strip() or None
         nota = (request.form.get("note") or "").strip() or None
-        file = request.files.get("evidence")
-        if file and file.filename:
-            ext = os.path.splitext(file.filename)[1].lower()
-            if ext not in ALLOWED_EVIDENCE:
-                flash("Formato de evidência não permitido.", "danger")
+        arquivos = [f for f in request.files.getlist("evidence") if f and f.filename]
+        for f_ in arquivos:
+            if os.path.splitext(f_.filename)[1].lower() not in ALLOWED_EVIDENCE:
+                flash(f"Formato não permitido: {f_.filename}", "danger")
                 return redirect(url_for("team_indicador_medir", def_id=d.id))
+        conteudos = [(f_.filename, f_.read()) for f_ in arquivos]
         marcados = {int(x) for x in request.form.getlist("ind") if x.isdigit()}
         alvo = [i for i in _usos_ativos(d.id) if i.id in marcados]
         if not alvo:
@@ -1093,7 +1092,6 @@ def register_team_routes(app):
             return redirect(url_for("team_indicador_medir", def_id=d.id))
 
         agora = datetime.utcnow()
-        origem = None                     # 1º arquivo salvo; os demais são cópias
         novos = atualizados = 0
         for i in alvo:
             q = IndicatorResult.query.filter_by(indicator_id=i.id)
@@ -1114,26 +1112,18 @@ def register_team_routes(app):
             r.computed = False
             r.recorded_by = current_user.id
             r.recorded_at = agora
-            if file and file.filename:
-                # cada resultado tem a sua cópia: excluir num painel não apaga nos outros
+            if conteudos:                # acrescenta (não substitui as anteriores)
+                from team.models import IndicatorEvidence
                 folder = os.path.join(EVIDENCE_DIR, str(i.id))
                 os.makedirs(folder, exist_ok=True)
-                path = os.path.join(folder, secure_filename(
-                    f"{agora:%Y%m%d%H%M%S}_{file.filename}"))
-                if origem is None:
-                    file.save(path)
-                    origem = path
-                else:
-                    shutil.copyfile(origem, path)
-                if r.evidence_path and r.evidence_path != path and os.path.exists(r.evidence_path):
-                    try:
-                        os.remove(r.evidence_path)
-                    except OSError:
-                        pass
-                r.evidence_path = path
-                r.evidence_name = file.filename
-                r.evidence_by = current_user.id
-                r.evidence_at = agora
+                db.session.flush()
+                for k, (nome, dados) in enumerate(conteudos):
+                    path = os.path.join(folder, secure_filename(
+                        f"{agora:%Y%m%d%H%M%S}_{k}_{nome}"))
+                    with open(path, "wb") as fh:
+                        fh.write(dados)
+                    db.session.add(IndicatorEvidence(result_id=r.id, path=path, name=nome,
+                                                     sent_by=current_user.id, sent_at=agora))
         db.session.commit()
         log_audit(current_user.id, "indicador_medicao_unica", "indicator_def",
                   f"{d.id}: {len(alvo)} painel(éis), {periodo}")
@@ -1176,7 +1166,8 @@ def register_team_routes(app):
             note=request.form.get("note") or None,
             recorded_by=current_user.id)
         # evidencia (anexo simples, com quem/quando)
-        file = request.files.get("evidence")
+        files = [f for f in request.files.getlist("evidence") if f and f.filename]
+        file = files[0] if files else None
         if file and file.filename:
             ext = os.path.splitext(file.filename)[1].lower()
             if ext not in ALLOWED_EVIDENCE:
@@ -1205,6 +1196,32 @@ def register_team_routes(app):
             abort(404)
         return send_file(r.evidence_path, as_attachment=True,
                          download_name=r.evidence_name or "evidencia")
+
+    @app.route("/indicador/evidencia/<int:eid>")
+    @team_required
+    def team_evidencia_baixar(eid):
+        from team.models import IndicatorEvidence
+        e = db.session.get(IndicatorEvidence, eid) or abort(404)
+        if not os.path.exists(e.path):
+            abort(404)
+        return send_file(e.path, as_attachment=True, download_name=e.name or "evidencia")
+
+    @app.route("/indicador/evidencia/<int:eid>/excluir", methods=["POST"])
+    @controladoria_required
+    def team_evidencia_excluir(eid):
+        from team.models import IndicatorEvidence
+        e = db.session.get(IndicatorEvidence, eid) or abort(404)
+        iid = e.result.indicator_id
+        if os.path.exists(e.path):
+            try:
+                os.remove(e.path)
+            except OSError:
+                pass
+        db.session.delete(e)
+        db.session.commit()
+        flash("Evidência removida.", "success")
+        return redirect(url_for("team_indicador", iid=iid))
+
 
     @app.route("/indicador/resultado/<int:rid>/excluir", methods=["POST"])
     @team_required

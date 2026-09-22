@@ -106,8 +106,9 @@
   <div class="form-row"><label class="field-label">Observação</label>
     <textarea class="input" name="note" rows="2"></textarea></div>
   <div class="form-row"><label class="field-label">Evidência (anexo)</label>
-    <input class="input" type="file" name="evidence"/>
-    <div class="help-txt">O mesmo anexo é gravado em cada painel.</div></div>
+    <input class="input" type="file" name="evidence" multiple/>
+    <div class="help-txt">Pode anexar <strong>mais de um arquivo</strong>; cada painel recebe a sua cópia.
+      Os anexos anteriores da mesma medição são mantidos.</div></div>
 
   <h3 class="mt-2">Painéis que recebem esta medição</h3>
   <p class="help-txt">A meta é de cada painel. Se num deles o resultado for diferente, ajuste só ali.</p>

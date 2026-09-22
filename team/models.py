@@ -470,6 +470,21 @@ class Indicator(db.Model):
         return [v or "—" for v in vals]
 
 
+class IndicatorEvidence(db.Model):
+    """Anexo de uma medição. Uma medição pode ter várias evidências; cada painel
+    guarda a sua cópia, então apagar num painel não apaga nos outros."""
+    __tablename__ = "indicator_evidences"
+    id = db.Column(db.Integer, primary_key=True)
+    result_id = db.Column(db.Integer, db.ForeignKey("indicator_results.id"), nullable=False)
+    path = db.Column(db.String(400), nullable=False)
+    name = db.Column(db.String(255))
+    sent_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    result = db.relationship("IndicatorResult", backref=db.backref(
+        "evidencias", cascade="all, delete-orphan", order_by="IndicatorEvidence.id"))
+
+
 class IndicatorResult(db.Model):
     __tablename__ = "indicator_results"
     id = db.Column(db.Integer, primary_key=True)
