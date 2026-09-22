@@ -636,3 +636,29 @@ button.tl-chip:hover{border-color:var(--text-soft);}
 .btn[hidden],button[hidden]{display:none !important;}
 .tbl-cron .cr-dup span{display:none;}            /* Duplicar só com ícone: cabe sem virar cartão */
 .cr-resp-emp{display:block;max-width:170px;white-space:normal;line-height:1.3;padding-top:.3rem;}
+/* Régua: barras proporcionais por dia útil */
+.rg-col .rg-barra{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:78px;margin:6px 0 2px;}
+.rg-col .bs{width:11px;border-radius:2px 2px 0 0;min-height:3px;}
+.rg-col .bs.bf{background:var(--r-ok,#639922);} .rg-col .bs.ba{background:var(--r-carimbo);}
+.rg-col .bs.bh{background:var(--accent);} .rg-col .bs.bn{background:var(--border-2);}
+.rg-col .rg-n{font-size:15px;font-weight:600;color:var(--text);}
+a.rg-col{text-decoration:none;color:inherit;}
+a.rg-col:hover{background:var(--surface-hi);}
+/* Fechamento por pessoa */
+.pes-lista{display:flex;flex-direction:column;}
+.pes-lin{display:grid;grid-template-columns:120px 1fr 96px;gap:12px;align-items:center;
+  padding:8px 0;border-top:1px solid var(--border);}
+.pes-nome{display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--text);font-size:14px;min-width:0;}
+.pes-nome .mini-av{width:22px;height:22px;font-size:.62rem;flex:0 0 auto;}
+.pes-faixa{display:flex;gap:3px;align-items:flex-end;height:26px;}
+.pes-dia{position:relative;flex:1;height:100%;background:var(--surface-hi);border-radius:3px;
+  display:flex;align-items:flex-end;justify-content:center;gap:2px;padding:0 2px;text-decoration:none;}
+.pes-dia.hoje{outline:1.5px solid var(--accent);}
+.pes-bar{flex:1;max-width:10px;border-radius:2px 2px 0 0;min-height:3px;background:var(--primary-2);}
+.pes-bar.bf{background:#639922;} .pes-bar.ba{background:var(--r-carimbo);}
+.pes-bar.bh{background:var(--accent);} .pes-bar.bn{background:var(--border-2);}
+.pes-nums{display:flex;gap:8px;justify-content:flex-end;font-size:14px;color:var(--text-soft);}
+.pes-nums .n-a{color:var(--r-carimbo);font-weight:700;}
+.pes-nums .n-h{color:var(--accent);font-weight:700;}
+.pes-nums .n-f{color:var(--text-muted);}
+@media (max-width:760px){ .pes-lin{grid-template-columns:96px 1fr 84px;gap:8px;} }

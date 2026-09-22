@@ -342,7 +342,7 @@ def posicao_fechamento(comp, ref=None):
     return du_hoje, du_prazo
 
 
-def regua(comp, ref=None, member_id=None, kind_filter=None):
+def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None):
     """Estrutura da régua do fechamento para o Painel do Dia.
 
     Colunas = dias úteis D+1..D+N do mês seguinte (N cobre o prazo, as
@@ -381,6 +381,8 @@ def regua(comp, ref=None, member_id=None, kind_filter=None):
     n = max(5, du_prazo or 0, min(ult_ativ, limite))
     if du_hoje and du_hoje <= limite + 2:
         n = max(n, du_hoje)
+    if n_fixo:                                # visão por pessoa: todas as réguas
+        n = min(n_fixo, len(dias))            # com as mesmas colunas
     n = min(n, len(dias))
     cols_dias = dias[:n]
     por_dia = {d: [] for d in cols_dias}
@@ -406,7 +408,8 @@ def regua(comp, ref=None, member_id=None, kind_filter=None):
         pts = sorted((estado(a) for a in por_dia[d]), key=lambda e: ordem[e])
         cols.append({"tipo": "dia", "du": i + 1, "data": d, "dsem": _DSEM[d.weekday()],
                      "pts": pts, "hoje": d == ref, "prazo": d == comp.deadline,
-                     "n": len(pts)})
+                     "n": len(pts),
+                     "c": {e: pts.count(e) for e in ("f", "a", "h", "")}})
     total = len(acts)
     feitas = sum(1 for a in acts if a.status == "concluida")
     atrasadas = [a for a in acts if estado(a) == "a"]
@@ -419,7 +422,39 @@ def regua(comp, ref=None, member_id=None, kind_filter=None):
         "atraso_desde": (min(a.due_date for a in atrasadas) if atrasadas else None),
         "atraso_du": (dias.index(min(a.due_date for a in atrasadas)) + 1
                       if atrasadas and min(a.due_date for a in atrasadas) in dias else None),
+        "pico": max([c["n"] for c in cols if c["tipo"] == "dia"] + [1]),
+        "n_cols": n,
     }
+
+
+def regua_por_pessoa(comp, ref=None, membros=None):
+    """Uma régua por pessoa, todas com as mesmas colunas (D+1..D+N do time).
+
+    Responde 'quem está afogado hoje?': a faixa mostra onde estão as atividades
+    de cada um e os contadores separam atrasadas, de hoje e a fazer.
+    """
+    geral = regua(comp, ref)
+    if not geral:
+        return []
+    from team.models import TeamMember
+    membros = membros or (TeamMember.query.filter_by(active=True)
+                          .order_by(db.func.lower(TeamMember.name)).all())
+    linhas = []
+    for m in membros:
+        r = regua(comp, ref, member_id=m.id, n_fixo=geral["n_cols"])
+        if not r or not r["total"]:
+            continue
+        dias_ = [c for c in r["cols"] if c["tipo"] == "dia"]
+        linhas.append({
+            "member": m, "cols": dias_, "total": r["total"], "feitas": r["feitas"],
+            "pct": r["pct"],
+            "atrasadas": sum(c["c"]["a"] for c in dias_) + r["antes"].count("a"),
+            "hoje": sum(c["c"]["h"] for c in dias_),
+            "afazer": sum(c["c"][""] for c in dias_) + r["depois"].count(""),
+            "pico": max([c["n"] for c in dias_] + [1]),
+        })
+    linhas.sort(key=lambda x: (-x["atrasadas"], -x["hoje"], x["member"].name.lower()))
+    return linhas
 
 
 def farol(competency, ref=None):

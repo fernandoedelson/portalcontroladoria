@@ -57,11 +57,17 @@
       {% if c.tipo == 'feriado' %}
       <div class="rg-col rg-fer" title="Feriado — não conta como dia útil"><div class="d">—</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div><div class="rg-tag">feriado</div></div>
       {% else %}
-      <div class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}" title="D+{{ c.du }} · {{ c.data.strftime('%d/%m/%Y') }} · {{ c.n }} atividade(s)">
+      <a class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}" href="/atividades?venc={{ c.data }}{{ '&member_id=%d'|format(sel) if sel }}"
+         title="D+{{ c.du }} · {{ c.data.strftime('%d/%m/%Y') }} · {{ c.n }} atividade(s) — ver a lista do dia">
         <div class="d">D+{{ c.du }}</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div>
-        <div class="pts">{% for p in c.pts %}<i class="pt {{ p }}"></i>{% endfor %}</div>
+        <div class="rg-barra" aria-hidden="true">
+          {% set rotulo = {'f':'concluída(s)','a':'atrasada(s)','h':'vence(m) hoje'} %}
+          {% for k in ['f','a','h',''] %}{% if c.c[k] %}<i class="bs b{{ k or 'n' }}" style="height:{{ (c.c[k] / regua.pico * 100)|round(1) }}%"
+             title="{{ c.c[k] }} {{ rotulo.get(k, 'a fazer') }}"></i>{% endif %}{% endfor %}
+        </div>
+        <div class="rg-n">{{ c.n or '—' }}</div>
         {% if c.hoje %}<div class="rg-tag">hoje</div>{% elif c.prazo %}<div class="rg-tag">prazo</div>{% endif %}
-      </div>
+      </a>
       {% endif %}
     {% endfor %}
     {% if regua.depois %}
@@ -75,6 +81,41 @@
   {% endif %}
   {% if regua.sem_prazo %}<p class="help-txt rg-nota">{{ regua.sem_prazo }} atividade(s) sem prazo definido não aparecem na régua.</p>{% endif %}
 </section>
+{% if pessoas %}
+<section class="card regua rg-pessoas" aria-label="Fechamento por pessoa">
+  <div class="rg-topo">
+    <div><div class="rot">Por pessoa · {{ comp.label }}</div>
+      <div class="rg-pct"><b>{{ pessoas|length }}</b><span>pessoa(s) com atividades no fechamento</span></div></div>
+    <div class="rg-legenda" aria-hidden="true">
+      <span><i class="pt a"></i>atrasada</span><span><i class="pt h"></i>hoje</span><span><i class="pt"></i>a fazer</span></div>
+  </div>
+  <div class="pes-lista">
+    {% for l in pessoas %}
+    <div class="pes-lin">
+      <a class="pes-nome" href="/atividades?member_id={{ l.member.id }}&competency_id={{ comp.id }}">
+        <span class="mini-av" style="background:{{ l.member.color }}">{{ l.member.initials }}</span>
+        <span>{{ l.member.name.split()[0] }}</span></a>
+      <div class="pes-faixa">
+        {% for c in l.cols %}
+        <a class="pes-dia{{ ' hoje' if c.hoje }}" href="/atividades?venc={{ c.data }}&member_id={{ l.member.id }}"
+           title="D+{{ c.du }} · {{ c.data.strftime('%d/%m') }} · {{ c.n }} atividade(s)">
+          {% for k in ['f','a','h',''] %}{% if c.c[k] %}<i class="pes-bar b{{ k or 'n' }}"
+             style="height:{{ (c.c[k] / l.pico * 100)|round(1) }}%"></i>{% endif %}{% endfor %}
+        </a>
+        {% endfor %}
+      </div>
+      <div class="pes-nums">
+        <span class="{{ 'n-a' if l.atrasadas }}">{{ l.atrasadas }}</span>
+        <span class="{{ 'n-h' if l.hoje }}">{{ l.hoje }}</span>
+        <span class="n-f">{{ l.afazer }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="help-txt rg-nota">Atrasadas · vencem hoje · a fazer. A faixa vai de D+1 a D+{{ pessoas[0].cols|length }};
+    clique num dia para ver as atividades da pessoa.</p>
+</section>
+{% endif %}
 {% elif comp %}
 <section class="card vazio-card">
   <h2>Nenhuma atividade de fechamento em {{ comp.label }}</h2>

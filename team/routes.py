@@ -245,11 +245,14 @@ def register_team_routes(app):
                                    "vence_hoje": 0, "aberta": 0})
             board.append({"member": m, "f": mf})
         rg = engine.regua(comp, ref, member_id=sel) if comp else None
+        # visão por pessoa (só para quem enxerga o time inteiro)
+        pessoas = (engine.regua_por_pessoa(comp, ref, membros=members)
+                   if comp and _scoped_member_id() is None else [])
         # barra de cada pessoa proporcional à maior carga do time
         maior = max([b["f"]["aberta"] for b in board] + [1])
         return render_template("team/hoje.html", panel=panel, members=members,
                                sel=sel, tipo=tipo, comp=comp, farol=fr, board=board,
-                               mm=mm, today=ref, regua=rg, maior_carga=maior,
+                               mm=mm, today=ref, regua=rg, pessoas=pessoas, maior_carga=maior,
                                du_entre=engine.business_days_between)
 
     # ==================================================================
@@ -267,6 +270,7 @@ def register_team_routes(app):
             f_status = "abertas"
         f_comp = request.args.get("competency_id", type=int)
         f_project = request.args.get("project_id", type=int)
+        f_venc = request.args.get("venc")          # vencimento exato (clique na régua)
         q = Activity.query
         sid = _scoped_member_id()
         if sid is not None:               # profissional: so as proprias
@@ -279,6 +283,12 @@ def register_team_routes(app):
             q = q.filter(Activity.competency_id == f_comp)
         if f_project:
             q = q.filter(Activity.project_id == f_project)
+        if f_venc:
+            try:
+                q = q.filter(Activity.due_date == date.fromisoformat(f_venc))
+                f_status = "todos"                 # o dia mostra tudo, inclusive concluídas
+            except ValueError:
+                f_venc = None
         acts = q.order_by(Activity.due_date.is_(None), Activity.due_date,
                           Activity.sort_order, Activity.id).all()
         ref = fuso.hoje()
@@ -312,7 +322,7 @@ def register_team_routes(app):
                                projects=Project.query.order_by(Project.name).all(),
                                kinds=KINDS, statuses=STATUSES, mm=_member_map(),
                                f_kind=f_kind, f_member=f_member, f_status=f_status,
-                               f_comp=f_comp, f_project=f_project, today=ref)
+                               f_comp=f_comp, f_project=f_project, f_venc=f_venc, today=ref)
 
     @app.route("/atividade/nova", methods=["GET", "POST"])
     @team_required
