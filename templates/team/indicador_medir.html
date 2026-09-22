@@ -27,24 +27,34 @@
   {% endif %}
 </div>
 
+{% macro fila(itens, feitos, sufixo) %}
+<div class="med-fila">
+  {% for p in itens %}
+  <a class="med-chip pend{{ ' on' if sel and sel.id == p.d.id }}" href="/indicadores/medir?def_id={{ p.d.id }}{{ sufixo }}">
+    <span>{{ p.d.title }}</span><i>{{ p.faltam }}/{{ p.total }} painel(éis)</i></a>
+  {% endfor %}
+  {% for p in feitos %}
+  <a class="med-chip feito{{ ' on' if sel and sel.id == p.d.id }}" href="/indicadores/medir?def_id={{ p.d.id }}{{ sufixo }}">
+    {{ icone('check', 13) }} <span>{{ p.d.title }}</span></a>
+  {% endfor %}
+</div>
+{% endmacro %}
+
 {% if comp_atual and (pendentes or medidos) %}
 <div class="card">
-  <h2>Fila de {{ comp_atual.label }}</h2>
-  <p class="text-muted text-sm mb-2">{{ pendentes|length }} indicador(es) sem medição ·
-    {{ medidos|length }} já medido(s). Clique para abrir e gravar.</p>
-  <div class="med-fila">
-    {% for p in pendentes %}
-    <a class="med-chip pend{{ ' on' if sel and sel.id == p.d.id }}"
-       href="/indicadores/medir?def_id={{ p.d.id }}&competency_id={{ comp_atual.id }}">
-      <span>{{ p.d.title }}</span>
-      <i>{{ p.faltam }}/{{ p.total }} painel(éis)</i></a>
-    {% endfor %}
-    {% for p in medidos %}
-    <a class="med-chip feito{{ ' on' if sel and sel.id == p.d.id }}"
-       href="/indicadores/medir?def_id={{ p.d.id }}&competency_id={{ comp_atual.id }}">
-      {{ icone('check', 13) }} <span>{{ p.d.title }}</span></a>
-    {% endfor %}
-  </div>
+  <h2>Do mês · {{ comp_atual.label }}</h2>
+  <p class="text-muted text-sm mb-2">{{ pendentes|length }} sem medição · {{ medidos|length }} já medido(s)
+    nesta competência. Indicadores mensais.</p>
+  {{ fila(pendentes, medidos, '&competency_id=%d'|format(comp_atual.id)) }}
+</div>
+{% endif %}
+
+{% if entregas or entregues %}
+<div class="card">
+  <h2>Entregas</h2>
+  <p class="text-muted text-sm mb-2">Medidos uma vez só, na entrega — não voltam a cada mês.
+    {{ entregas|length }} pendente(s) · {{ entregues|length }} entregue(s).</p>
+  {{ fila(entregas, entregues, '') }}
 </div>
 {% endif %}
 
@@ -56,13 +66,23 @@
   <p class="help-txt">Está em <strong>{{ inds|length }}</strong> {{ 'painéis' if inds|length > 1 else 'painel' }}.
     Se já houver registro na mesma competência, ele é <strong>atualizado</strong> (não duplica).</p>
 
+  {% if sel.frequencia == 'mensal' %}
   <div class="grid-2">
     <div class="form-row"><label class="field-label">Competência</label>
-      <select class="input" name="competency_id"><option value="">— (usar só o período)</option>
+      <select class="input" name="competency_id" required>
         {% for c in comps %}<option value="{{ c.id }}" {{ 'selected' if comp_atual and c.id == comp_atual.id }}>{{ c.label }}</option>{% endfor %}</select></div>
     <div class="form-row"><label class="field-label">Período (rótulo)</label>
       <input class="input" name="period_label" placeholder="Em branco = nome da competência"/></div>
   </div>
+  {% else %}
+  <div class="grid-2">
+    <div class="form-row"><label class="field-label">Data da entrega *</label>
+      <input class="input" type="date" name="data_entrega" required/>
+      <div class="help-txt">Indicador de <strong>entrega única</strong>: mede uma vez só, sem competência.</div></div>
+    <div class="form-row"><label class="field-label">Período (rótulo)</label>
+      <input class="input" name="period_label" placeholder="Em branco = a data da entrega"/></div>
+  </div>
+  {% endif %}
   <div class="grid-2">
     <div class="form-row"><label class="field-label">Resultado</label>
       <select class="input" name="outcome" id="med-geral" required>

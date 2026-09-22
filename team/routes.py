@@ -949,6 +949,7 @@ def register_team_routes(app):
         d.dimension = form.get("dimension") or "PRAZO"
         d.target_type = form.get("target_type") or "manual"
         d.unit = form.get("unit") or None
+        d.frequencia = "mensal" if form.get("frequencia") == "mensal" else "unica"
         d.rational = form.get("rational") or None
         d.sort_order = _int(form.get("sort_order")) or d.sort_order or 100
 
@@ -1027,27 +1028,48 @@ def register_team_routes(app):
         comp_id = request.args.get("competency_id", type=int)
         comp = db.session.get(Competency, comp_id) if comp_id else _current_competency()
         # fila: o que ainda não foi medido nesta competência (a ordem do trabalho)
-        pendentes, medidos = [], []
-        if comp:
-            from team.models import IndicatorResult
-            feitos = {r.indicator_id for r in IndicatorResult.query.filter_by(
-                competency_id=comp.id).filter(IndicatorResult.outcome != "na").all()}
-            for d in defs:
-                faltam = [i for i in usos[d.id] if i.id not in feitos]
-                (pendentes if faltam else medidos).append({"d": d, "faltam": len(faltam),
-                                                           "total": len(usos[d.id])})
+        from team.models import IndicatorResult
+        pendentes, medidos, entregas, entregues = [], [], [], []
+        do_mes = {r.indicator_id for r in IndicatorResult.query.filter_by(
+            competency_id=comp.id).filter(IndicatorResult.outcome != "na").all()} if comp else set()
+        de_entrega = {r.indicator_id for r in IndicatorResult.query.filter(
+            IndicatorResult.outcome != "na").all()}
+        for d in defs:
+            if (d.frequencia or "unica") == "mensal":
+                if not comp:
+                    continue
+                faltam = [i for i in usos[d.id] if i.id not in do_mes]
+                (pendentes if faltam else medidos).append(
+                    {"d": d, "faltam": len(faltam), "total": len(usos[d.id])})
+            else:
+                faltam = [i for i in usos[d.id] if i.id not in de_entrega]
+                (entregas if faltam else entregues).append(
+                    {"d": d, "faltam": len(faltam), "total": len(usos[d.id])})
         return render_template("team/indicador_medir.html", defs=defs, usos=usos,
                                sel=sel, inds=usos.get(sel.id, []) if sel else [],
                                comps=_comps(), comp_atual=comp,
-                               pendentes=pendentes, medidos=medidos)
+                               pendentes=pendentes, medidos=medidos,
+                               entregas=entregas, entregues=entregues)
 
     def _grava_medicao():
         from team.models import IndicatorDef
         import shutil
         d = db.session.get(IndicatorDef, _int(request.form.get("def_id"))) or abort(404)
-        comp_id = _int(request.form.get("competency_id"))
+        unica = (d.frequencia or "unica") != "mensal"
+        comp_id = None if unica else _int(request.form.get("competency_id"))
         comp = db.session.get(Competency, comp_id) if comp_id else None
-        periodo = (request.form.get("period_label") or "").strip() or (comp.label if comp else None)
+        entrega = (request.form.get("data_entrega") or "").strip() if unica else ""
+        if unica and not entrega:
+            flash("Informe a data da entrega.", "danger")
+            return redirect(url_for("team_indicador_medir", def_id=d.id))
+        rot_entrega = None
+        if entrega:
+            try:
+                rot_entrega = "entregue em " + date.fromisoformat(entrega).strftime("%d/%m/%Y")
+            except ValueError:
+                rot_entrega = None
+        periodo = ((request.form.get("period_label") or "").strip()
+                   or rot_entrega or (comp.label if comp else None))
         if not comp and not periodo:
             flash("Informe a competência ou o período da medição.", "danger")
             return redirect(url_for("team_indicador_medir", def_id=d.id))

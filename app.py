@@ -76,7 +76,9 @@ def create_app(config=Config):
             app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
         try:                          # depois da carteira existir
             ensure_clusters_defaults()
-            from team.models import ensure_macros, normaliza_prazos_cronograma
+            from team.models import (ensure_macros, normaliza_prazos_cronograma,
+                                     ensure_frequencia_indicadores)
+            ensure_frequencia_indicadores()
             ensure_macros()
             n = normaliza_prazos_cronograma()
             if n:
@@ -119,6 +121,7 @@ _COLUNAS_NOVAS = [
     ("activities", "nova_data_motivo", "VARCHAR(240)"),
     ("activities", "nova_data_by", "INTEGER"),
     ("activities", "nova_data_at", "DATETIME"),
+    ("indicator_defs", "frequencia", "VARCHAR(10) DEFAULT 'unica'"),
 ]
 
 

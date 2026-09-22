@@ -561,11 +561,18 @@ def metas_painel(comp, member_id=None):
     inds = q.all()
     if not inds:
         return []
+    # mensal: resultado DESTA competência; entrega única: o último de qualquer época
+    ids = [i.id for i in inds]
+    mensal = {i.id for i in inds
+              if i.definition and (i.definition.frequencia or "unica") == "mensal"}
     res = {}
-    if comp:
-        for r in (IndicatorResult.query
-                  .filter(IndicatorResult.indicator_id.in_([i.id for i in inds]))
-                  .filter(IndicatorResult.competency_id == comp.id).all()):
+    for r in (IndicatorResult.query
+              .filter(IndicatorResult.indicator_id.in_(ids))
+              .order_by(IndicatorResult.recorded_at).all()):
+        if r.indicator_id in mensal:
+            if comp and r.competency_id == comp.id:
+                res[r.indicator_id] = r
+        else:
             res[r.indicator_id] = r
     membros = {m.id: m for m in TeamMember.query.all()}
     por_membro = {}
@@ -578,15 +585,19 @@ def metas_painel(comp, member_id=None):
         r = res.get(i.id)
         linha["itens"].append({"ind": i, "res": r,
                                "outcome": (r.outcome if r else "sem"),
-                               "valor": (r.value_label if r else None)})
+                               "valor": (r.value_label if r else None),
+                               "mensal": i.id in mensal})
         if r and r.outcome != "na":
             linha["medidos"] += 1
             if r.outcome in ("atingido", "superado"):
                 linha["atingidos"] += 1
     linhas = list(por_membro.values())
     for l in linhas:
-        l["itens"].sort(key=lambda x: (x["ind"].sort_order or 100, x["ind"].title))
+        l["itens"].sort(key=lambda x: (not x["mensal"], x["ind"].sort_order or 100,
+                                       x["ind"].title))
         l["total"] = len(l["itens"])
+        l["entregas_pend"] = sum(1 for x in l["itens"]
+                                 if not x["mensal"] and x["outcome"] == "sem")
         l["peso"] = round(sum(x["ind"].weight or 0 for x in l["itens"]), 1)
     linhas.sort(key=lambda l: l["member"].name.lower())
     return linhas

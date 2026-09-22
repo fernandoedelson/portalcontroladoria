@@ -403,6 +403,9 @@ class IndicatorDef(db.Model):
     # como avaliar: 'prazo_du' | 'contagem' | 'data_marco' | 'projeto' | 'manual'
     target_type = db.Column(db.String(20), default="manual")
     unit = db.Column(db.String(30))                    # ex.: "dias úteis", "%", "un"
+    # 'mensal' = uma medição por competência (fechamento, consolidação, releases);
+    # 'unica'  = medido uma vez, na entrega (projetos, implantações, orçamento)
+    frequencia = db.Column(db.String(10), default="unica")
     rational = db.Column(db.Text)                      # racional padrão (herdável)
     auto_source = db.Column(db.String(60))
     active = db.Column(db.Boolean, default=True)
@@ -640,4 +643,26 @@ def normaliza_prazos_cronograma():
         n += 1
     if n:
         db.session.commit()
+    return n
+
+
+# Indicadores medidos todo mês (o resto é entrega única, medida uma vez só)
+MENSAIS_PADRAO = ("consolida", "fechamento mensal", "emissão mensal dos releases",
+                  "emissao mensal dos releases")
+
+
+def ensure_frequencia_indicadores():
+    """Classifica o catálogo uma única vez: mensal x entrega única."""
+    from models import get_setting, set_setting
+    if get_setting("indic_frequencia_ok") == "1":
+        return 0
+    n = 0
+    for d in IndicatorDef.query.all():
+        t = (d.title or "").lower()
+        nova = "mensal" if any(k in t for k in MENSAIS_PADRAO) else "unica"
+        if d.frequencia != nova:
+            d.frequencia = nova
+            n += 1
+    db.session.commit()
+    set_setting("indic_frequencia_ok", "1")
     return n

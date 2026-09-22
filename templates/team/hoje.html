@@ -109,7 +109,8 @@
       <div class="met-itens">
         {% for it in l.itens %}
         <div class="met-item">
-          <span class="met-tit">{{ it.ind.title }}</span>
+          <span class="met-tit">{{ it.ind.title }}{% if not it.mensal %}
+            <span class="badge-soft" title="Medido uma vez, na entrega">entrega</span>{% endif %}</span>
           <span class="met-esc" title="mínimo · objetivo · superação">
             {% if it.ind.scale_min or it.ind.scale_obj or it.ind.scale_sup %}
             {% set esc = it.ind.escala_curta %}

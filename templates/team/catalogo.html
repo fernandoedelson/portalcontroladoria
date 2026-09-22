@@ -20,6 +20,10 @@
       <select class="input" name="target_type">{% for v,l in target_types %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
     <div class="form-row"><label class="field-label">Unidade (opcional)</label>
       <input class="input" name="unit" placeholder="dias úteis, %, un…"/></div>
+    <div class="form-row"><label class="field-label">Frequência</label>
+      <select class="input" name="frequencia">
+        <option value="unica">Entrega única (mede uma vez)</option>
+        <option value="mensal">Mensal (uma medição por competência)</option></select></div>
     <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Racional padrão (opcional)</label>
       <textarea class="input" name="rational" rows="2"></textarea></div>
     <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('plus') }} Cadastrar</button></div>
@@ -30,7 +34,7 @@
   <h2>Indicadores cadastrados ({{ defs|length }})</h2>
   <div class="tbl-wrap"><table class="tbl">
     <thead><tr><th scope="col">Indicador</th><th scope="col">Dimensão</th><th scope="col">Avaliação</th>
-      <th scope="col">Unidade</th><th class="num">Usos</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
+      <th scope="col">Unidade</th><th scope="col">Frequência</th><th class="num">Usos</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
     <tbody>
     {% for d in defs %}
     <tr class="{{ '' if d.active else 'row-inativa' }}">
@@ -38,6 +42,9 @@
       <td><select class="input" form="cd-{{ d.id }}" name="dimension" style="width:auto;">{% for dim in dimensions %}<option value="{{ dim }}" {{ 'selected' if d.dimension==dim }}>{{ dim }}</option>{% endfor %}</select></td>
       <td><select class="input" form="cd-{{ d.id }}" name="target_type" style="width:auto;">{% for v,l in target_types %}<option value="{{ v }}" {{ 'selected' if d.target_type==v }}>{{ l }}</option>{% endfor %}</select></td>
       <td><input class="input" form="cd-{{ d.id }}" name="unit" value="{{ d.unit or '' }}" style="width:110px;"/></td>
+      <td><select class="input" form="cd-{{ d.id }}" name="frequencia" style="width:auto;">
+        <option value="unica" {{ 'selected' if d.frequencia != 'mensal' }}>Entrega única</option>
+        <option value="mensal" {{ 'selected' if d.frequencia == 'mensal' }}>Mensal</option></select></td>
       <td class="num">{{ d.usos }}</td>
       <td>
         <form method="post" action="/catalogo/indicador/{{ d.id }}/toggle" style="display:inline;">
