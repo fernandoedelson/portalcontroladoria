@@ -76,6 +76,8 @@ def create_app(config=Config):
             app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
         try:                          # depois da carteira existir
             ensure_clusters_defaults()
+            from team.models import ensure_macros
+            ensure_macros()
         except Exception as e:
             db.session.rollback()
             app.logger.warning("Nao foi possivel semear os clusters: %s", e)
@@ -108,6 +110,7 @@ _COLUNAS_NOVAS = [
     ("closing_template_items", "company_ids_json", "TEXT"),   # várias empresas por item
     ("company_assignments", "cluster_id", "INTEGER"),
     ("company_assignments", "member_excecao", "BOOLEAN DEFAULT 0"),
+    ("closing_template_items", "macro", "VARCHAR(30)"),
 ]
 
 

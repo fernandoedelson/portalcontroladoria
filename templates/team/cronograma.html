@@ -60,8 +60,8 @@
       <input class="input input-lg" name="title" placeholder="Ex.: Consolidar eliminações" required/></div>
     <div class="form-row"><label class="field-label">Escopo / empresa</label>
       {{ campo_escopo('', 'geral', []) }}
-      <div class="help-txt">“Todas” e “empresas específicas” criam uma atividade por empresa, com o responsável dela na carteira.</div></div>
-    <div class="form-row"><label class="field-label">Responsável (geral / fallback)</label>
+      <div class="help-txt">“Todas” e “empresas específicas” criam uma atividade por empresa, com o responsável de cada entidade.</div></div>
+    <div class="form-row"><label class="field-label">Responsável</label>
       <select class="input" name="member_id"><option value="">— a definir —</option>
         {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
     <div class="form-row"><label class="field-label">Vencimento — Nº dia útil do mês seguinte</label>
@@ -76,7 +76,7 @@
 <!-- ===== lista (salvar tudo de uma vez) ===== -->
 <form class="card" id="form-cron" method="post" action="/cronograma/salvar" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-  <h2>Atividades do cronograma ({{ items|length }})</h2>
+  <h2>Atividades do cronograma ({{ items|length + macros|length }})</h2>
   <div class="barra-salvar" id="cron-barra">
     <span id="cron-status">Edite à vontade: nada é gravado até você clicar em <b>Salvar tudo</b>.</span>
     <span class="flex gap-1">
@@ -88,6 +88,27 @@
     <thead><tr><th scope="col" style="min-width:260px;">Atividade</th><th scope="col">Escopo / empresa</th><th scope="col">Responsável</th>
       <th class="num" title="Nº do dia útil do mês seguinte à competência">Venc. (DU)</th><th scope="col">Prioridade</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
     <tbody id="cron-corpo">
+    {% if macros %}
+    <tr class="cron-grupo"><td colspan="7"><strong>Macro-atividades</strong>
+      <span class="text-muted text-sm"> · pilotadas pelos selos marcados em Administração › Entidades</span></td></tr>
+    {% for it in macros %}
+    {% set p = 't%d_'|format(it.id) %}
+    <tr class="cron-lin cron-macro{{ '' if it.active else ' row-inativa' }}" data-p="{{ p }}" data-id="{{ it.id }}">
+      <td><input type="hidden" name="{{ p }}mudou" value="0" class="cr-mudou"/>
+          <input type="hidden" name="{{ p }}excluir" value="0" class="cr-excluir"/>
+          <div class="cr-macro-tit">{{ it.title }}</div></td>
+      <td><span class="cr-selo">{{ it.macro }}</span>
+          <div class="text-muted text-sm">{{ conta_selo.get(it.macro, 0) }} entidade(s) com o selo</div></td>
+      <td><span class="text-muted text-sm">Conforme responsável por empresa</span></td>
+      <td class="num"><input class="input cr-du" type="number" name="{{ p }}due_offset" value="{{ it.due_offset }}" min="1" aria-label="Dia útil de vencimento"/></td>
+      <td><select class="input" name="{{ p }}priority" aria-label="Prioridade">{% for pr in priorities %}<option value="{{ pr }}" {{ 'selected' if it.priority==pr }}>{{ pr|capitalize }}</option>{% endfor %}</select></td>
+      <td><input type="hidden" name="{{ p }}active_presente" value="1"/>
+          <label class="chk cr-ativo"><input type="checkbox" name="{{ p }}active" value="1" {{ 'checked' if it.active }}/><span>Ativo</span></label></td>
+      <td><span class="text-muted text-sm" title="Macro-atividade fixa: não pode ser duplicada nem removida">fixa</span></td>
+    </tr>
+    {% endfor %}
+    <tr class="cron-grupo"><td colspan="7"><strong>Demais atividades</strong></td></tr>
+    {% endif %}
     {% for it in items %}
     {% set p = 't%d_'|format(it.id) %}
     <tr class="cron-lin{{ '' if it.active else ' row-inativa' }}" data-p="{{ p }}" data-id="{{ it.id }}">
@@ -110,8 +131,10 @@
     </tr>
     {% else %}<tr><td colspan="7" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhuma atividade cadastrada ainda. Adicione acima.</td></tr>{% endfor %}
     </tbody></table></div>
-  <p class="help-txt mt-1">“Todas as empresas” e “empresas específicas” usam o responsável definido na Carteira do Time;
-    o responsável da linha vale como reserva. Duplicar cria a cópia logo abaixo — ajuste e clique em Salvar tudo.</p>
+  <p class="help-txt mt-1"><strong>Macro-atividades</strong> (Painel, Fluxo de Endividamento, Consolidação): ao gerar o mês, cada uma
+    cria uma atividade para cada entidade com o selo correspondente, para o responsável da entidade — aqui você define só o prazo e a prioridade.
+    “Todas as empresas” e “empresas específicas” criam uma atividade por empresa, cada uma com o
+    responsável da própria entidade (Administração › Entidades). Duplicar cria a cópia logo abaixo — ajuste e clique em Salvar tudo.</p>
 </form>
 
 <script>
@@ -131,6 +154,18 @@ function escAtualiza(box){
   box.querySelector('.esc-resumo').textContent = !nomes.length ? 'Escolher empresas'
     : (nomes.length<=2 ? nomes.join(', ') : nomes.length+' empresas: '+nomes.slice(0,2).join(', ')+'…');
   box.classList.toggle('esc-vazio', sel.value==='empresas' && !nomes.length);
+  respSync(box);
+}
+/* escopo por empresa: o responsável vem da entidade (cluster) — trava o campo da linha */
+function respSync(box){
+  var sel=box.querySelector('.esc-sel'), lugar=box.closest('tr')||box.closest('form');
+  var r=lugar && lugar.querySelector('select[name$="member_id"]'); if(!r) return;
+  var op=r.querySelector('option[value="__emp"]');
+  if(!op){ op=document.createElement('option'); op.value='__emp'; op.textContent='Conforme responsável por empresa'; op.hidden=true; r.insertBefore(op, r.firstChild); }
+  var porEmpresa = sel.value!=='geral';
+  if(porEmpresa && !r.disabled){ r.dataset.antes=r.value; r.value='__emp'; r.disabled=true;
+    r.title='Cada atividade vai para o responsável da própria entidade (Administração › Entidades).'; }
+  else if(!porEmpresa && r.disabled){ r.disabled=false; r.value=r.dataset.antes||''; r.title=''; }
 }
 function escLiga(box){
   var sel=box.querySelector('.esc-sel'), pop=box.querySelector('.esc-pop');

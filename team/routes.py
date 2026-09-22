@@ -479,6 +479,8 @@ def register_team_routes(app):
     @team_required
     def team_agenda_item_delete(iid):
         it = db.session.get(ClosingTemplateItem, iid) or abort(404)
+        if it.macro:
+            abort(400)
         db.session.delete(it)
         db.session.commit()
         flash("Item removido.", "success")
@@ -523,6 +525,14 @@ def register_team_routes(app):
         't12_' para o item 12, 'n3_' para a 3ª linha nova/duplicada)."""
         def g(k, d=None):
             return form.get(p + k, d)
+        if it.macro:              # macro: só prazo, prioridade e ativo vêm da tela
+            it.priority = g("priority") if g("priority") in PRIORITIES else it.priority
+            if (p + "active_presente") in form:
+                it.active = g("active") in ("1", "on", "true")
+            off = _int(g("due_offset"))
+            if off is not None:
+                it.due_base, it.due_offset = "fixed_bd", max(off, 1)
+            return
         it.title = (g("title") or "").strip() or it.title or "Nova atividade"
         if (p + "kind") in form:
             it.kind = g("kind") if g("kind") in KINDS else "fechamento"
@@ -585,7 +595,7 @@ def register_team_routes(app):
             it = db.session.get(ClosingTemplateItem, iid)
             if not it:
                 continue
-            if f.get(f"t{iid}_excluir") == "1":
+            if f.get(f"t{iid}_excluir") == "1" and not it.macro:
                 _exclui_item_cronograma(it)
                 excluidos += 1
             elif f.get(f"t{iid}_mudou") == "1":
@@ -626,7 +636,16 @@ def register_team_routes(app):
         items = (ClosingTemplateItem.query
                  .order_by(ClosingTemplateItem.sort_order, ClosingTemplateItem.id).all())
         hoje = fuso.hoje()
-        return render_template("team/cronograma.html", items=items,
+        from team.models import MACROS
+        conta_selo = {selo: 0 for selo, _ in MACROS}
+        for a in CompanyAssignment.query.join(Company).filter(Company.active.is_(True)):
+            for selo in conta_selo:
+                if selo in a.deliverables:
+                    conta_selo[selo] += 1
+        macros = [it for it in items if it.macro]
+        items = [it for it in items if not it.macro]
+        return render_template("team/cronograma.html", items=items, macros=macros,
+                               conta_selo=conta_selo,
                                members=_members(), companies=_companies(),
                                kinds=KINDS, priorities=PRIORITIES,
                                ano_atual=hoje.year, mes_atual=hoje.month,
@@ -664,6 +683,9 @@ def register_team_routes(app):
     @controladoria_required
     def team_cronograma_item_delete(iid):
         it = db.session.get(ClosingTemplateItem, iid) or abort(404)
+        if it.macro:
+            flash("As macro-atividades não podem ser removidas — desmarque “Ativo” para pausar.", "warning")
+            return redirect(url_for("team_cronograma"))
         _exclui_item_cronograma(it)
         db.session.commit()
         flash("Atividade removida do cronograma.", "success")

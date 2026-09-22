@@ -26,7 +26,7 @@ from team.models import Indicator
 
 ROLE_LABELS = [("gestor", "Gestor"), ("senior", "Analista Sênior"),
                ("pleno", "Analista Pleno"), ("especialista", "Especialista")]
-DELIVERABLES = ["Painel", "Endividamento", "Consolidação", "Auxiliares"]
+DELIVERABLES = ["Painel", "Endividamento", "Consolidação"]   # = selos das macro-atividades
 FLOWS = ["Próprio", "Terceiro", "Verificar"]
 RESPONSIBILITIES = ["J&F", "Terceiro"]
 DEFAULT_PASSWORD = "jfsa@2026T"

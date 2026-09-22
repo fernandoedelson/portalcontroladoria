@@ -277,6 +277,10 @@ class ClosingTemplateItem(db.Model):
     # True: replica a atividade para cada empresa da carteira (responsavel = o da empresa).
     # False: uma unica atividade geral, com member_id fixo abaixo.
     per_company = db.Column(db.Boolean, default=False)
+    # macro-atividade ligada a um selo de entrega das Entidades (Painel,
+    # Endividamento, Consolidação): gera uma atividade por entidade com o selo,
+    # para o responsável dela. Não tem escopo nem responsável próprios.
+    macro = db.Column(db.String(30))
 
     # base do prazo: 'deadline' (5o DU), 'insumo' (chegada das ancoras), 'fixed_bd'
     due_base = db.Column(db.String(20), default="deadline")
@@ -554,4 +558,26 @@ def ensure_clusters_defaults():
                 n += 1
     db.session.commit()
     set_setting("clusters_semeados", "1")
+    return n
+
+
+# selo da entidade -> título da macro-atividade no cronograma
+MACROS = [("Painel", "Painel"), ("Endividamento", "Fluxo de Endividamento"),
+          ("Consolidação", "Consolidação")]
+
+
+def ensure_macros():
+    """Garante as três macro-atividades no cronograma (idempotente)."""
+    existentes = {it.macro for it in ClosingTemplateItem.query.filter(
+        ClosingTemplateItem.macro.isnot(None)).all()}
+    n = 0
+    for i, (selo, titulo) in enumerate(MACROS, start=1):
+        if selo in existentes:
+            continue
+        db.session.add(ClosingTemplateItem(
+            title=titulo, macro=selo, kind="fechamento", priority="alta",
+            due_base="fixed_bd", due_offset=5, active=True, sort_order=i))
+        n += 1
+    if n:
+        db.session.commit()
     return n

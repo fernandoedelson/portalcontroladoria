@@ -158,7 +158,10 @@ def generate_closing_activities(competency, created_by=None):
         rule = {"base": it.due_base, "offset": it.due_offset,
                 "codes": it.insumo_codes}
         due, provisional = compute_due(rule, competency)
-        if it.per_company:                       # todas as empresas da carteira
+        if it.macro:                             # macro: entidades com o selo marcado
+            alvos = [(a.company_id, a.member_id) for a in assigns
+                     if it.macro in a.deliverables]
+        elif it.per_company:                     # todas as empresas da carteira
             alvos = [(a.company_id, a.member_id or it.member_id) for a in assigns]
         elif it.company_ids:                     # uma ou várias empresas específicas
             alvos = []

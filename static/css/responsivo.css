@@ -521,3 +521,9 @@ table.tbl-empilha td > .flex{flex-wrap:wrap;justify-content:flex-end;}
   .ent-resp{grid-column:1/-1;}
   .ent-entregas{grid-column:1/2;}
 }
+
+/* Cronograma: macro-atividades (pilotadas pelos selos das Entidades) */
+tr.cron-grupo > td{background:var(--surface-hi);font-size:.8rem;padding:.45rem .7rem;border-top:2px solid var(--border-2);}
+.cr-macro-tit{font-weight:700;padding:.35rem 0;}
+.cr-selo{display:inline-block;font-size:.72rem;font-weight:600;padding:.15rem .55rem;border-radius:999px;
+  background:var(--accent);color:var(--surface);}
