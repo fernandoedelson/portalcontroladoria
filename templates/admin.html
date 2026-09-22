@@ -422,9 +422,6 @@
           <input class="input" name="code" required placeholder="ELDORADO"/></div>
         <div class="form-row"><label class="field-label">Nome</label>
           <input class="input" name="name" required placeholder="Eldorado Brasil Celulose"/></div>
-        <div class="form-row"><label class="field-label">Rótulo canônico (contraparte intercompany)</label>
-          <input class="input" name="canonical_label" placeholder="igual ao nome, se vazio"/>
-          <div class="help-txt">Usado para casar a contraparte na conta corrente.</div></div>
         <div class="form-row"><label class="chk"><input type="checkbox" name="add_to_carteira" value="1" checked/> Já incluir na carteira do time</label></div>
         <button class="btn btn-primary" type="submit">Cadastrar empresa</button>
       </form>
@@ -462,17 +459,13 @@
       <div class="barra-salvar" id="barra-empresas"><span data-cont>Nenhuma alteração pendente</span>
         <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap"><table class="tbl tbl-cartao">
-      <thead><tr><th scope="col">Código</th><th scope="col">Nome</th><th scope="col">Rótulo canônico</th><th class="num">ROL LTM (R$mi)</th><th scope="col">Tol. rel.</th><th scope="col">Tol. abs.</th><th scope="col">Ativa</th><th scope="col"></th></tr></thead>
+      <thead><tr><th scope="col">Código</th><th scope="col">Nome</th><th scope="col">Ativa</th><th scope="col"></th></tr></thead>
       <tbody>
       {% for c in companies %}
       {% set P = 'e' ~ c.id ~ '_' %}
       <tr data-id="{{ c.id }}">
         <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}code" value="{{ c.code }}" style="width:110px;"/></td>
-        <td><input class="input" name="{{ P }}name" value="{{ c.name }}" style="min-width:170px;"/></td>
-        <td><input class="input" name="{{ P }}canonical_label" value="{{ c.canonical_label or '' }}" style="min-width:150px;"/></td>
-        <td class="num">{{ '{:,.0f}'.format((c.rol_ltm or 0)/1e6) }}</td>
-        <td><input class="input" name="{{ P }}tol_rel" value="{{ c.tol_rel if c.tol_rel is not none else '' }}" placeholder="0.0001" style="width:90px;"/></td>
-        <td><input class="input" name="{{ P }}tol_abs" value="{{ c.tol_abs if c.tol_abs is not none else '' }}" placeholder="1000" style="width:95px;"/></td>
+        <td><input class="input" name="{{ P }}name" value="{{ c.name }}" style="min-width:260px;width:100%;"/></td>
         <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if c.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
                     <button class="btn btn-outline btn-sm btn-danger" type="submit" form="empdel-{{ c.id }}" title="Excluir">{{ icone("x") }}</button>
@@ -481,7 +474,6 @@
       {% endfor %}
       </tbody></table></div>
     </form>
-    <p class="help-txt mt-1">Tolerância efetiva = max(absoluta, relativa × ROL LTM). Vazio usa o padrão configurado em “Template &amp; regras”.</p>
   </div>
 
   <div class="card">

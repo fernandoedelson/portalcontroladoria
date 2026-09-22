@@ -5,7 +5,6 @@ Reune num so lugar o que antes estava disperso (ou so existia via seed):
   Organizacao      -> Empresas e Usuarios (CRUD completo)
   Time             -> Membros e Carteira (empresa x pessoa x entregas)
   Fechamento       -> atalho para /gestao (competencias, prazos, regua)
-  Template & regras-> versao do template oficial + manifesto + tolerancias padrao
 
 Acessivel por ADMINISTRADOR e CONTROLADORIA (mesma regra da /gestao).
 """
@@ -105,8 +104,6 @@ def register_admin_routes(app):
             role_labels=ROLE_LABELS, deliverables=DELIVERABLES, flows=FLOWS,
             responsibilities=RESPONSIBILITIES, segments=segments, seg_objs=seg_objs,
             panels=panels,
-            default_tol_rel=get_setting("default_tol_rel", Config.DEFAULT_TOL_REL),
-            default_tol_abs=get_setting("default_tol_abs", Config.DEFAULT_TOL_ABS),
             default_password=DEFAULT_PASSWORD, tab=request.args.get("tab", "time"),
             mod_consolidacao=str(get_setting("mod_consolidacao", "0")) == "1",
             competencia_atual_id=(int(get_setting("competencia_atual_id"))
@@ -440,9 +437,7 @@ def register_admin_routes(app):
             code = (g("code") or c.code).strip().upper()
             c.code = code
             c.name = (g("name") or c.name).strip()
-            c.canonical_label = (g("canonical_label") or "").strip() or c.name
-            c.tol_rel = _float(g("tol_rel"))
-            c.tol_abs = _float(g("tol_abs"))
+            c.canonical_label = c.name
             c.active = _bool(g("active"))
             n += 1
         cods = [x.code for x, _ in linhas]
@@ -613,11 +608,7 @@ def register_admin_routes(app):
         if Company.query.filter_by(code=code).first():
             flash(f"Já existe empresa com o código {code}.", "warning")
             return _back("org")
-        c = Company(code=code, name=name,
-                    canonical_label=(request.form.get("canonical_label") or name).strip(),
-                    tol_rel=_float(request.form.get("tol_rel")),
-                    tol_abs=_float(request.form.get("tol_abs")),
-                    active=True)
+        c = Company(code=code, name=name, canonical_label=name, active=True)
         db.session.add(c)
         db.session.commit()
         # ja entra na carteira do time (evita empresa "invisivel" para o time)
@@ -639,9 +630,7 @@ def register_admin_routes(app):
             return _back("org")
         c.code = code
         c.name = (request.form.get("name") or c.name).strip()
-        c.canonical_label = (request.form.get("canonical_label") or "").strip() or c.name
-        c.tol_rel = _float(request.form.get("tol_rel"))
-        c.tol_abs = _float(request.form.get("tol_abs"))
+        c.canonical_label = c.name
         c.active = _bool(request.form.get("active"))
         db.session.commit()
         log_audit(current_user.id, "empresa_editada", "company", c.code)
