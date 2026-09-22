@@ -787,3 +787,39 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   table.tbl-empilha .input,table.tbl-empilha select{max-width:100%;}
 }
 
+
+/* ==========================================================================
+   ENTIDADES (Administração): uma linha por entidade, compacta. Antes cada
+   entidade ocupava duas ou três linhas e a lista ficava poluída.
+   ========================================================================== */
+.ent-cl-tit{padding:.45rem .8rem;}
+.ent-cl-nome{font-size:.9rem;}
+.ent-cl-info{font-size:.72rem;}
+.ent-seg-tit{padding:.3rem .8rem .2rem;}
+.ent-seg-tit span{font-size:.64rem;padding-left:.4rem;}
+.ent-linha{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) auto auto;
+  gap:.3rem .7rem;padding:.3rem .8rem .3rem 1.2rem;font-size:.8rem;}
+.ent-linha .ent-nome{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;display:block;min-width:0;}
+.ent-sel{gap:.45rem;min-width:0;}
+.ent-sel > span{min-width:0;}
+.ent-resp select{font-size:.75rem;padding:.2rem .35rem;min-height:28px;height:28px;}
+.ent-entregas{flex-wrap:nowrap;}
+.ent-pill span{font-size:.64rem;padding:.1rem .42rem;white-space:nowrap;}
+.ent-acoes .btn{font-size:.72rem;padding:0 .5rem;min-height:26px;height:26px;}
+.ent-acoes .btn svg{width:13px;height:13px;}
+.met-item,.ent-det{font-size:.78rem;}
+.ent-det label{font-size:.66rem;}
+.ent-det .input{font-size:.75rem;padding:.2rem .35rem;min-height:28px;}
+@media (max-width:640px){
+  .ent-entregas{flex-wrap:wrap;}
+  .ent-linha{font-size:.78rem;}
+}
+@media (min-width:641px) and (max-width:1100px){
+  /* tablet: continua uma linha só (a regra de celular fazia quebrar em três) */
+  .ent-linha{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto;
+    padding:.3rem .6rem .3rem .9rem;}
+  .ent-resp,.ent-entregas{grid-column:auto;}
+  .ent-pill span{font-size:.6rem;padding:.08rem .35rem;}
+  .ent-resp select{font-size:.72rem;}
+}
