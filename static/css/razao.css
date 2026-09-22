@@ -750,8 +750,19 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   .tbl-cron th:nth-child(5){width:13%;}
   .tbl-cron th:nth-child(6){width:6%;}
   .tbl-cron th:nth-child(7){width:11%;}
-  .tbl-cron .input,.tbl-cron select,.tbl-cron .esc,.tbl-cron .esc-sel{
-    width:100% !important;min-width:0 !important;max-width:100% !important;}
+  .tbl-cron td .input,.tbl-cron td select,.tbl-cron td select.input,
+  .tbl-cron .esc,.tbl-cron .esc-sel{
+    width:100% !important;min-width:0 !important;max-width:100% !important;
+    font-size:11.5px !important;padding:.25rem .4rem !important;
+    min-height:30px !important;height:30px;}
+  /* no iPhone/iPad o Safari dá zoom ao tocar num campo com menos de 16px;
+     ao focar, a letra volta a 16px e o zoom não acontece */
+  .tbl-cron td .input:focus,.tbl-cron td select:focus{font-size:16px !important;}
+  .tbl-cron .esc-pop > summary{min-height:30px;font-size:11.5px;padding:2px 7px;}
+  .tbl-cron .esc-lista,.tbl-cron .esc-item{font-size:12px;}
+  .tbl-cron td,.tbl-cron th{font-size:11.5px;}
+  .tbl-cron .cr-macro-tit{font-size:12.5px;}
+  .tbl-cron .cr-selo{font-size:10px;}
   .tbl-cron .cr-du{width:100% !important;text-align:right;}
   .tbl-cron .cr-ativo span{display:none;}
   .tbl-cron .cr-acoes{gap:4px;}

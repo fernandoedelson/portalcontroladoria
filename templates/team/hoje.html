@@ -92,7 +92,7 @@
   <div class="pes-lista">
     <div class="pes-lin pes-ind pes-cab">
       <span>Pessoa</span><span>Indicadores da competência</span>
-      <div class="pes-nums"><span title="Medidos">medidos</span><span title="Pendentes">pend.</span><span title="Peso somado">peso</span></div>
+      <div class="pes-nums"><span title="Indicadores já medidos">medidos</span><span title="Ainda sem medição">pend.</span><span title="Quanto do peso da pessoa já foi medido (o total dela é 100%)">% peso</span></div>
     </div>
     {% for l in metas %}
     <details class="pes-det">
@@ -104,7 +104,7 @@
         <span class="pes-nums">
           <span class="{{ 'n-ok' if l.medidos }}">{{ l.medidos }}</span>
           <span class="{{ 'n-a' if l.total - l.medidos }}">{{ l.total - l.medidos }}</span>
-          <span class="n-f">{{ l.peso|round|int }}%</span></span>
+          <span class="n-f" title="{{ l.peso_medido }}% de {{ l.peso|round|int }}%">{{ (l.peso_medido / l.peso * 100)|round|int if l.peso else 0 }}%</span></span>
       </summary>
       <div class="met-itens">
         {% for it in l.itens %}

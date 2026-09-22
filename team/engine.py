@@ -598,6 +598,8 @@ def metas_painel(comp, member_id=None):
         l["total"] = len(l["itens"])
         l["entregas_pend"] = sum(1 for x in l["itens"]
                                  if not x["mensal"] and x["outcome"] == "sem")
+        l["peso_medido"] = round(sum((x["ind"].weight or 0) for x in l["itens"]
+                                     if x["outcome"] not in ("sem", "na")), 1)
         l["peso"] = round(sum(x["ind"].weight or 0 for x in l["itens"]), 1)
     linhas.sort(key=lambda l: l["member"].name.lower())
     return linhas
