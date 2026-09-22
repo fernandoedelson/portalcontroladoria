@@ -32,9 +32,8 @@
   tr { break-inside: avoid; }
   td { padding: 5px 10px; border-top: 1px solid #e6e9e4; vertical-align: middle; }
   td.ent { font-weight: 600; width: 34%; }
-  td.resp { width: 26%; }
+  td.resp { width: 30%; }
   td.resp .exc { font-size: 7.5pt; color: #8a6420; border: 1px solid #B5832A; border-radius: 8px; padding: 0 5px; margin-left: 4px; }
-  td.ent-g { font-size: 8pt; color: #5b6770; width: 14%; }
   .pill { display: inline-block; font-size: 7.5pt; padding: 1px 6px; border-radius: 9px; margin: 1px 2px 1px 0;
           border: 1px solid #cfd4ce; color: #8b949b; }
   .pill.on { background: #B5832A; border-color: #B5832A; color: #fff; font-weight: 600; }
@@ -74,7 +73,6 @@
         <td class="ent">{{ a.company.name }}</td>
         <td class="resp">{% if a.member %}{{ a.member.name }}{% else %}<span class="vazio">a definir</span>{% endif %}
           {% if a.member_excecao %}<span class="exc">exceção</span>{% endif %}</td>
-        <td class="ent-g">{{ a.flow or '—' }}{% if a.responsibility %} · {{ a.responsibility }}{% endif %}</td>
         <td>{% for d in deliverables %}<span class="pill {{ 'on' if d in a.deliverables }}">{{ d }}</span>{% endfor %}</td>
       </tr>
       {% endfor %}
@@ -83,8 +81,8 @@
   </section>
   {% endfor %}
 
-  <footer>Entregas em destaque = exigidas. “Exceção” = responsável escolhido direto na entidade, diferente do responsável do cluster.
-    Coluna do meio: fluxo · responsabilidade.</footer>
+  <footer>Entregas em destaque = exigidas. “Exceção” = responsável escolhido direto na entidade,
+    diferente do responsável do cluster.</footer>
 </div>
 <script>
   // abre a janela de impressão sozinho (dá tempo das fontes/imagem carregarem)
