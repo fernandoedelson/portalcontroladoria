@@ -141,7 +141,8 @@
         <span class="met-tit">{{ it.ind.title }}</span>
         <span class="met-esc" title="mínimo · objetivo · superação">
           {% if it.ind.scale_min or it.ind.scale_obj or it.ind.scale_sup %}
-          <i>{{ it.ind.scale_min or '—' }}</i><i class="o">{{ it.ind.scale_obj or '—' }}</i><i>{{ it.ind.scale_sup or '—' }}</i>
+          {% set esc = it.ind.escala_curta %}
+          <i>{{ esc[0] }}</i><i class="o">{{ esc[1] }}</i><i>{{ esc[2] }}</i>
           {% else %}<i class="text-muted">sem escala</i>{% endif %}
         </span>
         <span class="met-res">

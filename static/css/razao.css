@@ -700,3 +700,5 @@ a.rg-col:hover{background:var(--surface-hi);}
 .med-chip.on{outline:2px solid var(--primary);}
 .med-chip:hover{background:var(--surface-hi);}
 a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
+.met-item{grid-template-columns:1fr 170px 190px 48px;}
+.met-esc{flex-wrap:wrap;justify-content:flex-start;}

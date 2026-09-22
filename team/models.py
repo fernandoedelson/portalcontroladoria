@@ -456,6 +456,17 @@ class Indicator(db.Model):
     definition = db.relationship("IndicatorDef")
 
 
+    @property
+    def escala_curta(self):
+        """['NOV','OUT','SET'] — tira o /26 quando os três valores são do mesmo
+        ano (fica mais limpo). Se a escala cruza anos, mantém o /26 e o /27."""
+        vals = [self.scale_min, self.scale_obj, self.scale_sup]
+        anos = {v.rsplit("/", 1)[1] for v in vals if v and "/" in v}
+        if len(anos) == 1 and all((v is None) or ("/" in v) for v in vals):
+            vals = [(v.rsplit("/", 1)[0] if v else v) for v in vals]
+        return [v or "—" for v in vals]
+
+
 class IndicatorResult(db.Model):
     __tablename__ = "indicator_results"
     id = db.Column(db.Integer, primary_key=True)
