@@ -390,6 +390,131 @@ def register_admin_routes(app):
         flash(f"Cluster “{nome}” excluído.", "success")
         return _back("carteira")
 
+    # ==================================================================
+    # SALVAR EM LOTE — membros, empresas, usuários (um botão por tabela;
+    # só as linhas marcadas como alteradas pela tela são gravadas)
+    # ==================================================================
+    def _linhas_alteradas(letra, modelo):
+        ids = [int(k[len(letra):-len("_mudou")]) for k, v in request.form.items()
+               if k.startswith(letra) and k.endswith("_mudou") and v == "1"
+               and k[len(letra):-len("_mudou")].isdigit()]
+        return [(o, (lambda o: lambda k, d=None: request.form.get(f"{letra}{o.id}_{k}", d))(o))
+                for o in (db.session.get(modelo, i) for i in ids) if o]
+
+    def _fecha_lote(ok, erros, rotulo, tab):
+        if erros:
+            db.session.rollback()
+            for e in erros:
+                flash(e, "danger")
+            flash("Nada foi salvo — corrija e salve de novo.", "warning")
+            return _back(tab)
+        db.session.commit()
+        log_audit(current_user.id, f"{rotulo}_lote", rotulo, f"{ok} alterados")
+        flash(f"{ok} {rotulo}(s) salvo(s)." if ok else "Nenhuma alteração para salvar.",
+              "success" if ok else "info")
+        return _back(tab)
+
+    @app.route("/admin/membros/salvar", methods=["POST"])
+    @admin_required
+    def admin_membros_salvar():
+        n, erros = 0, []
+        for m, g in _linhas_alteradas("m", TeamMember):
+            nome = (g("name") or "").strip()
+            if not nome:
+                erros.append("Membro sem nome."); continue
+            m.name = nome
+            m.user_id = _int(g("user_id"))
+            m.panel_id = _int(g("panel_id"))
+            m.is_manager = _bool(g("is_manager"))
+            m.whatsapp = _whats(g("whatsapp"))
+            m.active = _bool(g("active"))
+            n += 1
+        return _fecha_lote(n, erros, "membro", "time")
+
+    @app.route("/admin/empresas/salvar", methods=["POST"])
+    @admin_required
+    def admin_empresas_salvar():
+        n, erros = 0, []
+        linhas = _linhas_alteradas("e", Company)
+        for c, g in linhas:
+            code = (g("code") or c.code).strip().upper()
+            c.code = code
+            c.name = (g("name") or c.name).strip()
+            c.canonical_label = (g("canonical_label") or "").strip() or c.name
+            c.tol_rel = _float(g("tol_rel"))
+            c.tol_abs = _float(g("tol_abs"))
+            c.active = _bool(g("active"))
+            n += 1
+        cods = [x.code for x, _ in linhas]
+        with db.session.no_autoflush:
+            outros = {c.code for c in Company.query.with_entities(Company.id, Company.code)
+                      .filter(~Company.id.in_([x.id for x, _ in linhas] or [0]))}
+        for cod in sorted({x for x in cods if cods.count(x) > 1 or x in outros}):
+            erros.append(f"O código {cod} ficou repetido em mais de uma empresa.")
+        return _fecha_lote(n, erros, "empresa", "org")
+
+    @app.route("/admin/usuarios/salvar", methods=["POST"])
+    @admin_required
+    def admin_usuarios_salvar():
+        n, erros = 0, []
+        linhas = _linhas_alteradas("u", User)
+        for u, g in linhas:
+            email = (g("email") or u.email).strip().lower()
+            role = g("role") or u.role
+            active = _bool(g("active"))
+            if u.id == current_user.id and (role not in ("admin", "controladoria") or not active):
+                erros.append("Você não pode rebaixar nem inativar o próprio usuário."); continue
+            u.email = email
+            u.display_name = (g("display_name") or u.display_name).strip()
+            u.role = role
+            u.company_id = _int(g("company_id"))
+            u.active = active
+            n += 1
+        mudados = [x for x, _ in linhas]
+        mails = [x.email for x in mudados]
+        with db.session.no_autoflush:
+            outros = {r.email for r in User.query.with_entities(User.id, User.email)
+                      .filter(~User.id.in_([x.id for x in mudados] or [0]))}
+        for e in sorted({x for x in mails if mails.count(x) > 1 or x in outros}):
+            erros.append(f"O e-mail {e} ficou repetido em mais de um usuário.")
+        return _fecha_lote(n, erros, "usuário", "org")
+
+    @app.route("/admin/paineis/salvar", methods=["POST"])
+    @admin_required
+    def admin_paineis_salvar():
+        n, erros = 0, []
+        for p, g in _linhas_alteradas("p", Panel):
+            p.name = (g("name") or p.name).strip()
+            p.kind = g("kind") or p.kind
+            p.owner_member_id = _int(g("owner_member_id")) if p.kind == "pessoal" else None
+            p.active = _bool(g("active"))
+            n += 1
+        return _fecha_lote(n, erros, "painel", "time")
+
+    @app.route("/admin/segmentos/salvar", methods=["POST"])
+    @admin_required
+    def admin_segmentos_salvar():
+        n, erros, renomes = 0, [], []
+        linhas = _linhas_alteradas("s", Segment)
+        for seg, g in linhas:
+            novo = (g("name") or seg.name).strip()
+            if novo != seg.name:
+                renomes.append((seg.name, novo))
+            seg.name = novo
+            seg.active = _bool(g("active"))
+            seg.sort_order = _int(g("sort_order")) or seg.sort_order
+            n += 1
+        with db.session.no_autoflush:
+            outros = {r.name.lower() for r in Segment.query.with_entities(Segment.id, Segment.name)
+                      .filter(~Segment.id.in_([x.id for x, _ in linhas] or [0]))}
+        nomes = [x.name.lower() for x, _ in linhas]
+        for nm in sorted({x for x in nomes if nomes.count(x) > 1 or x in outros}):
+            erros.append(f"Segmento repetido: “{nm}”.")
+        if not erros:                    # renomear propaga para as entidades
+            for antigo, novo in renomes:
+                CompanyAssignment.query.filter_by(segment=antigo).update({"segment": novo})
+        return _fecha_lote(n, erros, "segmento", "org")
+
     @app.route("/admin/entidades/pdf")
     @admin_required
     def admin_entidades_pdf():

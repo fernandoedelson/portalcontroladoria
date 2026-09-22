@@ -20,7 +20,6 @@
      usamos o atributo form= dos campos apontando para estes) -->
 <div hidden>
   {% for m in members %}
-    <form id="mem-{{ m.id }}" method="post" action="/admin/member/{{ m.id }}">{{ csrf() }}</form>
     <form id="memdel-{{ m.id }}" method="post" action="/admin/member/{{ m.id }}/excluir"
           onsubmit="return confirm('Remover {{ m.name }}? Se tiver empresas na carteira, será apenas inativado.');">{{ csrf() }}</form>
   {% endfor %}
@@ -35,12 +34,10 @@
           onsubmit="return confirm('Remover {{ a.company.name }} da carteira?');">{{ csrf() }}</form>
   {% endfor %}
   {% for c in companies %}
-    <form id="emp-{{ c.id }}" method="post" action="/admin/company/{{ c.id }}">{{ csrf() }}</form>
     <form id="empdel-{{ c.id }}" method="post" action="/admin/company/{{ c.id }}/excluir"
           onsubmit="return confirm('Excluir {{ c.name }}? Se houver envios, será apenas inativada.');">{{ csrf() }}</form>
   {% endfor %}
   {% for u in users %}
-    <form id="usr-{{ u.id }}" method="post" action="/admin/user/{{ u.id }}">{{ csrf() }}</form>
     <form id="usrpw-{{ u.id }}" method="post" action="/admin/user/{{ u.id }}/senha"
           onsubmit="return confirm('Redefinir a senha de {{ u.email }} para {{ default_password }}?');">
       {{ csrf() }}<input type="hidden" name="password" value="{{ default_password }}"/></form>
@@ -79,36 +76,40 @@
   <div class="card">
     <h2>Membros ({{ members|length }})</h2>
     {% if members %}
+    <form method="post" action="/admin/membros/salvar" id="form-membros" class="form-lote">
+      {{ csrf() }}
+      <div class="barra-salvar" id="barra-membros"><span data-cont>Nenhuma alteração pendente</span>
+        <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap"><table class="tbl tbl-cartao">
       <thead><tr><th scope="col">Membro</th><th scope="col">Login</th><th scope="col">Painel</th><th scope="col">WhatsApp</th><th scope="col">Gestor</th><th scope="col">Ativo</th><th scope="col"></th></tr></thead>
       <tbody>
       {% for m in members %}
-      {% set F = 'mem-' ~ m.id %}
-      <tr>
-        <td><div class="flex gap-1 items-center">
+      {% set P = 'm' ~ m.id ~ '_' %}
+      <tr data-id="{{ m.id }}">
+        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><div class="flex gap-1 items-center">
           <span class="avatar-sm" style="background:{{ m.color }}">{{ m.initials }}</span>
-          <input class="input" form="{{ F }}" name="name" value="{{ m.name }}" style="min-width:150px;"/>
-          <input type="hidden" form="{{ F }}" name="sort_order" value="{{ m.sort_order }}"/>
-          <input type="hidden" form="{{ F }}" name="color" value="{{ m.color }}"/>
+          <input class="input" name="{{ P }}name" value="{{ m.name }}" style="min-width:150px;"/>
+          <input type="hidden" name="{{ P }}sort_order" value="{{ m.sort_order }}"/>
+          <input type="hidden" name="{{ P }}color" value="{{ m.color }}"/>
         </div></td>
-        <td data-rot="Login"><select class="input" form="{{ F }}" name="user_id"><option value="">—</option>
+        <td data-rot="Login"><select class="input" name="{{ P }}user_id"><option value="">—</option>
           {% for u in users %}{% if u.role != 'empresa' %}<option value="{{ u.id }}" {{ 'selected' if m.user_id==u.id }} title="{{ perfil(u.role) }}">{{ u.display_name }}</option>{% endif %}{% endfor %}
         </select></td>
-        <td data-rot="Painel"><select class="input" form="{{ F }}" name="panel_id"><option value="">— próprio —</option>
+        <td data-rot="Painel"><select class="input" name="{{ P }}panel_id"><option value="">— próprio —</option>
           {% for p in panels %}{% if p.active %}<option value="{{ p.id }}" {{ 'selected' if m.panel_id==p.id }}>{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
         </select></td>
-        <td data-rot="WhatsApp"><input class="input" type="tel" form="{{ F }}" name="whatsapp"
+        <td data-rot="WhatsApp"><input class="input" type="tel" name="{{ P }}whatsapp"
             value="{{ m.whatsapp or '' }}" placeholder="+55…" style="min-width:140px;"/></td>
-        <td class="text-center"><input type="checkbox" form="{{ F }}" name="is_manager" value="1" {{ 'checked' if m.is_manager }}/></td>
-        <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if m.active }}/></td>
+        <td class="text-center"><input type="checkbox" name="{{ P }}is_manager" value="1" {{ 'checked' if m.is_manager }}/></td>
+        <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if m.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
-          <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
-          <button class="btn btn-outline btn-sm btn-danger" type="submit" form="memdel-{{ m.id }}" title="Remover {{ m.name }}"
+                    <button class="btn btn-outline btn-sm btn-danger" type="submit" form="memdel-{{ m.id }}" title="Remover {{ m.name }}"
                   onclick="return confirm('Remover {{ m.name }}? Se tiver empresas na carteira, será apenas inativado.');">{{ icone("x") }}</button>
         </div></td>
       </tr>
       {% endfor %}
       </tbody></table></div>
+    </form>
     {% else %}
       <div class="empty-box"><div class="empty-ico">{{ icone('users', 28) }}</div>
         <p><strong>Nenhum membro cadastrado.</strong></p>
@@ -142,33 +143,36 @@
               onsubmit="return confirm('Remover o painel {{ p.name }}?');">{{ csrf() }}</form>
       {% endfor %}
     </div>
+    <form method="post" action="/admin/paineis/salvar" class="form-lote">
+      {{ csrf() }}
+      <div class="barra-salvar"><span data-cont>Nenhuma alteração pendente</span>
+        <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap mt-2"><table class="tbl">
       <thead><tr><th scope="col">Painel</th><th scope="col">Tipo</th><th scope="col">Dono</th><th scope="col" style="width:78px;">Ativo</th><th scope="col" style="width:150px;"></th></tr></thead>
       <tbody>
       {% for p in panels %}
-      {% set PF = 'pnl-' ~ p.id %}
-      <tr>
-        <td><div class="flex gap-1 items-center">
+      {% set P = 'p' ~ p.id ~ '_' %}
+      <tr data-id="{{ p.id }}">
+        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><div class="flex gap-1 items-center">
           <span class="avatar-sm" style="background:{{ p.color }}">{{ p.initials }}</span>
-          <input class="input" form="{{ PF }}" name="name" value="{{ p.name }}" style="min-width:150px;"/>
-          <input type="hidden" form="{{ PF }}" name="color" value="{{ p.color }}"/>
-          <input type="hidden" form="{{ PF }}" name="sort_order" value="{{ p.sort_order }}"/>
+          <input class="input" name="{{ P }}name" value="{{ p.name }}" style="min-width:150px;"/>
+          <input type="hidden" name="{{ P }}color" value="{{ p.color }}"/>
+          <input type="hidden" name="{{ P }}sort_order" value="{{ p.sort_order }}"/>
         </div></td>
-        <td><select class="input" form="{{ PF }}" name="kind" style="min-width:120px;">
+        <td><select class="input" name="{{ P }}kind" style="min-width:120px;">
           <option value="pessoal" {{ 'selected' if p.kind=='pessoal' }}>Pessoal</option>
           <option value="equipe" {{ 'selected' if p.kind=='equipe' }}>Equipe</option></select></td>
-        <td><select class="input" form="{{ PF }}" name="owner_member_id" style="min-width:150px;"><option value="">—</option>
+        <td><select class="input" name="{{ P }}owner_member_id" style="min-width:150px;"><option value="">—</option>
           {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if p.owner_member_id==m.id }}>{{ m.name }}</option>{% endfor %}</select></td>
-        <td class="text-center"><input type="checkbox" form="{{ PF }}" name="active" value="1" {{ 'checked' if p.active }}/></td>
+        <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if p.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
-          <form id="{{ PF }}" method="post" action="/admin/painel/{{ p.id }}">{{ csrf() }}</form>
-          <button class="btn btn-outline btn-sm" type="submit" form="{{ PF }}">Salvar</button>
           <button class="btn btn-outline btn-danger btn-sm" type="submit" form="pnldel-{{ p.id }}"
                   aria-label="Excluir {{ p.name }}">{{ icone('trash') }}</button>
         </div></td>
       </tr>
       {% endfor %}
       </tbody></table></div>
+    </form>
     {% endif %}
   </div>
 
@@ -453,55 +457,63 @@
 
   <div class="card">
     <h2>Empresas ({{ companies|length }})</h2>
+    <form method="post" action="/admin/empresas/salvar" id="form-empresas" class="form-lote">
+      {{ csrf() }}
+      <div class="barra-salvar" id="barra-empresas"><span data-cont>Nenhuma alteração pendente</span>
+        <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap"><table class="tbl tbl-cartao">
       <thead><tr><th scope="col">Código</th><th scope="col">Nome</th><th scope="col">Rótulo canônico</th><th class="num">ROL LTM (R$mi)</th><th scope="col">Tol. rel.</th><th scope="col">Tol. abs.</th><th scope="col">Ativa</th><th scope="col"></th></tr></thead>
       <tbody>
       {% for c in companies %}
-      {% set F = 'emp-' ~ c.id %}
-      <tr>
-        <td><input class="input" form="{{ F }}" name="code" value="{{ c.code }}" style="width:110px;"/></td>
-        <td><input class="input" form="{{ F }}" name="name" value="{{ c.name }}" style="min-width:170px;"/></td>
-        <td><input class="input" form="{{ F }}" name="canonical_label" value="{{ c.canonical_label or '' }}" style="min-width:150px;"/></td>
+      {% set P = 'e' ~ c.id ~ '_' %}
+      <tr data-id="{{ c.id }}">
+        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}code" value="{{ c.code }}" style="width:110px;"/></td>
+        <td><input class="input" name="{{ P }}name" value="{{ c.name }}" style="min-width:170px;"/></td>
+        <td><input class="input" name="{{ P }}canonical_label" value="{{ c.canonical_label or '' }}" style="min-width:150px;"/></td>
         <td class="num">{{ '{:,.0f}'.format((c.rol_ltm or 0)/1e6) }}</td>
-        <td><input class="input" form="{{ F }}" name="tol_rel" value="{{ c.tol_rel if c.tol_rel is not none else '' }}" placeholder="0.0001" style="width:90px;"/></td>
-        <td><input class="input" form="{{ F }}" name="tol_abs" value="{{ c.tol_abs if c.tol_abs is not none else '' }}" placeholder="1000" style="width:95px;"/></td>
-        <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if c.active }}/></td>
+        <td><input class="input" name="{{ P }}tol_rel" value="{{ c.tol_rel if c.tol_rel is not none else '' }}" placeholder="0.0001" style="width:90px;"/></td>
+        <td><input class="input" name="{{ P }}tol_abs" value="{{ c.tol_abs if c.tol_abs is not none else '' }}" placeholder="1000" style="width:95px;"/></td>
+        <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if c.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
-          <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
-          <button class="btn btn-outline btn-sm btn-danger" type="submit" form="empdel-{{ c.id }}" title="Excluir">{{ icone("x") }}</button>
+                    <button class="btn btn-outline btn-sm btn-danger" type="submit" form="empdel-{{ c.id }}" title="Excluir">{{ icone("x") }}</button>
         </div></td>
       </tr>
       {% endfor %}
       </tbody></table></div>
+    </form>
     <p class="help-txt mt-1">Tolerância efetiva = max(absoluta, relativa × ROL LTM). Vazio usa o padrão configurado em “Template &amp; regras”.</p>
   </div>
 
   <div class="card">
     <h2>Usuários ({{ users|length }})</h2>
+    <form method="post" action="/admin/usuarios/salvar" id="form-usuarios" class="form-lote">
+      {{ csrf() }}
+      <div class="barra-salvar" id="barra-usuarios"><span data-cont>Nenhuma alteração pendente</span>
+        <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap"><table class="tbl tbl-cartao">
       <thead><tr><th scope="col">Nome</th><th scope="col">E-mail</th><th scope="col">Perfil</th><th scope="col">Empresa</th><th scope="col">Ativo</th><th scope="col">Último acesso</th><th scope="col"></th></tr></thead>
       <tbody>
       {% for u in users %}
-      {% set F = 'usr-' ~ u.id %}
-      <tr>
-        <td><input class="input" form="{{ F }}" name="display_name" value="{{ u.display_name }}" style="min-width:140px;"/></td>
-        <td><input class="input" form="{{ F }}" type="email" name="email" value="{{ u.email }}" style="min-width:190px;"/></td>
-        <td><select class="input" form="{{ F }}" name="role">
+      {% set P = 'u' ~ u.id ~ '_' %}
+      <tr data-id="{{ u.id }}">
+        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}display_name" value="{{ u.display_name }}" style="min-width:140px;"/></td>
+        <td><input class="input" type="email" name="{{ P }}email" value="{{ u.email }}" style="min-width:190px;"/></td>
+        <td><select class="input" name="{{ P }}role">
           <option value="empresa" {{ 'selected' if u.role=='empresa' }}>Empresa</option>
           <option value="profissional" {{ 'selected' if u.role=='profissional' }}>Profissional</option>
           <option value="controladoria" {{ 'selected' if u.role=='controladoria' }}>Controladoria</option>
           <option value="admin" {{ 'selected' if u.role=='admin' }}>Admin</option></select></td>
-        <td><select class="input" form="{{ F }}" name="company_id"><option value="">—</option>
+        <td><select class="input" name="{{ P }}company_id"><option value="">—</option>
           {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if u.company_id==c.id }}>{{ c.name }}</option>{% endfor %}</select></td>
-        <td class="text-center"><input type="checkbox" form="{{ F }}" name="active" value="1" {{ 'checked' if u.active }}/></td>
+        <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if u.active }}/></td>
         <td class="text-sm text-muted">{{ (u.last_login|local).strftime('%d/%m/%y %H:%M') if u.last_login else 'nunca' }}</td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
-          <button class="btn btn-outline btn-sm" type="submit" form="{{ F }}">Salvar</button>
-          <button class="btn btn-outline btn-sm" type="submit" form="usrpw-{{ u.id }}" title="Redefinir senha">{{ icone("key") }}</button>
+                    <button class="btn btn-outline btn-sm" type="submit" form="usrpw-{{ u.id }}" title="Redefinir senha">{{ icone("key") }}</button>
         </div></td>
       </tr>
       {% endfor %}
       </tbody></table></div>
+    </form>
     <p class="help-txt mt-1">Redefinir a senha aplica “{{ default_password }}” e força a troca no próximo acesso.</p>
   </div>
 
@@ -520,24 +532,27 @@
               onsubmit="return confirm('Remover o segmento {{ s.name }}?');">{{ csrf() }}</form>
       {% endfor %}
     </div>
+    <form method="post" action="/admin/segmentos/salvar" class="form-lote">
+      {{ csrf() }}
+      <div class="barra-salvar"><span data-cont>Nenhuma alteração pendente</span>
+        <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th scope="col">Segmento</th><th scope="col" style="width:90px;">Ordem</th><th scope="col" style="width:80px;">Ativo</th><th scope="col" style="width:150px;"></th></tr></thead>
       <tbody>
       {% for s in seg_objs %}
-      {% set SF = 'seg-' ~ s.id %}
-      <tr>
-        <td><input class="input" form="{{ SF }}" name="name" value="{{ s.name }}"/></td>
-        <td><input class="input" form="{{ SF }}" type="number" name="sort_order" value="{{ s.sort_order }}"/></td>
-        <td class="text-center"><input type="checkbox" form="{{ SF }}" name="active" value="1" {{ 'checked' if s.active }}/></td>
+      {% set P = 's' ~ s.id ~ '_' %}
+      <tr data-id="{{ s.id }}">
+        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}name" value="{{ s.name }}"/></td>
+        <td><input class="input" type="number" name="{{ P }}sort_order" value="{{ s.sort_order }}"/></td>
+        <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if s.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
-          <form id="{{ SF }}" method="post" action="/admin/segmento/{{ s.id }}">{{ csrf() }}</form>
-          <button class="btn btn-outline btn-sm" type="submit" form="{{ SF }}">Salvar</button>
           <button class="btn btn-outline btn-danger btn-sm" type="submit" form="segdel-{{ s.id }}"
                   aria-label="Excluir {{ s.name }}">{{ icone('trash') }}</button>
         </div></td>
       </tr>
       {% endfor %}
       </tbody></table></div>
+    </form>
     {% else %}<p class="text-muted text-sm">Nenhum segmento cadastrado.</p>{% endif %}
   </div>
 </section>
@@ -634,6 +649,24 @@
 </section>
 
 <script>
+// ==== Tabelas com "Salvar alterações" único (membros, empresas, usuários) ====
+document.querySelectorAll('form.form-lote').forEach(function(form){
+  var barra=form.querySelector('.barra-salvar'), cont=barra.querySelector('[data-cont]'), ini=new Map();
+  form.querySelectorAll('tr[data-id] input,tr[data-id] select').forEach(function(el){
+    if(el.type==='hidden') return; ini.set(el, el.type==='checkbox'?el.checked:el.value); });
+  function revisar(){
+    var alt=new Set();
+    ini.forEach(function(v,el){ if((el.type==='checkbox'?el.checked:el.value)!==v) alt.add(el.closest('tr')); });
+    form.querySelectorAll('tr[data-id]').forEach(function(tr){
+      var on=alt.has(tr); tr.classList.toggle('linha-alterada',on); tr.querySelector('[data-mudou]').value=on?'1':'0'; });
+    var n=alt.size; barra.classList.toggle('ativa',n>0);
+    cont.textContent=n===0?'Nenhuma alteração pendente':(n===1?'1 linha alterada — não esqueça de salvar':n+' linhas alteradas — não esqueça de salvar');
+    return n;
+  }
+  form.addEventListener('input',revisar); form.addEventListener('change',revisar);
+  var salvando=false; form.addEventListener('submit',function(){ salvando=true; });
+  window.addEventListener('beforeunload',function(e){ if(!salvando && revisar()>0){ e.preventDefault(); e.returnValue=''; } });
+});
 // ==== Entidades: abrir/fechar detalhes ====
 document.querySelectorAll('.ent-mais').forEach(function(b){
   b.addEventListener('click', function(){
