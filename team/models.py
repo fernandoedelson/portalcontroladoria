@@ -350,6 +350,13 @@ class ClosingTemplateItem(db.Model):
         self.insumo_codes_json = json.dumps(list(value or []), ensure_ascii=False)
 
     @property
+    def du_efetivo(self):
+        """Nº do dia útil do mês seguinte em que vence — 'DU fixo' é o próprio
+        número; '5º DU ±n' e 'insumo ±n' contam a partir do 5º DU."""
+        off = self.due_offset if self.due_offset is not None else 0
+        return off if self.due_base == "fixed_bd" else 5 + off
+
+    @property
     def due_label(self):
         base = {"deadline": "5º DU", "insumo": "insumo", "fixed_bd": "DU fixo"}.get(
             self.due_base, self.due_base)
