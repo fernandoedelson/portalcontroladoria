@@ -65,7 +65,8 @@
   </div>
   <div class="grid-2">
     <div class="form-row"><label class="field-label">Resultado</label>
-      <select class="input" name="outcome" id="med-geral">
+      <select class="input" name="outcome" id="med-geral" required>
+        <option value="" selected disabled>— selecione o resultado —</option>
         {% for k, v in ROT.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
     <div class="form-row"><label class="field-label">Valor / detalhe</label>
       <input class="input" name="value_label" placeholder="Ex.: entregue em D+1"/></div>

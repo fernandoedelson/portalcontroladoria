@@ -1051,7 +1051,11 @@ def register_team_routes(app):
         if not comp and not periodo:
             flash("Informe a competência ou o período da medição.", "danger")
             return redirect(url_for("team_indicador_medir", def_id=d.id))
-        geral = request.form.get("outcome") or "na"
+        geral = request.form.get("outcome")
+        if geral not in ("superado", "atingido", "parcial", "nao_atingido", "na"):
+            flash("Escolha o resultado da medição.", "danger")
+            return redirect(url_for("team_indicador_medir", def_id=d.id,
+                                    competency_id=comp.id if comp else None))
         valor = (request.form.get("value_label") or "").strip() or None
         nota = (request.form.get("note") or "").strip() or None
         file = request.files.get("evidence")
@@ -1137,11 +1141,15 @@ def register_team_routes(app):
     @team_required
     def team_indicador_result(iid):
         i = db.session.get(Indicator, iid) or abort(404)
+        outcome = request.form.get("outcome")
+        if outcome not in ("superado", "atingido", "parcial", "nao_atingido", "na"):
+            flash("Escolha o resultado da medição.", "danger")
+            return redirect(url_for("team_indicador", iid=i.id))
         r = IndicatorResult(
             indicator_id=i.id,
             competency_id=_int(request.form.get("competency_id")),
             period_label=request.form.get("period_label") or None,
-            outcome=request.form.get("outcome") or "na",
+            outcome=outcome,
             value_label=request.form.get("value_label") or None,
             note=request.form.get("note") or None,
             recorded_by=current_user.id)
