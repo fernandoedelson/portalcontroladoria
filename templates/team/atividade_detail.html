@@ -24,6 +24,14 @@
       <tr><th>Projeto</th><td>{% if a.project %}<a href="/projeto/{{ a.project_id }}">{{ a.project.name }}</a>{% else %}—{% endif %}</td></tr>
       <tr><th>Início</th><td>{{ a.start_date.strftime('%d/%m/%Y') if a.start_date else '—' }}</td></tr>
       <tr><th>Prazo</th><td>{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">provisório (aguarda insumo)</span>{% endif %}</td></tr>
+      {% if a.nova_data %}
+      <tr><th>Nova data combinada</th><td>{{ a.nova_data.strftime('%d/%m/%Y') }}
+        {% set cumpr = a.nova_data_cumprida() %}
+        {% if cumpr is none %}<span class="badge-soft">{{ 'sem cobrança até lá' if a.cobranca_pausada() else 'nova data vencida — cobrança voltou' }}</span>
+        {% elif cumpr %}<span class="st st-aprovado">cumprida</span>
+        {% else %}<span class="st st-reprovado">não cumprida</span>{% endif %}
+        <div class="text-sm text-muted">{{ a.nova_data_motivo }}</div></td></tr>
+      {% endif %}
       <tr><th>Origem</th><td>{{ {'manual':'Manual','template':'Agenda de fechamento','indicador':'Indicador'}.get(a.origin, a.origin) }}{% if a.auto_metric %} · <span class="badge-soft">auto-métrica</span>{% endif %}</td></tr>
       <tr><th>Concluída em</th><td>{{ (a.done_at|local).strftime('%d/%m/%Y %H:%M') if a.done_at else '—' }}</td></tr>
     </table>
@@ -46,6 +54,25 @@
     {% endif %}
     <div class="mt-2"><a href="/atividades" class="btn btn-outline btn-sm">← Voltar às atividades</a></div>
   </div>
+</div>
+
+<div class="card">
+  <h2>Combinada nova data <span class="muted">· dependência de terceiro: para a cobrança, mantém o prazo</span></h2>
+  <p class="help-txt">O prazo original continua valendo e a atividade segue atrasada no portal.
+    Só as cobranças por e-mail, WhatsApp e push param até a data combinada. O gestor é avisado.</p>
+  <form method="post" action="/atividade/{{ a.id }}/nova-data" class="adm-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row"><label class="field-label">Nova data combinada *</label>
+      <input class="input" type="date" name="nova_data" value="{{ a.nova_data.isoformat() if a.nova_data else '' }}" required/></div>
+    <div class="form-row" style="grid-column:span 2;"><label class="field-label">Combinado *</label>
+      <input class="input" name="motivo" maxlength="240" required placeholder="Ex.: Eldorado envia o balancete dia 20"
+             value="{{ a.nova_data_motivo or '' }}"/></div>
+    <div class="form-row" style="align-self:end;"><div class="flex gap-1">
+      <button class="btn btn-primary" type="submit">{{ icone('calendar') }} {{ 'Atualizar combinado' if a.nova_data else 'Combinar nova data' }}</button>
+      {% if a.nova_data %}<button class="btn btn-outline" type="submit" name="remover" value="1"
+        onclick="return confirm('Retirar a nova data? A cobrança volta ao normal.');">Retirar</button>{% endif %}
+    </div></div>
+  </form>
 </div>
 
 <div class="card">

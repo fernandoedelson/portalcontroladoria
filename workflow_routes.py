@@ -62,6 +62,9 @@ def weekly_digest_text():
             f"  Em andamento: {andamento}",
             f"  Atrasadas: {len(atrasadas)}",
         ]
+        pausadas = [a for a in acts if a.cobranca_pausada(hoje)]
+        if pausadas:
+            linhas.append(f"  Com nova data combinada (sem cobrança): {len(pausadas)}")
     if comp.deadline:
         prazo = comp.deadline.strftime('%d/%m/%Y')
         pendentes = total - concluidas

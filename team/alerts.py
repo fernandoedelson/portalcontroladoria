@@ -315,6 +315,10 @@ def run_alert_cycle(ref=None, dry_run=False):
                  .filter(Activity.due_provisional.is_(False))
                  .filter(Activity.due_date.isnot(None)).all())
 
+    # "Combinada nova data": fora do app, nada é cobrado até a data combinada
+    summary["pausadas"] = sum(1 for a in open_acts if a.cobranca_pausada(ref))
+    open_acts = [a for a in open_acts if not a.cobranca_pausada(ref)]
+
     # agrupa contagem por membro para a mensagem generica do WhatsApp
     per_member_open = {}
     for a in open_acts:

@@ -11,7 +11,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from config import Config
-from models import (db, User, Company, Competency, log_audit)
+from models import (db, User, Company, Competency, log_audit, notify)
 from team.models import (TeamMember, CompanyAssignment, Project, Milestone,
                          Activity, ClosingTemplateItem, Indicator, IndicatorResult,
                          AlertChannelSetting, AlertLog, ALERT_EVENTS,
@@ -342,6 +342,54 @@ def register_team_routes(app):
                                competencies=_comps(), projects=_projects(),
                                kinds=KINDS, priorities=PRIORITIES,
                                preset_project=request.args.get("project_id", type=int))
+
+    @app.route("/atividade/<int:aid>/nova-data", methods=["POST"])
+    @team_required
+    def team_atividade_nova_data(aid):
+        """Combina uma nova data com quem depende de terceiro.
+
+        O prazo original continua valendo (a atividade segue atrasada no app);
+        só as cobranças por e-mail/WhatsApp/push param até a data combinada.
+        Quem registra é o responsável; o gestor é avisado.
+        """
+        a = db.session.get(Activity, aid) or abort(404)
+        sid = _scoped_member_id()
+        if sid is not None and a.member_id != sid:
+            abort(403)
+        if request.form.get("remover") == "1":
+            a.nova_data = a.nova_data_motivo = a.nova_data_by = a.nova_data_at = None
+            db.session.commit()
+            flash("Nova data retirada — a cobrança volta ao normal.", "success")
+            return redirect(url_for("team_atividade", aid=aid))
+        nova = request.form.get("nova_data")
+        motivo = (request.form.get("motivo") or "").strip()
+        try:
+            nova = date.fromisoformat(nova) if nova else None
+        except ValueError:
+            nova = None
+        if not nova:
+            flash("Informe a nova data combinada.", "danger")
+            return redirect(url_for("team_atividade", aid=aid))
+        if not motivo:
+            flash("Explique o combinado (ex.: “Eldorado envia dia 20”).", "danger")
+            return redirect(url_for("team_atividade", aid=aid))
+        a.nova_data, a.nova_data_motivo = nova, motivo[:240]
+        a.nova_data_by, a.nova_data_at = current_user.id, fuso.agora()
+        db.session.commit()
+        # avisa o gestor (não é cobrança: é informação de que houve repactuação)
+        quem = (a.member.name if a.member else current_user.display_name)
+        for g in TeamMember.query.filter_by(is_manager=True, active=True).all():
+            if g.user_id and g.id != a.member_id:
+                notify(g.user_id, "Nova data combinada",
+                       f"{quem} combinou nova data para “{a.title[:90]}”: "
+                       f"{nova.strftime('%d/%m/%Y')} (prazo original "
+                       f"{a.due_date.strftime('%d/%m/%Y') if a.due_date else '—'}). {motivo[:120]}",
+                       kind="prazo", url=f"/atividade/{a.id}")
+        log_audit(current_user.id, "nova_data_combinada", "activity", str(a.id))
+        flash(f"Nova data combinada para {nova.strftime('%d/%m/%Y')}. "
+              "A atividade continua atrasada no portal, mas não será cobrada por e-mail, "
+              "WhatsApp ou push até lá.", "success")
+        return redirect(url_for("team_atividade", aid=aid))
 
     @app.route("/atividade/<int:aid>")
     @team_required

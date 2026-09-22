@@ -115,6 +115,10 @@ _COLUNAS_NOVAS = [
     ("company_assignments", "member_excecao", "BOOLEAN DEFAULT 0"),
     ("closing_template_items", "macro", "VARCHAR(30)"),
     ("segments", "prazo_du", "INTEGER DEFAULT 5"),
+    ("activities", "nova_data", "DATE"),
+    ("activities", "nova_data_motivo", "VARCHAR(240)"),
+    ("activities", "nova_data_by", "INTEGER"),
+    ("activities", "nova_data_at", "DATETIME"),
 ]
 
 

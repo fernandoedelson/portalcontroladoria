@@ -199,6 +199,14 @@ class Activity(db.Model):
     done_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     auto_metric = db.Column(db.Boolean, default=False)   # concluir/on-time derivado do fechamento
 
+    # "Combinada nova data": o prazo original CONTINUA valendo (a atividade segue
+    # atrasada no app), mas as cobranças por e-mail/WhatsApp/push param até a data
+    # combinada. Serve para dependência de terceiro sem encher a caixa de entrada.
+    nova_data = db.Column(db.Date)
+    nova_data_motivo = db.Column(db.String(240))
+    nova_data_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    nova_data_at = db.Column(db.DateTime)
+
     sort_order = db.Column(db.Integer, default=100)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -248,6 +256,19 @@ class Activity(db.Model):
         if self.is_due_today(ref):
             return "vence_hoje"
         return self.status  # pendente | em_andamento
+
+    def cobranca_pausada(self, ref=None):
+        """Tem nova data combinada ainda no futuro? Então não cobra por fora do app."""
+        if not self.nova_data or self.status in ("concluida", "cancelada"):
+            return False
+        return self.nova_data >= (ref or fuso.hoje())
+
+    def nova_data_cumprida(self):
+        """None = ainda aberta; True/False = concluída dentro ou fora da nova data."""
+        if not self.nova_data or self.status != "concluida":
+            return None
+        fim = (fuso.local(self.done_at).date() if self.done_at else fuso.hoje())
+        return fim <= self.nova_data
 
     def days_to_due(self, ref=None):
         ref = ref or fuso.hoje()

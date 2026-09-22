@@ -84,7 +84,7 @@
         <td class="ta-prio"><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
         <td class="ta-prazo">{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">prov.</span>{% endif %}</td>
         {% set est = a.effective_status(today) %}
-        <td class="ta-st"><span class="st st-{{ est }}">{{ stlabels.get(est, est) }}{% if est == 'atrasada' %} · {{ -a.days_to_due(today) }} dia{{ '' if -a.days_to_due(today) == 1 else 's' }}{% endif %}</span></td>
+        <td class="ta-st">{% if a.nova_data %}<span class="badge-soft" title="Combinado: {{ a.nova_data_motivo }}">nova data {{ a.nova_data.strftime('%d/%m') }}{% if a.nova_data_cumprida() is not none %} · {{ 'cumprida' if a.nova_data_cumprida() else 'não cumprida' }}{% endif %}</span><br>{% endif %}<span class="st st-{{ est }}">{{ stlabels.get(est, est) }}{% if est == 'atrasada' %} · {{ -a.days_to_due(today) }} dia{{ '' if -a.days_to_due(today) == 1 else 's' }}{% endif %}</span></td>
         <td class="text-right ta-acoes"><div class="flex gap-1" style="justify-content:flex-end;">
           {% if a.status in ['pendente','em_andamento','bloqueada'] %}
           <button class="btn btn-primary btn-sm" type="submit"
