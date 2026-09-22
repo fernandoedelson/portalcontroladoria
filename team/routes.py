@@ -248,11 +248,13 @@ def register_team_routes(app):
         # visão por pessoa (só para quem enxerga o time inteiro)
         pessoas = (engine.regua_por_pessoa(comp, ref, membros=members)
                    if comp and _scoped_member_id() is None else [])
+        metas = engine.metas_painel(comp, member_id=_scoped_member_id() or sel)
         # barra de cada pessoa proporcional à maior carga do time
         maior = max([b["f"]["aberta"] for b in board] + [1])
         return render_template("team/hoje.html", panel=panel, members=members,
                                sel=sel, tipo=tipo, comp=comp, farol=fr, board=board,
-                               mm=mm, today=ref, regua=rg, pessoas=pessoas, maior_carga=maior,
+                               mm=mm, today=ref, regua=rg, pessoas=pessoas, metas=metas,
+                               maior_carga=maior,
                                du_entre=engine.business_days_between)
 
     # ==================================================================
@@ -965,10 +967,22 @@ def register_team_routes(app):
         # os comuns a vários painéis primeiro
         defs.sort(key=lambda d: (-len(usos[d.id]), d.sort_order or 100, d.title))
         sel = db.session.get(IndicatorDef, request.args.get("def_id", type=int) or 0)
-        comp = _current_competency()
+        comp_id = request.args.get("competency_id", type=int)
+        comp = db.session.get(Competency, comp_id) if comp_id else _current_competency()
+        # fila: o que ainda não foi medido nesta competência (a ordem do trabalho)
+        pendentes, medidos = [], []
+        if comp:
+            from team.models import IndicatorResult
+            feitos = {r.indicator_id for r in IndicatorResult.query.filter_by(
+                competency_id=comp.id).filter(IndicatorResult.outcome != "na").all()}
+            for d in defs:
+                faltam = [i for i in usos[d.id] if i.id not in feitos]
+                (pendentes if faltam else medidos).append({"d": d, "faltam": len(faltam),
+                                                           "total": len(usos[d.id])})
         return render_template("team/indicador_medir.html", defs=defs, usos=usos,
                                sel=sel, inds=usos.get(sel.id, []) if sel else [],
-                               comps=_comps(), comp_atual=comp)
+                               comps=_comps(), comp_atual=comp,
+                               pendentes=pendentes, medidos=medidos)
 
     def _grava_medicao():
         from team.models import IndicatorDef

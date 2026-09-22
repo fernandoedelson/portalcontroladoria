@@ -537,3 +537,48 @@ def day_panel(ref=None, member_id=None, kind_filter=None):
     soon.sort(key=key)
     return {"overdue": overdue, "today": today, "soon": soon,
             "n_overdue": len(overdue), "n_today": len(today), "n_soon": len(soon)}
+
+
+def metas_painel(comp, member_id=None):
+    """Metas (indicadores) da competência para o Painel do Dia.
+
+    Uma linha por indicador ativo com dono: escala, resultado da competência (se
+    já medido) e peso. A medição é sempre manual, feita pelo líder — aqui é só
+    visibilidade, inclusive para a própria pessoa.
+    """
+    from team.models import Indicator, IndicatorResult, TeamMember
+    q = Indicator.query.filter_by(active=True).filter(Indicator.member_id.isnot(None))
+    if member_id:
+        q = q.filter(Indicator.member_id == member_id)
+    inds = q.all()
+    if not inds:
+        return []
+    res = {}
+    if comp:
+        for r in (IndicatorResult.query
+                  .filter(IndicatorResult.indicator_id.in_([i.id for i in inds]))
+                  .filter(IndicatorResult.competency_id == comp.id).all()):
+            res[r.indicator_id] = r
+    membros = {m.id: m for m in TeamMember.query.all()}
+    por_membro = {}
+    for i in inds:
+        m = membros.get(i.member_id)
+        if not m or not m.active:
+            continue
+        linha = por_membro.setdefault(i.member_id, {"member": m, "itens": [],
+                                                    "medidos": 0, "atingidos": 0})
+        r = res.get(i.id)
+        linha["itens"].append({"ind": i, "res": r,
+                               "outcome": (r.outcome if r else "sem"),
+                               "valor": (r.value_label if r else None)})
+        if r and r.outcome != "na":
+            linha["medidos"] += 1
+            if r.outcome == "atingido":
+                linha["atingidos"] += 1
+    linhas = list(por_membro.values())
+    for l in linhas:
+        l["itens"].sort(key=lambda x: (x["ind"].sort_order or 100, x["ind"].title))
+        l["total"] = len(l["itens"])
+        l["peso"] = round(sum(x["ind"].weight or 0 for x in l["itens"]), 1)
+    linhas.sort(key=lambda l: l["member"].name.lower())
+    return linhas

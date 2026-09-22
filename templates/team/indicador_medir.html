@@ -27,6 +27,27 @@
   {% endif %}
 </div>
 
+{% if comp_atual and (pendentes or medidos) %}
+<div class="card">
+  <h2>Fila de {{ comp_atual.label }}</h2>
+  <p class="text-muted text-sm mb-2">{{ pendentes|length }} indicador(es) sem medição ·
+    {{ medidos|length }} já medido(s). Clique para abrir e gravar.</p>
+  <div class="med-fila">
+    {% for p in pendentes %}
+    <a class="med-chip pend{{ ' on' if sel and sel.id == p.d.id }}"
+       href="/indicadores/medir?def_id={{ p.d.id }}&competency_id={{ comp_atual.id }}">
+      <span>{{ p.d.title }}</span>
+      <i>{{ p.faltam }}/{{ p.total }} painel(éis)</i></a>
+    {% endfor %}
+    {% for p in medidos %}
+    <a class="med-chip feito{{ ' on' if sel and sel.id == p.d.id }}"
+       href="/indicadores/medir?def_id={{ p.d.id }}&competency_id={{ comp_atual.id }}">
+      {{ icone('check', 13) }} <span>{{ p.d.title }}</span></a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% if sel %}
 <form method="post" enctype="multipart/form-data" class="card" id="med-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>

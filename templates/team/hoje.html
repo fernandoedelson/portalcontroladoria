@@ -118,6 +118,49 @@
   </div>
 </section>
 {% endif %}
+{% if metas %}
+<section class="card regua rg-metas" aria-label="Metas do mês">
+  <div class="rg-topo">
+    <div><div class="rot">Metas · {{ comp.label if comp else 'sem competência' }}</div>
+      <div class="rg-pct"><b>{{ metas|sum(attribute='medidos') }}/{{ metas|sum(attribute='total') }}</b>
+        <span>indicador(es) já medido(s) na competência</span></div></div>
+    {% if current_user.is_controladoria %}
+    <a class="btn btn-outline btn-sm" href="/indicadores/medir">{{ icone('check') }} Medir indicadores</a>
+    {% endif %}
+  </div>
+  {% for l in metas %}
+  <div class="met-bloco">
+    <div class="met-pessoa">
+      <span class="mini-av" style="background:{{ l.member.color }}">{{ l.member.initials }}</span>
+      <span class="met-nome">{{ l.member.name }}</span>
+      <span class="text-muted text-sm">{{ l.total }} indicador(es) · peso {{ l.peso }}%</span>
+    </div>
+    <div class="met-itens">
+      {% for it in l.itens %}
+      <div class="met-item">
+        <span class="met-tit">{{ it.ind.title }}</span>
+        <span class="met-esc" title="mínimo · objetivo · superação">
+          {% if it.ind.scale_min or it.ind.scale_obj or it.ind.scale_sup %}
+          <i>{{ it.ind.scale_min or '—' }}</i><i class="o">{{ it.ind.scale_obj or '—' }}</i><i>{{ it.ind.scale_sup or '—' }}</i>
+          {% else %}<i class="text-muted">sem escala</i>{% endif %}
+        </span>
+        <span class="met-res">
+          {% if it.outcome == 'sem' %}{% if current_user.is_controladoria %}<a class="st st-pendente met-medir"
+            href="/indicadores/medir?def_id={{ it.ind.indicator_def_id or 0 }}{{ '&competency_id=%d'|format(comp.id) if comp }}"
+            title="Medir “{{ it.ind.title }}”">medir agora</a>{% else %}<span class="st st-pendente">não medido</span>{% endif %}
+          {% else %}<span class="st st-{{ 'aprovado' if it.outcome=='atingido' else ('validando' if it.outcome=='parcial' else ('cancelada' if it.outcome=='na' else 'reprovado')) }}">
+            {{ {'atingido':'atingido','parcial':'parcial','nao_atingido':'não atingido','na':'não se aplica'}.get(it.outcome, it.outcome) }}</span>
+            {% if it.valor %}<span class="text-muted text-sm">{{ it.valor }}</span>{% endif %}
+          {% endif %}
+        </span>
+        <span class="met-peso">{{ it.ind.weight|round|int if it.ind.weight else '—' }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 {% elif comp %}
 <section class="card vazio-card">
   <h2>Nenhuma atividade de fechamento em {{ comp.label }}</h2>

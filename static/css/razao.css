@@ -672,3 +672,31 @@ a.rg-col:hover{background:var(--surface-hi);}
 .pes-bar.bn{background:var(--primary-2);opacity:.55;}
 .pes-cab .pes-nums{font-size:10px;gap:6px;}
 @media (max-width:760px){ .pes-dia-cab i{display:none;} .pes-cab{font-size:10px;} }
+/* Metas no Painel do Dia */
+.met-bloco{border-top:1px solid var(--border);padding:10px 0 4px;}
+.met-pessoa{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.met-pessoa .mini-av{width:22px;height:22px;font-size:.62rem;}
+.met-nome{font-weight:600;}
+.met-item{display:grid;grid-template-columns:1fr 120px 200px 48px;gap:10px;align-items:center;
+  padding:5px 0 5px 30px;font-size:14px;}
+.met-item + .met-item{border-top:1px dashed var(--border);}
+.met-tit{min-width:0;overflow-wrap:anywhere;}
+.met-esc{display:flex;gap:4px;font-family:var(--r-mono);font-size:11px;color:var(--text-soft);}
+.met-esc i{font-style:normal;background:var(--surface-hi);padding:1px 5px;border-radius:4px;}
+.met-esc i.o{background:var(--accent);color:var(--surface);font-weight:700;}
+.met-res{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.met-peso{text-align:right;color:var(--text-soft);font-family:var(--r-mono);font-size:12px;}
+@media (max-width:760px){
+  .met-item{grid-template-columns:1fr auto;padding-left:0;}
+  .met-esc{grid-column:1/-1;} .met-res{grid-column:1/2;} .met-peso{grid-column:2/3;}
+}
+/* Fila de medição dos indicadores */
+.med-fila{display:flex;flex-wrap:wrap;gap:8px;}
+.med-chip{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;
+  padding:7px 12px;border-radius:999px;border:1px solid var(--border-2);color:var(--text);}
+.med-chip i{font-style:normal;font-size:11px;color:var(--text-soft);font-family:var(--r-mono);}
+.med-chip.pend{border-color:var(--accent);background:var(--surface);}
+.med-chip.feito{color:var(--text-soft);background:var(--surface-hi);border-color:transparent;}
+.med-chip.on{outline:2px solid var(--primary);}
+.med-chip:hover{background:var(--surface-hi);}
+a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
