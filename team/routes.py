@@ -263,6 +263,8 @@ def register_team_routes(app):
         f_kind = request.args.get("kind")
         f_member = request.args.get("member_id", type=int)
         f_status = request.args.get("status")
+        if f_status is None:                 # padrão: esconde concluídas e canceladas
+            f_status = "abertas"
         f_comp = request.args.get("competency_id", type=int)
         f_project = request.args.get("project_id", type=int)
         q = Activity.query
@@ -280,7 +282,9 @@ def register_team_routes(app):
         acts = q.order_by(Activity.due_date.is_(None), Activity.due_date,
                           Activity.sort_order, Activity.id).all()
         ref = fuso.hoje()
-        if f_status:
+        if f_status == "abertas":
+            acts = [a for a in acts if a.status not in ("concluida", "cancelada")]
+        elif f_status and f_status != "todos":
             acts = [a for a in acts if a.effective_status(ref) == f_status]
         # colunas do kanban por status efetivo
         columns = {"atrasada": [], "vence_hoje": [], "pendente": [], "em_andamento": [],
@@ -291,7 +295,7 @@ def register_team_routes(app):
         st_ordem = ["atrasada", "vence_hoje", "pendente", "em_andamento",
                     "aguardando", "bloqueada", "concluida", "cancelada"]
         st_labels = {"atrasada": "Atrasada", "vence_hoje": "Vence hoje",
-                     "pendente": "Pendente", "em_andamento": "Em andamento",
+                     "pendente": "A fazer", "em_andamento": "Em andamento",
                      "aguardando": "Aguardando insumo", "bloqueada": "Bloqueada",
                      "concluida": "Concluída", "cancelada": "Cancelada"}
         grupos_status = []

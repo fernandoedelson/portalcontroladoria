@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Atividades{% endblock %}
-{% set stlabels = {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'} %}
+{% set stlabels = {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'A fazer','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'} %}
 {% block content %}
 <div class="page-head">
   <div><h1>Atividades</h1>
@@ -27,7 +27,8 @@
       {% for c in competencies %}<option value="{{ c.id }}" {{ 'selected' if f_comp==c.id }}>{{ c.label }}</option>{% endfor %}
     </select>
     <select class="input" name="status" style="width:auto;" onchange="this.form.submit()">
-      <option value="">Todos os status</option>
+      <option value="abertas" {{ 'selected' if f_status=='abertas' }}>Em aberto (esconde concluídas)</option>
+      <option value="todos" {{ 'selected' if f_status=='todos' }}>Todos os status</option>
       {% for k, lbl in stlabels.items() %}<option value="{{ k }}" {{ 'selected' if f_status==k }}>{{ lbl }}</option>{% endfor %}
     </select>
     <span style="flex:1;"></span>
@@ -82,7 +83,8 @@
         <td class="ta-comp">{{ a.competency.label if a.competency else '—' }}</td>
         <td class="ta-prio"><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
         <td class="ta-prazo">{{ a.due_date.strftime('%d/%m/%Y') if a.due_date else '—' }}{% if a.due_provisional %} <span class="badge-soft">prov.</span>{% endif %}</td>
-        <td class="ta-st"><span class="st st-{{ a.effective_status(today) }}">{{ stlabels.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+        {% set est = a.effective_status(today) %}
+        <td class="ta-st"><span class="st st-{{ est }}">{{ stlabels.get(est, est) }}{% if est == 'atrasada' %} · {{ -a.days_to_due(today) }} dia{{ '' if -a.days_to_due(today) == 1 else 's' }}{% endif %}</span></td>
         <td class="text-right ta-acoes"><div class="flex gap-1" style="justify-content:flex-end;">
           {% if a.status in ['pendente','em_andamento','bloqueada'] %}
           <button class="btn btn-primary btn-sm" type="submit"
