@@ -77,6 +77,19 @@
   var _tt=null;
   function _ajustaDepois(ms){ clearTimeout(_tt); _tt=setTimeout(ajustaTabelas,ms||120); }
   document.addEventListener('DOMContentLoaded',function(){ ajustaTabelas(); });
+  // Home/End levam ao topo/fim da página. Com foco num select, checkbox ou botão o
+  // navegador não rola (e no select o Home ainda trocava a opção para a 1ª).
+  // Em caixa de texto, Home/End continuam movendo o cursor.
+  document.addEventListener('keydown',function(e){
+    if((e.key!=='Home' && e.key!=='End') || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    var a=document.activeElement, tag=a && a.tagName;
+    if(a && (a.isContentEditable || tag==='TEXTAREA' ||
+       (tag==='INPUT' && /^(text|search|email|tel|url|password|number|date|time|datetime-local|month|week)$/i.test(a.type||'text')))) return;
+    if(document.querySelector('.dlg-fundo') || document.fullscreenElement) return;
+    e.preventDefault();
+    if(a && a!==document.body && a.blur) a.blur();
+    window.scrollTo({top: e.key==='Home' ? 0 : document.documentElement.scrollHeight, behavior:'smooth'});
+  });
   window.addEventListener('load',function(){ ajustaTabelas(); });
   window.addEventListener('resize',function(){ _ajustaDepois(150); });
   window.addEventListener('orientationchange',function(){ _ajustaDepois(250); });
