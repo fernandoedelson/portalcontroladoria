@@ -850,3 +850,43 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   .pes-lin{font-size:.8rem;}
   .fila-lista .input,.fila-lista select{font-size:.78rem;min-height:28px;}
 }
+
+/* ==========================================================================
+   MESMA ESCALA NOS FORMULÁRIOS (fora das tabelas): cadastros, filtros e
+   botões. Sem isso, "Incluir empresa", "Novo membro", "Adicionar indicador"
+   e as barras de salvar ficavam com caixas grandes ao lado das listas densas.
+   ========================================================================== */
+@media (min-width:641px){
+  .input,input.input,select.input,textarea.input,select,
+  input[type=text],input[type=email],input[type=tel],input[type=number],
+  input[type=date],input[type=search],input[type=password]{
+    font-size:.8rem;padding:.3rem .5rem;min-height:30px;}
+  textarea,textarea.input{min-height:56px;height:auto;padding:.4rem .5rem;}
+  input[type=color]{min-height:30px;padding:.15rem;}
+  input[type=file]{font-size:.78rem;}
+  .input-lg{font-size:.86rem;min-height:34px;}
+  .btn{font-size:.78rem;min-height:30px;padding:.3rem .75rem;gap:.35rem;}
+  .btn svg{width:15px;height:15px;}
+  .btn-sm{font-size:.74rem;min-height:26px;padding:.2rem .55rem;}
+  .btn-sm svg{width:13px;height:13px;}
+  .btn-toque{min-height:30px;min-width:30px;padding:.3rem .75rem;}
+  input[type=checkbox],input[type=radio]{width:15px;height:15px;}
+  .field-label{font-size:.72rem;}
+  .help-txt{font-size:.72rem;}
+  .form-row{margin-bottom:.45rem;}
+  .adm-grid{gap:.45rem .8rem;}
+  .barra-salvar{padding:.45rem .7rem;font-size:.78rem;}
+  .segmento a{font-size:.75rem;padding:.25rem .6rem;}
+  .adm-tab{font-size:.8rem;padding:.35rem .7rem;}
+  /* dentro de tabela continua um pouco menor (28px) — regra anterior */
+}
+@media (min-width:641px){
+  /* Minhas Tarefas: a barra de adicionar seguia 40px */
+  .tl-add input[type=text],.tl-add input[type=date],.tl-add .tl-aviso-novo,
+  .tl-add .btn,.tl-add select,.tl-add .tl-aviso-novo select,
+  .tl-add .tl-aviso-novo input{height:30px !important;min-height:30px !important;font-size:.8rem;}
+  .tl-edita-lin .btn,.tl-edita-data input{min-height:30px;height:30px;}
+  .btn-concluir{width:30px;height:30px;}
+  .btn-toque{min-height:30px;min-width:30px;}
+}
+@media (min-width:641px){ .tl-aviso-sel,.tl-add .tl-aviso-sel{height:30px;min-height:30px;font-size:.8rem;} }
