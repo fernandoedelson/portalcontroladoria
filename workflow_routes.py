@@ -395,8 +395,7 @@ def register_workflow_routes(app):
         passadas = base.filter(Absence.status == "aprovada",
                                Absence.end_date < hoje).order_by(
             Absence.start_date.desc()).limit(20).all()
-        membros = TeamMember.query.filter_by(active=True).order_by(
-            TeamMember.sort_order, TeamMember.name).all()
+        membros = TeamMember.query.filter_by(active=True).order_by(db.func.lower(TeamMember.name)).all()
         comp = app._current_competency()
         risco = []
         if comp and comp.deadline:
@@ -1015,8 +1014,7 @@ def register_workflow_routes(app):
                               "prazo": a.get("prazo") or "",
                               "prazo_texto": a.get("prazo_texto") or "",
                               "prioridade": a.get("prioridade") or "media"})
-            membros = TeamMember.query.filter_by(active=True).order_by(
-                TeamMember.sort_order, TeamMember.name).all()
+            membros = TeamMember.query.filter_by(active=True).order_by(db.func.lower(TeamMember.name)).all()
             return render_template("team/ata_confirmar.html", dados=dados, meta=meta,
                                    raw=_extrai_json(request.form.get("json")),
                                    comp_match=comp_match, acoes=acoes, membros=membros,

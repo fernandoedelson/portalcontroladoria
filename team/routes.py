@@ -72,7 +72,7 @@ def register_team_routes(app):
         sid = _scoped_member_id()
         if sid is not None:
             q = q.filter(TeamMember.id == sid)
-        return q.order_by(TeamMember.sort_order, TeamMember.name).all()
+        return q.order_by(db.func.lower(TeamMember.name)).all()
 
     def _member_map():
         return {m.id: m for m in TeamMember.query.all()}
@@ -735,7 +735,7 @@ def register_team_routes(app):
         pq = Panel.query.filter_by(active=True)
         if meus_paineis is not None:
             pq = pq.filter(Panel.id.in_(meus_paineis))
-        panels = pq.order_by(Panel.sort_order, Panel.name).all()
+        panels = pq.order_by(db.func.lower(Panel.name)).all()
         pmap = {p.id: p for p in Panel.query.all()}
         from team.models import IndicatorDef
         defs = (IndicatorDef.query.filter_by(active=True)
@@ -911,7 +911,7 @@ def register_team_routes(app):
         inds = (Indicator.query.filter_by(indicator_def_id=did, active=True)
                 .outerjoin(Panel, Indicator.panel_id == Panel.id)
                 .filter(db.or_(Panel.id.is_(None), Panel.active.is_(True)))
-                .order_by(Panel.sort_order, Panel.name).all())
+                .order_by(db.func.lower(Panel.name)).all())
         return [i for i in inds if not (i.member and not i.member.active)]
 
     @app.route("/indicadores/medir", methods=["GET", "POST"])

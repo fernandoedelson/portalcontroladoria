@@ -77,8 +77,7 @@ def register_admin_routes(app):
     def admin():
         companies = Company.query.order_by(Company.name).all()
         users = User.query.order_by(User.role, User.display_name).all()
-        members = TeamMember.query.order_by(TeamMember.sort_order,
-                                            TeamMember.name).all()
+        members = TeamMember.query.order_by(db.func.lower(TeamMember.name)).all()
         clusters = Cluster.query.order_by(Cluster.sort_order, Cluster.name).all()
         ordem_cl = {c.id: i for i, c in enumerate(clusters)}
         assignments = sorted(CompanyAssignment.query.join(Company).all(),
@@ -94,7 +93,7 @@ def register_admin_routes(app):
         man = None
         seg_objs = (Segment.query.order_by(Segment.sort_order, Segment.name).all())
         segments = [s.name for s in seg_objs if s.active]
-        panels = Panel.query.order_by(Panel.sort_order, Panel.name).all()
+        panels = Panel.query.order_by(db.func.lower(Panel.name)).all()
         from team.models import IndicatorDef
         defs = (IndicatorDef.query.filter_by(active=True)
                 .order_by(IndicatorDef.sort_order, IndicatorDef.title).all())

@@ -65,8 +65,6 @@
           {% for p in panels %}{% if p.active %}<option value="{{ p.id }}">{{ p.name }}{{ ' (equipe)' if p.kind=='equipe' }}</option>{% endif %}{% endfor %}
         </select>
         <div class="help-txt">O trabalho deste membro entra no painel escolhido.</div></div>
-      <div class="form-row"><label class="field-label">Ordem</label>
-        <input class="input" type="number" name="sort_order" value="100"/></div>
       <div class="form-row"><label class="field-label">Cor</label>
         <input class="input" type="color" name="color" value="#1d5da8" style="height:42px;padding:.2rem;"/></div>
       <div class="form-row"><label class="field-label">WhatsApp</label>
