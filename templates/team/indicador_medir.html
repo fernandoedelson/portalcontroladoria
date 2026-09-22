@@ -66,6 +66,18 @@
   <p class="help-txt">Está em <strong>{{ inds|length }}</strong> {{ 'painéis' if inds|length > 1 else 'painel' }}.
     Se já houver registro na mesma competência, ele é <strong>atualizado</strong> (não duplica).</p>
 
+  {% set escalas = inds|map(attribute='escala_curta')|map('join', '|')|list|unique|list %}
+  <div class="med-meta">
+    <span class="med-meta-rot">Meta{{ 's' if escalas|length > 1 }}</span>
+    {% if escalas|length == 1 %}
+      {% set e = inds[0].escala_curta %}
+      <span class="escala-mini" title="mínimo · objetivo · superação"><span>{{ e[0] }}</span><span class="o">{{ e[1] }}</span><span>{{ e[2] }}</span></span>
+      <span class="med-meta-leg">mínimo · <b>objetivo</b> · superação{% if inds[0].direction == 'menor' %} · quanto menor, melhor{% elif inds[0].direction == 'maior' %} · quanto maior, melhor{% endif %}{% if inds[0].unit %} · {{ inds[0].unit }}{% endif %}</span>
+    {% else %}
+      <span class="med-meta-leg">a meta muda conforme o painel — veja abaixo</span>
+    {% endif %}
+  </div>
+
   {% if sel.frequencia == 'mensal' %}
   <div class="grid-2">
     <div class="form-row"><label class="field-label">Competência</label>
@@ -107,6 +119,8 @@
         <input type="checkbox" name="ind" value="{{ i.id }}" checked/>
         <span>
           <strong>{{ i.panel.name if i.panel else 'Sem painel' }}</strong>
+          {% set e = i.escala_curta %}
+          <span class="escala-mini" title="mínimo · objetivo · superação"><span>{{ e[0] }}</span><span class="o">{{ e[1] }}</span><span>{{ e[2] }}</span></span>
           <span class="help-txt">meta {{ i.target_label or '—' }}
             · último: {% if last %}{{ ROT.get(last.outcome, last.outcome) }} {{ last.period_label or '' }}{% else %}sem registro{% endif %}</span>
         </span>

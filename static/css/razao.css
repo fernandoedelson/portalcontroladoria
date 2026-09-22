@@ -724,3 +724,9 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 .pes-nums > span{white-space:nowrap;overflow:hidden;}
 .pes-lin{grid-template-columns:120px 1fr 150px;}
 .pes-lin.pes-ind{grid-template-columns:120px 1fr 150px;}
+/* Meta à mostra na tela de medição */
+.med-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 14px;
+  padding:8px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--surface-hi);}
+.med-meta-rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);font-family:var(--r-mono);}
+.med-meta-leg{font-size:12px;color:var(--text-soft);}
+.med-paineis .escala-mini{margin:0 6px;}
