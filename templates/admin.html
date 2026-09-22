@@ -464,7 +464,7 @@
       {% for c in companies %}
       {% set P = 'e' ~ c.id ~ '_' %}
       <tr data-id="{{ c.id }}">
-        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}code" value="{{ c.code }}" style="width:110px;"/></td>
+        <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}code" value="{{ c.code }}" style="width:220px;max-width:100%;"/></td>
         <td><input class="input" name="{{ P }}name" value="{{ c.name }}" style="min-width:260px;width:100%;"/></td>
         <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if c.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
