@@ -511,7 +511,7 @@
 
   <div class="card">
     <h2>Segmentos ({{ seg_objs|length }})</h2>
-    <p class="text-muted text-sm mb-2">A lista de segmentos usada ao classificar as entidades (Energia, Agro…). Editar um nome atualiza todas as entidades que o usavam.</p>
+    <p class="text-muted text-sm mb-2">A lista de segmentos usada ao classificar as entidades (Energia, Agro…). Editar um nome atualiza todas as entidades que o usavam. <strong>Prazo (DU)</strong>: dia útil do mês seguinte em que vencem as macro-atividades (Painel, Fluxo de Endividamento, Consolidação) das entidades do segmento; entidade sem segmento usa 5.</p>
     <form method="post" action="/admin/segmento" class="flex gap-1 items-center mb-2" style="flex-wrap:wrap;">
       {{ csrf() }}
       <input class="input" name="name" required placeholder="Novo segmento" style="max-width:220px;"/>
@@ -529,12 +529,13 @@
       <div class="barra-salvar"><span data-cont>Nenhuma alteração pendente</span>
         <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button></div>
     <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th scope="col">Segmento</th><th scope="col" style="width:90px;">Ordem</th><th scope="col" style="width:80px;">Ativo</th><th scope="col" style="width:150px;"></th></tr></thead>
+      <thead><tr><th scope="col">Segmento</th><th scope="col" style="width:120px;" title="Nº dia útil do mês seguinte em que vencem as macro-atividades (Painel, Fluxo de Endividamento, Consolidação) das entidades deste segmento">Prazo (DU)</th><th scope="col" style="width:90px;">Ordem</th><th scope="col" style="width:80px;">Ativo</th><th scope="col" style="width:150px;"></th></tr></thead>
       <tbody>
       {% for s in seg_objs %}
       {% set P = 's' ~ s.id ~ '_' %}
       <tr data-id="{{ s.id }}">
         <td><input type="hidden" name="{{ P }}mudou" value="0" data-mudou/><input class="input" name="{{ P }}name" value="{{ s.name }}"/></td>
+        <td><input class="input" type="number" min="1" max="23" name="{{ P }}prazo_du" value="{{ s.prazo_du or 5 }}" aria-label="Prazo em dias úteis de {{ s.name }}" style="width:80px;"/></td>
         <td><input class="input" type="number" name="{{ P }}sort_order" value="{{ s.sort_order }}"/></td>
         <td class="text-center"><input type="checkbox" name="{{ P }}active" value="1" {{ 'checked' if s.active }}/></td>
         <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">

@@ -111,6 +111,7 @@ _COLUNAS_NOVAS = [
     ("company_assignments", "cluster_id", "INTEGER"),
     ("company_assignments", "member_excecao", "BOOLEAN DEFAULT 0"),
     ("closing_template_items", "macro", "VARCHAR(30)"),
+    ("segments", "prazo_du", "INTEGER DEFAULT 5"),
 ]
 
 

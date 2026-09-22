@@ -151,6 +151,8 @@ def generate_closing_activities(competency, created_by=None):
     assigns = (CompanyAssignment.query.join(Company)
                .filter(Company.active.is_(True)).all())
     by_company = {a.company_id: a for a in assigns}
+    from team.models_workflow import Segment
+    prazo_seg = {s.name: (s.prazo_du or 5) for s in Segment.query.all()}
 
     # 1) conjunto DESEJADO: chave (template_id, company_id) -> dados
     desejado = {}
@@ -171,8 +173,14 @@ def generate_closing_activities(competency, created_by=None):
         else:                                    # atividade geral do time
             alvos = [(None, it.member_id)]
         for cid, mid in alvos:
-            desejado[(it.id, cid)] = {"it": it, "member_id": mid, "due": due,
-                                      "prov": provisional, "rule": rule}
+            d_due, d_prov, d_rule = due, provisional, rule
+            if it.macro:                         # macro: prazo do segmento da entidade
+                a = by_company.get(cid)
+                du = prazo_seg.get(a.segment if a else None, 5)
+                d_rule = {"base": "fixed_bd", "offset": du, "codes": []}
+                d_due, d_prov = compute_due(d_rule, competency)
+            desejado[(it.id, cid)] = {"it": it, "member_id": mid, "due": d_due,
+                                      "prov": d_prov, "rule": d_rule}
 
     # 2) reconcilia com o que já existe (só atividades geradas por template)
     existentes = Activity.query.filter_by(

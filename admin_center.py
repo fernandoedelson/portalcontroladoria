@@ -498,6 +498,11 @@ def register_admin_routes(app):
             seg.name = novo
             seg.active = _bool(g("active"))
             seg.sort_order = _int(g("sort_order")) or seg.sort_order
+            du = _int(g("prazo_du"))
+            if du is not None:
+                if not 1 <= du <= 23:
+                    erros.append(f"Prazo de “{novo}” fora do intervalo (1 a 23 dias úteis).")
+                seg.prazo_du = du
             n += 1
         with db.session.no_autoflush:
             outros = {r.name.lower() for r in Segment.query.with_entities(Segment.id, Segment.name)

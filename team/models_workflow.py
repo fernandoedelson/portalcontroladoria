@@ -488,6 +488,9 @@ class Segment(db.Model):
     name = db.Column(db.String(60), unique=True, nullable=False)
     sort_order = db.Column(db.Integer, default=100)
     active = db.Column(db.Boolean, default=True)
+    # prazo das macro-atividades (Painel, Endividamento, Consolidação) das
+    # entidades deste segmento: Nº dia útil do mês seguinte
+    prazo_du = db.Column(db.Integer, default=5)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @staticmethod

@@ -79,7 +79,7 @@
       <td><span class="cr-selo">{{ it.macro }}</span>
           <div class="text-muted text-sm">{{ conta_selo.get(it.macro, 0) }} entidade(s) com o selo</div></td>
       <td><span class="text-muted text-sm cr-resp-emp">Conforme responsável por empresa</span></td>
-      <td class="num"><input class="input cr-du" type="number" name="{{ p }}due_offset" value="{{ it.due_offset }}" min="1" aria-label="Dia útil de vencimento"/></td>
+      <td class="num"><span class="text-muted text-sm cr-resp-emp" title="Prazo definido por segmento em Administração › Organização › Segmentos">Conforme segmento</span></td>
       <td><select class="input" name="{{ p }}priority" aria-label="Prioridade">{% for pr in priorities %}<option value="{{ pr }}" {{ 'selected' if it.priority==pr }}>{{ pr|capitalize }}</option>{% endfor %}</select></td>
       <td><input type="hidden" name="{{ p }}active_presente" value="1"/>
           <label class="chk cr-ativo"><input type="checkbox" name="{{ p }}active" value="1" {{ 'checked' if it.active }}/><span>Ativo</span></label></td>
@@ -132,7 +132,8 @@
     </tr>
   </tbody></table></template>
   <p class="help-txt mt-1"><strong>Macro-atividades</strong> (Painel, Fluxo de Endividamento, Consolidação): ao gerar o mês, cada uma
-    cria uma atividade para cada entidade com o selo correspondente, para o responsável da entidade — aqui você define só o prazo e a prioridade.
+    cria uma atividade para cada entidade com o selo correspondente, para o responsável da entidade, vencendo no prazo do segmento dela
+    (Administração › Organização › Segmentos) — aqui você define só a prioridade e se está ativa.
     “Todas as empresas” e “empresas específicas” criam uma atividade por empresa, cada uma com o
     responsável da própria entidade (Administração › Entidades). Duplicar cria a cópia logo abaixo — ajuste e clique em Salvar tudo.</p>
 </form>
