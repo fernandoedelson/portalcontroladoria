@@ -90,6 +90,15 @@
       <span><i class="pt a"></i>atrasada</span><span><i class="pt h"></i>hoje</span><span><i class="pt"></i>a fazer</span></div>
   </div>
   <div class="pes-lista">
+    <div class="pes-lin pes-cab">
+      <span>Pessoa</span>
+      <div class="pes-faixa">
+        {% for c in pessoas[0].cols %}
+        <span class="pes-dia-cab{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}">D+{{ c.du }}<i>{{ c.data.strftime('%d/%m') }}</i></span>
+        {% endfor %}
+      </div>
+      <div class="pes-nums"><span title="Atrasadas">atras.</span><span title="Vencem hoje">hoje</span><span title="A fazer">a fazer</span></div>
+    </div>
     {% for l in pessoas %}
     <div class="pes-lin">
       <a class="pes-nome" href="/atividades?member_id={{ l.member.id }}&competency_id={{ comp.id }}">
@@ -112,8 +121,6 @@
     </div>
     {% endfor %}
   </div>
-  <p class="help-txt rg-nota">Atrasadas · vencem hoje · a fazer. A faixa vai de D+1 a D+{{ pessoas[0].cols|length }};
-    clique num dia para ver as atividades da pessoa.</p>
 </section>
 {% endif %}
 {% elif comp %}

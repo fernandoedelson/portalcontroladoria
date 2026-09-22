@@ -662,3 +662,13 @@ a.rg-col:hover{background:var(--surface-hi);}
 .pes-nums .n-h{color:var(--accent);font-weight:700;}
 .pes-nums .n-f{color:var(--text-muted);}
 @media (max-width:760px){ .pes-lin{grid-template-columns:96px 1fr 84px;gap:8px;} }
+.pes-cab{border-top:none;padding-bottom:4px;font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-muted);font-family:var(--r-mono);}
+.pes-cab .pes-faixa{height:auto;align-items:stretch;}
+.pes-dia-cab{flex:1;text-align:center;line-height:1.25;}
+.pes-dia-cab i{display:block;font-style:normal;font-size:10px;color:var(--text-soft);letter-spacing:0;text-transform:none;}
+.pes-dia-cab.hoje{color:var(--accent);} .pes-dia-cab.prazo{color:var(--text);font-weight:700;}
+.pes-cab .pes-nums span{font-weight:400;}
+.pes-bar.bn{background:var(--primary-2);opacity:.55;}
+.pes-cab .pes-nums{font-size:10px;gap:6px;}
+@media (max-width:760px){ .pes-dia-cab i{display:none;} .pes-cab{font-size:10px;} }
