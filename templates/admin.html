@@ -318,7 +318,10 @@
   </div>
 
   <div class="card">
-    <h2>Entidades ({{ assignments|length }})</h2>
+    <div class="flex items-center gap-1" style="justify-content:space-between;flex-wrap:wrap;">
+      <h2 style="margin:0;">Entidades ({{ assignments|length }})</h2>
+      <a class="btn btn-outline" href="/admin/entidades/pdf" target="_blank" rel="noopener">{{ icone('download') }} Exportar PDF</a>
+    </div>
     {% if assignments %}
     <div class="flex gap-1 items-center mb-2" id="barra-mover" style="flex-wrap:wrap;">
       <span class="text-sm"><strong id="n-sel">0</strong> marcada(s) →</span>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distribuição das Entidades — {{ gerado.strftime('%d-%m-%Y') }}</title>
+<style>
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Avenir Next", "Segoe UI", Arial, sans-serif; color: #14273A;
+         font-size: 10.5pt; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .folha { max-width: 190mm; margin: 0 auto; padding: 18px 0 40px; }
+  .barra { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 14px; }
+  .barra button, .barra a { font: inherit; font-size: 10pt; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+         border: 1px solid #14273A; background: #14273A; color: #fff; text-decoration: none; }
+  .barra a { background: #fff; color: #14273A; }
+  header.cab { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #14273A; padding-bottom: 10px; }
+  header.cab img { width: 34px; height: 34px; }
+  header.cab h1 { font-size: 16pt; margin: 0; }
+  header.cab .sub { font-size: 9pt; color: #5b6770; }
+  .resumo { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 16px; font-size: 9pt; color: #3c4a55; }
+  .resumo b { color: #14273A; }
+  section.cl { break-inside: auto; margin-bottom: 14px; border: 1px solid #d5d9d4; border-radius: 6px; overflow: hidden; }
+  .cl-tit { background: #14273A; color: #fff; padding: 7px 10px; display: flex; justify-content: space-between;
+            gap: 10px; break-after: avoid; }
+  .cl-tit strong { font-size: 11.5pt; }
+  .cl-tit span { font-size: 9pt; opacity: .9; }
+  .seg { background: #EEF1EC; padding: 5px 10px; font-size: 8pt; font-weight: 700; letter-spacing: .08em;
+         text-transform: uppercase; color: #8a6420; border-top: 1px solid #d5d9d4; break-after: avoid; }
+  .seg i { display: inline-block; width: 3px; height: 10px; background: #B5832A; margin-right: 6px; vertical-align: -1px; }
+  table { width: 100%; border-collapse: collapse; }
+  tr { break-inside: avoid; }
+  td { padding: 5px 10px; border-top: 1px solid #e6e9e4; vertical-align: middle; }
+  td.ent { font-weight: 600; width: 34%; }
+  td.resp { width: 26%; }
+  td.resp .exc { font-size: 7.5pt; color: #8a6420; border: 1px solid #B5832A; border-radius: 8px; padding: 0 5px; margin-left: 4px; }
+  td.ent-g { font-size: 8pt; color: #5b6770; width: 14%; }
+  .pill { display: inline-block; font-size: 7.5pt; padding: 1px 6px; border-radius: 9px; margin: 1px 2px 1px 0;
+          border: 1px solid #cfd4ce; color: #8b949b; }
+  .pill.on { background: #B5832A; border-color: #B5832A; color: #fff; font-weight: 600; }
+  .vazio { color: #8b949b; font-style: italic; }
+  footer { margin-top: 18px; font-size: 8pt; color: #5b6770; border-top: 1px solid #d5d9d4; padding-top: 6px; }
+  @media print { .barra { display: none; } .folha { padding: 0; max-width: none; } }
+</style>
+</head>
+<body>
+<div class="folha">
+  <div class="barra">
+    <a href="/admin?tab=carteira">Voltar</a>
+    <button type="button" onclick="window.print()">Salvar em PDF / Imprimir</button>
+  </div>
+
+  <header class="cab">
+    <img src="/static/icons/favicon-48.png?v=4" alt="">
+    <div><h1>Distribuição das Entidades</h1>
+      <div class="sub">Controladoria J&amp;F · cluster › segmento › entidade · gerado em {{ gerado.strftime('%d/%m/%Y %H:%M') }} por {{ autor }}</div></div>
+  </header>
+
+  <div class="resumo">
+    <span><b>{{ total }}</b> entidades</span>
+    <span><b>{{ grupos|length }}</b> clusters</span>
+    {% for nome, n in por_pessoa %}<span>{{ nome }}: <b>{{ n }}</b></span>{% endfor %}
+  </div>
+
+  {% for cl, segs in grupos %}
+  <section class="cl">
+    <div class="cl-tit"><strong>{{ cl.name if cl else 'Sem cluster' }}</strong>
+      <span>{{ segs|sum(attribute='1', start=[])|length }} entidade(s){% if cl %} · {{ cl.member.name if cl.member else 'responsável a definir' }}{% endif %}</span></div>
+    {% for seg, itens in segs %}
+    <div class="seg"><i></i>{{ seg }}</div>
+    <table>
+      {% for a in itens %}
+      <tr>
+        <td class="ent">{{ a.company.name }}</td>
+        <td class="resp">{% if a.member %}{{ a.member.name }}{% else %}<span class="vazio">a definir</span>{% endif %}
+          {% if a.member_excecao %}<span class="exc">exceção</span>{% endif %}</td>
+        <td class="ent-g">{{ a.flow or '—' }}{% if a.responsibility %} · {{ a.responsibility }}{% endif %}</td>
+        <td>{% for d in deliverables %}<span class="pill {{ 'on' if d in a.deliverables }}">{{ d }}</span>{% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  <footer>Entregas em destaque = exigidas. “Exceção” = responsável escolhido direto na entidade, diferente do responsável do cluster.
+    Coluna do meio: fluxo · responsabilidade.</footer>
+</div>
+<script>
+  // abre a janela de impressão sozinho (dá tempo das fontes/imagem carregarem)
+  window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 350); });
+</script>
+</body>
+</html>

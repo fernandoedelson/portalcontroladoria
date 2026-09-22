@@ -390,6 +390,34 @@ def register_admin_routes(app):
         flash(f"Cluster “{nome}” excluído.", "success")
         return _back("carteira")
 
+    @app.route("/admin/entidades/pdf")
+    @admin_required
+    def admin_entidades_pdf():
+        """Relatório de impressão (A4) da distribuição: cluster > segmento > entidade.
+        Abre a janela de impressão do navegador — 'Salvar como PDF'."""
+        import fuso
+        clusters = Cluster.query.order_by(Cluster.sort_order, Cluster.name).all()
+        ordem = {c.id: i for i, c in enumerate(clusters)}
+        linhas = sorted(CompanyAssignment.query.join(Company).all(),
+                        key=lambda a: (ordem.get(a.cluster_id, 10**6),
+                                       (a.segment or "~").lower(), a.company.name.lower()))
+        grupos = []                          # [(cluster|None, [(segmento, [linhas])])]
+        for a in linhas:
+            if not grupos or grupos[-1][0] is not a.cluster:
+                grupos.append((a.cluster, []))
+            segs = grupos[-1][1]
+            if not segs or segs[-1][0] != (a.segment or "Sem segmento"):
+                segs.append((a.segment or "Sem segmento", []))
+            segs[-1][1].append(a)
+        por_pessoa = {}
+        for a in linhas:
+            nome = a.member.name if a.member else "A definir"
+            por_pessoa[nome] = por_pessoa.get(nome, 0) + 1
+        return render_template("admin_entidades_pdf.html", grupos=grupos,
+                               total=len(linhas), deliverables=DELIVERABLES,
+                               por_pessoa=sorted(por_pessoa.items(), key=lambda x: x[0].lower()),
+                               gerado=fuso.agora(), autor=current_user.display_name)
+
     @app.route("/admin/carteira/mover", methods=["POST"])
     @admin_required
     def admin_carteira_mover():
