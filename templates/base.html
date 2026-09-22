@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Public+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"/>
-  <link rel="stylesheet" href="/static/css/razao.css?v=31"/>
+  <link rel="stylesheet" href="/static/css/razao.css?v=32"/>
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
@@ -71,12 +71,11 @@
         t.dataset.rotulado='1';
       }
       t.classList.remove('tbl-empilha');
-      // tablet (641–1100px): tabela continua tabela. Se faltar largura, o quadro
-      // rola de lado — vira cartao so no celular, onde nao ha espaco mesmo.
-      var larg = document.documentElement.clientWidth || window.innerWidth;
-      var tablet = larg >= 641 && larg <= 1100;
-      w.classList.toggle('rola-lado', tablet && w.scrollWidth > w.clientWidth + 2);
-      if(!tablet && w.scrollWidth>w.clientWidth+2) t.classList.add('tbl-empilha');
+      w.classList.remove('rola-lado');            // nunca rola de lado: o portal se ajusta
+      // cronograma tem layout proprio no tablet/celular (blocos de 3 linhas)
+      if(t.classList.contains('tbl-cron') &&
+         (document.documentElement.clientWidth||window.innerWidth) <= 1100) return;
+      if(w.scrollWidth>w.clientWidth+2) t.classList.add('tbl-empilha');
     });
   }
   var _tt=null;
