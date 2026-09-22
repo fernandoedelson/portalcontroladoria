@@ -541,10 +541,11 @@ table.tbl-empilha .col-assunto .assunto{min-width:0;}
 .tbl-cron td{vertical-align:top;padding:10px 7px;}
 .tbl-cron th{padding:11px 7px;}
 .tbl-cron td:first-child,.tbl-cron th:first-child{padding-left:12px;}
-.tbl-cron input[name$="title"]{min-width:200px;width:100%;}
-.tbl-cron select[name$="member_id"]{min-width:max-content;}
+.tbl-cron input[name$="title"]{min-width:180px;width:100%;}
+.tbl-cron td select.input[name$="member_id"]{min-width:150px;width:100%;max-width:190px;text-overflow:ellipsis;}
 .tbl-cron select[name$="priority"]{min-width:max-content;}
-.tbl-cron .esc{min-width:180px;}
+.tbl-cron .esc{min-width:150px;max-width:180px;}
+.tbl-cron .esc-sel{width:100%;text-overflow:ellipsis;}
 .cr-ativo span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}   /* o cabeçalho já diz "Ativo" */
 .cr-acoes .btn{padding:0 10px;height:34px;min-height:34px;min-width:38px;justify-content:center;}
 @media (max-width:1599px){ .cr-dup span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);} }
@@ -630,3 +631,8 @@ button.tl-chip:hover{border-color:var(--text-soft);}
   .tl-edita-lin .btn{flex:1 1 auto;justify-content:center;min-height:40px;}
   .tl-edita-data{flex:1 1 100%;} .tl-edita-data input{flex:1;height:40px;}
 }
+
+/* atributo hidden vence o display dos botões (ex.: "Descartar alterações") */
+.btn[hidden],button[hidden]{display:none !important;}
+.tbl-cron .cr-dup span{display:none;}            /* Duplicar só com ícone: cabe sem virar cartão */
+.cr-resp-emp{display:block;max-width:170px;white-space:normal;line-height:1.3;padding-top:.3rem;}

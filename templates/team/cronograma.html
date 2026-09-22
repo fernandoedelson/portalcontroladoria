@@ -85,7 +85,7 @@
     </span>
   </div>
   <div class="tbl-wrap"><table class="tbl tbl-cron">
-    <thead><tr><th scope="col" style="min-width:260px;">Atividade</th><th scope="col">Escopo / empresa</th><th scope="col">Responsável</th>
+    <thead><tr><th scope="col" style="min-width:200px;">Atividade</th><th scope="col">Escopo / empresa</th><th scope="col">Responsável</th>
       <th class="num" title="Nº do dia útil do mês seguinte à competência">Venc. (DU)</th><th scope="col">Prioridade</th><th scope="col">Ativo</th><th scope="col">Ações</th></tr></thead>
     <tbody id="cron-corpo">
     {% if macros %}
@@ -99,7 +99,7 @@
           <div class="cr-macro-tit">{{ it.title }}</div></td>
       <td><span class="cr-selo">{{ it.macro }}</span>
           <div class="text-muted text-sm">{{ conta_selo.get(it.macro, 0) }} entidade(s) com o selo</div></td>
-      <td><span class="text-muted text-sm">Conforme responsável por empresa</span></td>
+      <td><span class="text-muted text-sm cr-resp-emp">Conforme responsável por empresa</span></td>
       <td class="num"><input class="input cr-du" type="number" name="{{ p }}due_offset" value="{{ it.due_offset }}" min="1" aria-label="Dia útil de vencimento"/></td>
       <td><select class="input" name="{{ p }}priority" aria-label="Prioridade">{% for pr in priorities %}<option value="{{ pr }}" {{ 'selected' if it.priority==pr }}>{{ pr|capitalize }}</option>{% endfor %}</select></td>
       <td><input type="hidden" name="{{ p }}active_presente" value="1"/>
@@ -239,7 +239,7 @@ document.addEventListener('click',function(e){
       var marcar=!tr2.classList.contains('cron-excluida');
       tr2.classList.toggle('cron-excluida', marcar);
       tr2.querySelector('.cr-excluir').value=marcar?'1':'0';
-      del.innerHTML = marcar ? '{{ icone("undo") }}<span>Desfazer</span>' : '{{ icone("trash") }}';
+      del.innerHTML = marcar ? '{{ icone("undo") }}' : '{{ icone("trash") }}';   // só ícone: largura não muda
       del.title = marcar ? 'Desfazer a remoção' : 'Marcar para remover';
       conta();
     }
