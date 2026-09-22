@@ -823,3 +823,30 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   .ent-pill span{font-size:.6rem;padding:.08rem .35rem;}
   .ent-resp select{font-size:.72rem;}
 }
+
+/* ==========================================================================
+   DENSIDADE PADRÃO (a mesma da lista de Entidades) para o app inteiro:
+   campos, caixas de seleção e botões dentro de tabelas/listas. No celular
+   (<641px) nada muda — lá o alvo do dedo precisa ser grande.
+   ========================================================================== */
+@media (min-width:641px){
+  .tbl{font-size:.8rem;}
+  .tbl td,.tbl th{padding:.38rem .5rem;}
+  .tbl td .input,.tbl td select,.tbl td select.input,.tbl td textarea.input,
+  .tbl th .input,.tbl th select{font-size:.78rem;padding:.22rem .4rem;
+    min-height:28px;height:28px;}
+  .tbl td textarea.input{height:auto;}
+  .tbl td input[type=checkbox],.tbl th input[type=checkbox],
+  .chk input[type=checkbox],.chk-sm input[type=checkbox]{width:15px;height:15px;}
+  .tbl td .btn,.tbl th .btn,.tbl td .btn-sm{font-size:.72rem;min-height:26px;height:26px;
+    padding:0 .55rem;min-width:28px;}
+  .tbl td .btn svg,.tbl th .btn svg{width:13px;height:13px;}
+  .tbl .kind-chip,.tbl .badge-soft,.tbl .st,.tbl .prio{font-size:.66rem;padding:.08rem .4rem;}
+  .escala-mini span{font-size:.64rem;padding:.06rem .35rem;}
+  .chk,.chk-sm{font-size:.76rem;gap:.35rem;}
+  /* listas fora de tabela seguem o mesmo padrão */
+  .med-chip{font-size:.74rem;padding:5px 10px;}
+  .met-item{font-size:.78rem;}
+  .pes-lin{font-size:.8rem;}
+  .fila-lista .input,.fila-lista select{font-size:.78rem;min-height:28px;}
+}
