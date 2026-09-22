@@ -351,15 +351,14 @@ class ClosingTemplateItem(db.Model):
 
     @property
     def du_efetivo(self):
-        """Nº do dia útil do mês seguinte em que vence — 'DU fixo' é o próprio
-        número; '5º DU ±n' e 'insumo ±n' contam a partir do 5º DU."""
-        off = self.due_offset if self.due_offset is not None else 0
-        return off if self.due_base == "fixed_bd" else 5 + off
+        """Nº do dia útil do mês seguinte em que a atividade vence."""
+        return self.due_offset if self.due_offset is not None else 5
 
     @property
     def due_label(self):
-        base = {"deadline": "5º DU", "insumo": "insumo", "fixed_bd": "DU fixo"}.get(
-            self.due_base, self.due_base)
+        if self.due_base == "fixed_bd":
+            return f"{self.du_efetivo}º DU"
+        base = {"deadline": "5º DU", "insumo": "insumo"}.get(self.due_base, self.due_base)
         if self.due_offset == 0:
             return base
         sign = "+" if self.due_offset > 0 else "−"
@@ -584,6 +583,28 @@ def ensure_macros():
         db.session.add(ClosingTemplateItem(
             title=titulo, macro=selo, kind="fechamento", priority="alta",
             due_base="fixed_bd", due_offset=5, active=True, sort_order=i))
+        n += 1
+    if n:
+        db.session.commit()
+    return n
+
+
+def normaliza_prazos_cronograma():
+    """Todo item passa a valer como 'Nº dia útil do mês seguinte' (uma vez).
+
+    Antes havia três bases (5º DU ±n, insumo ±n, DU fixo) e a coluna do
+    cronograma mostrava o ±n, o que confundia. Agora o número da coluna É o
+    dia útil. Itens com número menor que 1 (ex.: '5º DU −1') viram o dia útil
+    correspondente (4).
+    """
+    n = 0
+    for it in ClosingTemplateItem.query.filter(
+            db.or_(ClosingTemplateItem.due_base != "fixed_bd",
+                   ClosingTemplateItem.due_offset < 1)).all():
+        off = it.due_offset if it.due_offset is not None else 5
+        if off < 1:                       # '5º DU −1' -> 4º DU
+            off = max(5 + off, 1)
+        it.due_base, it.due_offset = "fixed_bd", off
         n += 1
     if n:
         db.session.commit()

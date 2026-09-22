@@ -76,8 +76,11 @@ def create_app(config=Config):
             app.logger.warning("Nao foi possivel cadastrar os dados iniciais: %s", e)
         try:                          # depois da carteira existir
             ensure_clusters_defaults()
-            from team.models import ensure_macros
+            from team.models import ensure_macros, normaliza_prazos_cronograma
             ensure_macros()
+            n = normaliza_prazos_cronograma()
+            if n:
+                app.logger.info("%s item(ns) do cronograma passaram a Nº dia útil", n)
         except Exception as e:
             db.session.rollback()
             app.logger.warning("Nao foi possivel semear os clusters: %s", e)

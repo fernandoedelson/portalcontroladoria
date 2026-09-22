@@ -98,9 +98,7 @@
       <td>{{ campo_escopo(p, it.escopo, it.company_ids) }}</td>
       <td><select class="input" name="{{ p }}member_id" aria-label="Responsável"><option value="">— a definir —</option>
         {% for m in members %}<option value="{{ m.id }}" {{ 'selected' if it.member_id==m.id }}>{{ m.name }}</option>{% endfor %}</select></td>
-      <td class="num"><input class="input cr-du" type="number" name="{{ p }}due_offset" min="1" value="{{ it.du_efetivo }}" aria-label="Dia útil de vencimento"
-            {% if it.due_base != 'fixed_bd' %} title="Regra antiga: {{ it.due_label }} (≅ {{ it.du_efetivo }}º DU). Salvar esta linha passa a contar como Nº dia útil do mês seguinte."{% endif %}/>
-          {% if it.due_base != 'fixed_bd' %}<div class="cr-base">{{ it.due_label }}</div>{% endif %}</td>
+      <td class="num"><input class="input cr-du" type="number" name="{{ p }}due_offset" min="1" value="{{ it.due_offset }}" aria-label="Dia útil de vencimento"/></td>
       <td><select class="input" name="{{ p }}priority" aria-label="Prioridade">{% for pr in priorities %}<option value="{{ pr }}" {{ 'selected' if it.priority==pr }}>{{ pr|capitalize }}</option>{% endfor %}</select></td>
       <td><input type="hidden" name="{{ p }}active_presente" value="1"/>
           <label class="chk cr-ativo"><input type="checkbox" name="{{ p }}active" value="1" {{ 'checked' if it.active }}/><span>Ativo</span></label></td>
