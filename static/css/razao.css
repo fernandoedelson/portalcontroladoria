@@ -890,3 +890,15 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   .btn-toque{min-height:30px;min-width:30px;}
 }
 @media (min-width:641px){ .tl-aviso-sel,.tl-add .tl-aviso-sel{height:30px;min-height:30px;font-size:.8rem;} }
+
+/* Cadastros da Administração: campos elásticos — a tabela encolhe em vez de
+   virar cartões (Membros quebrava em 5 linhas em telas ~1180px). */
+@media (min-width:641px){
+  .tbl-cartao td .input,.tbl-cartao td select,.tbl-cartao td select.input,
+  .tbl td .input,.tbl td select,.tbl td select.input{
+    min-width:0 !important;width:100%;}
+  .tbl-cartao td,.tbl td{min-width:0;}
+  .tbl-cartao td .flex,.tbl td .flex{min-width:0;}
+  .tbl-cartao td input[type=color],.tbl td input[type=color]{width:30px;min-width:30px !important;}
+  .tbl-cartao td .btn,.tbl td .btn{width:auto;}
+}
