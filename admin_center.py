@@ -640,20 +640,44 @@ def register_admin_routes(app):
     @app.route("/admin/company/<int:cid>/excluir", methods=["POST"])
     @admin_required
     def admin_company_delete(cid):
+        """Exclui a empresa. Se ela já aparece em algum histórico (atividades,
+        atas, cronograma, envios antigos), só inativa — apagar quebraria o histórico."""
+        from sqlalchemy import text
+        from team.models import Activity, ClosingTemplateItem
         c = db.session.get(Company, cid) or abort(404)
-        n_sub = Submission.query.filter_by(company_id=cid).count()
-        if n_sub:
+        usos = []
+        n = Activity.query.filter_by(company_id=cid).count()
+        if n:
+            usos.append(f"{n} atividade(s)")
+        n = sum(1 for it in ClosingTemplateItem.query.all()
+                if it.company_id == cid or cid in (it.company_ids or []))
+        if n:
+            usos.append(f"{n} item(ns) do cronograma")
+        for tabela, cols, rotulo in (("atas_reuniao", ["company_id"], "ata(s)"),
+                                     ("submissions", ["company_id"], "envio(s) antigo(s)"),
+                                     ("ic_declarations", ["reporter_id", "counterparty_id"], "declaração(ões) intercompany"),
+                                     ("ic_pendencies", ["company_a_id", "company_b_id"], "pendência(s) intercompany")):
+            try:
+                cond = " OR ".join(f"{x} = :c" for x in cols)
+                n = db.session.execute(text(f"SELECT COUNT(*) FROM {tabela} WHERE {cond}"),
+                                       {"c": cid}).scalar()
+            except Exception:
+                db.session.rollback()
+                n = 0
+            if n:
+                usos.append(f"{n} {rotulo}")
+        nome = c.name
+        if usos:
             c.active = False
             db.session.commit()
-            flash(f"'{c.name}' tem {n_sub} envio(s) no histórico — foi inativada "
-                  f"em vez de excluída.", "warning")
+            flash(f"“{nome}” aparece em {', '.join(usos)} — foi inativada em vez de excluída.",
+                  "warning")
         else:
             CompanyAssignment.query.filter_by(company_id=cid).delete()
-            User.query.filter_by(company_id=cid).update({"active": False})
-            nome = c.name
+            User.query.filter_by(company_id=cid).update({"company_id": None, "active": False})
             db.session.delete(c)
             db.session.commit()
-            flash(f"Empresa '{nome}' excluída.", "success")
+            flash(f"Empresa “{nome}” excluída.", "success")
         log_audit(current_user.id, "empresa_removida", "company", str(cid))
         return _back("org")
 
