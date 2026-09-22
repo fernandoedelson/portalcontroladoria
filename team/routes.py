@@ -630,6 +630,12 @@ def register_team_routes(app):
               "success" if partes else "info")
         return redirect(url_for("team_cronograma"))
 
+    def _du_efetivo(it):
+        """Dia útil do mês seguinte em que o item vence, para ordenar: 'DU fixo'
+        é o próprio número; '5º DU ±n' e 'insumo ±n' contam a partir do 5º DU."""
+        off = it.due_offset if it.due_offset is not None else 0
+        return off if it.due_base == "fixed_bd" else 5 + off
+
     @app.route("/cronograma")
     @controladoria_required
     def team_cronograma():
@@ -643,7 +649,9 @@ def register_team_routes(app):
                 if selo in a.deliverables:
                     conta_selo[selo] += 1
         macros = [it for it in items if it.macro]
-        items = [it for it in items if not it.macro]
+        # demais atividades: sempre em ordem de vencimento (DU); macros ficam no topo
+        items = sorted((it for it in items if not it.macro),
+                       key=lambda it: (_du_efetivo(it), (it.title or "").lower()))
         return render_template("team/cronograma.html", items=items, macros=macros,
                                conta_selo=conta_selo,
                                members=_members(), companies=_companies(),

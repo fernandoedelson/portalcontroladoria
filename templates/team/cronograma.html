@@ -51,28 +51,6 @@
   </form>
 </div>
 
-<!-- ===== nova atividade ===== -->
-<div class="card">
-  <h2>Nova atividade do cronograma</h2>
-  <form method="post" action="/cronograma/item" class="adm-grid">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <div class="form-row" style="grid-column:1/-1;"><label class="field-label">Atividade</label>
-      <input class="input input-lg" name="title" placeholder="Ex.: Consolidar eliminações" required/></div>
-    <div class="form-row"><label class="field-label">Escopo / empresa</label>
-      {{ campo_escopo('', 'geral', []) }}
-      <div class="help-txt">“Todas” e “empresas específicas” criam uma atividade por empresa, com o responsável de cada entidade.</div></div>
-    <div class="form-row"><label class="field-label">Responsável</label>
-      <select class="input" name="member_id"><option value="">— a definir —</option>
-        {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
-    <div class="form-row"><label class="field-label">Vencimento — Nº dia útil do mês seguinte</label>
-      <input class="input" type="number" name="due_offset" min="1" max="23" value="5" style="width:110px;"/>
-      <div class="help-txt">Ex.: 5 = 5º dia útil do mês seguinte à competência.</div></div>
-    <div class="form-row"><label class="field-label">Prioridade</label>
-      <select class="input" name="priority">{% for p in priorities %}<option value="{{ p }}" {{ 'selected' if p=='media' }}>{{ p|capitalize }}</option>{% endfor %}</select></div>
-    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('plus') }} Adicionar</button></div>
-  </form>
-</div>
-
 <!-- ===== lista (salvar tudo de uma vez) ===== -->
 <form class="card" id="form-cron" method="post" action="/cronograma/salvar" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -81,6 +59,7 @@
     <span id="cron-status">Edite à vontade: nada é gravado até você clicar em <b>Salvar tudo</b>.</span>
     <span class="flex gap-1">
       <button type="button" class="btn btn-outline btn-sm" id="cron-descartar" hidden>Descartar alterações</button>
+      <button type="button" class="btn btn-outline btn-sm" id="cron-novo">{{ icone('plus') }} Novo</button>
       <button type="submit" class="btn btn-primary btn-sm" id="cron-salvar">{{ icone('check') }} Salvar tudo</button>
     </span>
   </div>
@@ -107,7 +86,8 @@
       <td><span class="text-muted text-sm" title="Macro-atividade fixa: não pode ser duplicada nem removida">fixa</span></td>
     </tr>
     {% endfor %}
-    <tr class="cron-grupo"><td colspan="7"><strong>Demais atividades</strong></td></tr>
+    <tr class="cron-grupo" id="cron-demais"><td colspan="7"><strong>Demais atividades</strong>
+      <span class="text-muted text-sm"> · em ordem de vencimento (DU)</span></td></tr>
     {% endif %}
     {% for it in items %}
     {% set p = 't%d_'|format(it.id) %}
@@ -129,8 +109,28 @@
         <button type="button" class="btn btn-outline btn-sm btn-danger cr-del" title="Marcar para remover" aria-label="Remover {{ it.title }}">{{ icone('trash') }}</button>
       </div></td>
     </tr>
-    {% else %}<tr><td colspan="7" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhuma atividade cadastrada ainda. Adicione acima.</td></tr>{% endfor %}
+    {% else %}<tr id="cron-vazio"><td colspan="7" class="text-muted" style="text-align:center;padding:1.2rem;">Nenhuma atividade cadastrada ainda. Clique em <b>Novo</b>.</td></tr>{% endfor %}
     </tbody></table></div>
+  {# modelo da linha nova (botão Novo): __P__ vira o prefixo n0_, n1_… #}
+  <template id="cron-modelo"><table><tbody>
+    <tr class="cron-lin cron-nova" data-p="__P__">
+      <td><input type="hidden" name="__P__mudou" value="1" class="cr-mudou"/>
+          <input type="hidden" name="__P__excluir" value="0" class="cr-excluir"/>
+          <input class="input" name="__P__title" value="" placeholder="Nome da atividade" aria-label="Atividade" required/>
+          <span class="cr-tag">nova</span></td>
+      <td>{{ campo_escopo('__P__', 'geral', []) }}</td>
+      <td><select class="input" name="__P__member_id" aria-label="Responsável"><option value="">— a definir —</option>
+        {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></td>
+      <td class="num"><input class="input cr-du" type="number" name="__P__due_offset" value="5" min="1" aria-label="Dia útil de vencimento"/></td>
+      <td><select class="input" name="__P__priority" aria-label="Prioridade">{% for pr in priorities %}<option value="{{ pr }}" {{ 'selected' if pr=='media' }}>{{ pr|capitalize }}</option>{% endfor %}</select></td>
+      <td><input type="hidden" name="__P__active_presente" value="1"/>
+          <label class="chk cr-ativo"><input type="checkbox" name="__P__active" value="1" checked/><span>Ativo</span></label></td>
+      <td><div class="cr-acoes">
+        <button type="button" class="btn btn-outline btn-sm cr-dup" title="Duplicar esta atividade" aria-label="Duplicar">{{ icone('copy') }}<span>Duplicar</span></button>
+        <button type="button" class="btn btn-outline btn-sm btn-danger cr-del" title="Descartar esta nova" aria-label="Descartar nova">{{ icone('x') }}</button>
+      </div></td>
+    </tr>
+  </tbody></table></template>
   <p class="help-txt mt-1"><strong>Macro-atividades</strong> (Painel, Fluxo de Endividamento, Consolidação): ao gerar o mês, cada uma
     cria uma atividade para cada entidade com o selo correspondente, para o responsável da entidade — aqui você define só o prazo e a prioridade.
     “Todas as empresas” e “empresas específicas” criam uma atividade por empresa, cada uma com o
@@ -243,6 +243,19 @@ document.addEventListener('click',function(e){
       del.title = marcar ? 'Desfazer a remoção' : 'Marcar para remover';
       conta();
     }
+  });
+  document.getElementById('cron-novo').addEventListener('click',function(){
+    var np='n'+(nNovo++)+'_';
+    var tmp=document.createElement('tbody');
+    tmp.innerHTML=document.getElementById('cron-modelo').innerHTML.split('__P__').join(np).replace(/^[\s\S]*?<tbody>|<\/tbody>[\s\S]*$/g,'');
+    var tr=tmp.querySelector('tr');
+    var vazio=document.getElementById('cron-vazio'); if(vazio) vazio.remove();
+    var ref=document.getElementById('cron-demais');
+    if(ref) ref.parentNode.insertBefore(tr, ref.nextSibling); else corpo.insertBefore(tr, corpo.firstChild);
+    tr.querySelectorAll('[data-esc]').forEach(escLiga);
+    tr.scrollIntoView({block:'center'});
+    var t=tr.querySelector('input[name$="title"]'); t.focus();
+    conta();
   });
   btnDesc.addEventListener('click',function(){
     if(confirm('Descartar todas as alterações não salvas do cronograma?')){ salvando=true; location.reload(); }
