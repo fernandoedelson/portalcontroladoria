@@ -1045,9 +1045,13 @@ def register_team_routes(app):
                 faltam = [i for i in usos[d.id] if i.id not in de_entrega]
                 (entregas if faltam else entregues).append(
                     {"d": d, "faltam": len(faltam), "total": len(usos[d.id])})
+        # últimas medições gravadas (todas as pessoas/painéis), para conferência
+        ultimas = (IndicatorResult.query
+                   .order_by(IndicatorResult.recorded_at.desc()).limit(25).all())
+        quem = {u.id: u.display_name for u in User.query.all()}
         return render_template("team/indicador_medir.html", defs=defs, usos=usos,
                                sel=sel, inds=usos.get(sel.id, []) if sel else [],
-                               comps=_comps(), comp_atual=comp,
+                               comps=_comps(), comp_atual=comp, ultimas=ultimas, quem=quem,
                                pendentes=pendentes, medidos=medidos,
                                entregas=entregas, entregues=entregues)
 

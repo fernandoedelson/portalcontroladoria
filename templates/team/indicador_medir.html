@@ -137,6 +137,32 @@
 </form>
 {% endif %}
 
+{% if ultimas %}
+<div class="card">
+  <h2>Últimas medições</h2>
+  <p class="text-muted text-sm mb-2">As 25 mais recentes, de todos os painéis. Clique no indicador para abrir a ficha,
+    com o histórico completo e as evidências.</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Indicador</th><th scope="col">Painel</th><th scope="col">Período</th>
+      <th scope="col">Resultado</th><th scope="col">Valor</th><th scope="col">Evidências</th>
+      <th scope="col">Quem · quando</th></tr></thead>
+    <tbody>
+    {% for r in ultimas %}
+    <tr>
+      <td><a href="/indicador/{{ r.indicator_id }}" style="text-decoration:none;color:var(--text);font-weight:500;">{{ r.indicator.title }}</a></td>
+      <td class="text-sm">{{ r.indicator.panel.name if r.indicator.panel else '—' }}</td>
+      <td class="text-sm">{{ r.period_label or (r.competency.label if r.competency else '—') }}</td>
+      <td><span class="st st-{{ r.outcome }}">{{ ROT.get(r.outcome, r.outcome) }}</span></td>
+      <td class="text-sm">{{ r.value_label or '—' }}</td>
+      <td class="text-sm">{% set n = (r.evidencias|length) + (1 if r.evidence_path else 0) %}
+        {% if n %}{{ icone('paperclip', 13) }} {{ n }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+      <td class="text-sm text-muted">{{ quem.get(r.recorded_by, '—') }}{% if r.recorded_at %} · {{ (r.recorded_at|local).strftime('%d/%m %H:%M') }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+{% endif %}
+
 <style>
   .med-escolhe select{max-width:100%;}
   .med-paineis{list-style:none;margin:0;padding:0;}
