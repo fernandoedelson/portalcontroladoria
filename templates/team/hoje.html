@@ -36,6 +36,12 @@
     <div>
       <div class="rot">Régua do fechamento · {{ comp.label }}{% if sel %} · {{ (members|selectattr('id','equalto',sel)|first).name }}{% endif %}</div>
       <div class="rg-pct"><b>{{ regua.pct }}%</b><span>{{ regua.feitas }} de {{ regua.total }} atividades conferidas</span></div>
+      <div class="rg-prazos">
+        {% if regua.prazo %}<span title="As empresas enviam o fechamento até aqui"><i class="pz pz-emp"></i>empresas
+          <b>{{ regua.prazo.strftime('%d/%m') }}</b>{% if regua.du_prazo %} · D+{{ regua.du_prazo }}{% endif %}</span>{% endif %}
+        {% if regua.prazo_cons %}<span title="Envio do fechamento consolidado do grupo"><i class="pz pz-cons"></i>consolidado
+          <b>{{ regua.prazo_cons.strftime('%d/%m') }}</b>{% if regua.du_prazo_cons %} · D+{{ regua.du_prazo_cons }}{% endif %}</span>{% endif %}
+      </div>
     </div>
     <div class="rg-legenda" aria-hidden="true">
       <span><i class="pt f"></i>concluída</span><span><i class="pt h"></i>vence hoje</span>
@@ -57,12 +63,14 @@
       {% if c.tipo == 'feriado' %}
       <div class="rg-col rg-fer" title="Feriado — não conta como dia útil"><div class="d">—</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div><div class="rg-tag">feriado</div></div>
       {% else %}
-      <a class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}"
+      <a class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}{{ ' prazo-cons' if c.prazo_cons }}"
          href="{{ '/fechamento/dia?d=%s'|format(c.data) if eu_sozinho else '/atividades?venc=%s%s'|format(c.data, '&member_id=%d'|format(sel) if sel else '') }}"
          title="D+{{ c.du }} · {{ c.data.strftime('%d/%m/%Y') }} · {{ c.n }} atividade(s) — ver a lista do dia">
         <div class="d">D+{{ c.du }}</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div>
         <div class="pts">{% for p in c.pts %}<i class="pt {{ p }}"></i>{% endfor %}</div>
-        {% if c.hoje %}<div class="rg-tag">hoje</div>{% elif c.prazo %}<div class="rg-tag">prazo</div>{% endif %}
+        {% if c.hoje %}<div class="rg-tag">hoje</div>
+        {% elif c.prazo %}<div class="rg-tag" title="Prazo das empresas enviarem o fechamento">empresas</div>
+        {% elif c.prazo_cons %}<div class="rg-tag" title="Prazo do fechamento consolidado do grupo">consolidado</div>{% endif %}
       </a>
       {% endif %}
     {% endfor %}

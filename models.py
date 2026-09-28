@@ -82,7 +82,10 @@ class Competency(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     year = db.Column(db.Integer, nullable=False)
     month = db.Column(db.Integer, nullable=False)   # 1..12
-    deadline = db.Column(db.Date)                    # 5o dia util
+    # prazo das EMPRESAS mandarem o fechamento (5o dia util, por padrao)
+    deadline = db.Column(db.Date)
+    # prazo do CONSOLIDADO do grupo (8o dia util, por padrao)
+    deadline_consolidado = db.Column(db.Date)
     status = db.Column(db.String(20), default="aberta")  # aberta | fechada
     closed_at = db.Column(db.DateTime)
     __table_args__ = (db.UniqueConstraint("year", "month", name="uq_comp_ym"),)

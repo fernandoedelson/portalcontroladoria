@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Public+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"/>
-  <link rel="stylesheet" href="/static/css/razao.css?v=44"/>
+  <link rel="stylesheet" href="/static/css/razao.css?v=45"/>
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
@@ -353,7 +353,8 @@
         {% if topo.du_hoje %}<span class="tc-du {{ 'vencido' if topo.vencido }}{{ ' feito' if not topo.pendentes }}"
           title="{{ topo.du_hoje }}º dia útil do fechamento{% if topo.du_prazo %}; prazo no {{ topo.du_prazo }}º{% endif %}">D+{{ topo.du_hoje }}{% if topo.du_prazo and topo.du_hoje <= topo.du_prazo %} de {{ topo.du_prazo }}{% endif %}</span>{% endif %}
         {% if not topo.pendentes and topo.du_hoje %}<span class="tc-ok">concluído</span>{% endif %}
-        {% if topo.prazo %}<span class="tc-prazo">prazo {{ topo.prazo.strftime('%d/%m') }}</span>{% endif %}
+        {% if topo.prazo %}<span class="tc-prazo" title="Prazo das empresas enviarem o fechamento">empresas {{ topo.prazo.strftime('%d/%m') }}</span>{% endif %}
+        {% if topo.prazo_cons %}<span class="tc-prazo tc-cons" title="Prazo de envio do fechamento consolidado do grupo">consolidado {{ topo.prazo_cons.strftime('%d/%m') }}</span>{% endif %}
       </a>
       {% endif %}
       <form class="search-box" action="/buscar" method="get" role="search">

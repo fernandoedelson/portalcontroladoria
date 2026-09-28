@@ -902,3 +902,11 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   .tbl-cartao td input[type=color],.tbl td input[type=color]{width:30px;min-width:30px !important;}
   .tbl-cartao td .btn,.tbl td .btn{width:auto;}
 }
+
+/* Régua: os dois prazos do fechamento (empresas e consolidado) */
+.rg-prazos{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;font-size:.74rem;color:var(--text-soft);}
+.rg-prazos b{color:var(--text);font-family:var(--r-mono);}
+.rg-prazos .pz{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:baseline;}
+.pz-emp{background:var(--text);} .pz-cons{background:var(--accent);}
+.rg-col.prazo-cons{background:linear-gradient(var(--surface-hi),transparent 70%);}
+.rg-col.prazo-cons .rg-tag{color:var(--accent);border:1.5px solid var(--accent);border-radius:3px;padding:0 4px;}

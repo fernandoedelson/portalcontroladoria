@@ -582,19 +582,30 @@
       <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Criar competência</button>
     </form>
     <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th scope="col">Competência</th><th scope="col">Prazo</th><th scope="col">Status</th><th scope="col">Ação</th></tr></thead>
+      <thead><tr><th scope="col">Competência</th>
+        <th scope="col" title="Prazo das empresas enviarem o fechamento">Prazo empresas</th>
+        <th scope="col" title="Prazo de envio do fechamento consolidado do grupo">Prazo consolidado</th>
+        <th scope="col">Status</th><th scope="col">Ação</th></tr></thead>
       <tbody>{% for c in competencies %}
-        <tr><td>{{ c.label }}</td>
-          <td>{{ c.deadline.strftime('%d/%m/%Y') if c.deadline else '—' }}</td>
+        <tr>
+          <td>{{ c.label }}</td>
+          <td><input class="input" type="date" form="cmp-{{ c.id }}" name="deadline"
+                     value="{{ c.deadline.isoformat() if c.deadline else '' }}" aria-label="Prazo das empresas em {{ c.label }}"/></td>
+          <td><input class="input" type="date" form="cmp-{{ c.id }}" name="deadline_consolidado"
+                     value="{{ c.deadline_consolidado.isoformat() if c.deadline_consolidado else '' }}" aria-label="Prazo do consolidado em {{ c.label }}"/></td>
           <td><span class="st st-{{ 'aberta' if c.status=='aberta' else ('fechada' if c.status=='fechada' else 'planejada') }}">{{ c.status }}</span></td>
-          <td>
+          <td><div class="flex gap-1">
+            <form id="cmp-{{ c.id }}" method="post" action="/admin/competencia/{{ c.id }}/prazos">{{ csrf() }}</form>
+            <button class="btn btn-outline btn-sm" type="submit" form="cmp-{{ c.id }}">Salvar prazos</button>
             <form method="post" action="/admin/competencia/{{ c.id }}/status" class="flex gap-1 items-center">
               {{ csrf() }}
               <input type="hidden" name="status" value="{{ 'fechada' if c.status=='aberta' else 'aberta' }}"/>
               <button class="btn btn-outline btn-sm" type="submit">{{ 'Fechar' if c.status=='aberta' else 'Reabrir' }}</button>
             </form>
-          </td></tr>
-      {% else %}<tr><td colspan="4" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma competência cadastrada.</td></tr>{% endfor %}</tbody></table></div>
+          </div></td></tr>
+      {% else %}<tr><td colspan="5" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma competência cadastrada.</td></tr>{% endfor %}</tbody></table></div>
+    <p class="help-txt mt-1">Ao criar uma competência, os prazos nascem no 5º e no 8º dia útil do mês seguinte.
+      Ajuste aqui quando o combinado do mês for outro.</p>
   </div>
 
   <div class="card">

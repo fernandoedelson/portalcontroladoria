@@ -899,12 +899,17 @@ def register_admin_routes(app):
             flash("Essa competência já existe.", "warning")
             return _back("sistema")
         nth = int(get_setting("closing_nth_bday", "5") or 5)
+        nth_cons = int(get_setting("closing_nth_bday_cons", "8") or 8)
         try:
             dl = deadline_for_competency(year, month, nth=nth)
         except Exception:
             dl = None
+        try:
+            dl_cons = deadline_for_competency(year, month, nth=nth_cons)
+        except Exception:
+            dl_cons = None
         db.session.add(Competency(year=year, month=month, deadline=dl,
-                                  status="aberta"))
+                                  deadline_consolidado=dl_cons, status="aberta"))
         db.session.commit()
         flash("Competência criada.", "success")
         return _back("sistema")
@@ -920,6 +925,35 @@ def register_admin_routes(app):
         else:
             set_setting("competencia_atual_id", "")
             flash("Competência atual limpa (usa a aberta mais recente).", "info")
+        return _back("sistema")
+
+    @app.route("/admin/competencia/<int:cid>/prazos", methods=["POST"])
+    @admin_required
+    def admin_competencia_prazos(cid):
+        """Os dois prazos do fechamento: empresas enviam / consolidado sai."""
+        from datetime import date as _date
+        c = db.session.get(Competency, cid) or abort(404)
+
+        def _data(campo):
+            v = (request.form.get(campo) or "").strip()
+            if not v:
+                return None
+            try:
+                return _date.fromisoformat(v)
+            except ValueError:
+                return "erro"
+
+        emp, cons = _data("deadline"), _data("deadline_consolidado")
+        if emp == "erro" or cons == "erro":
+            flash("Data inválida.", "danger")
+            return _back("sistema")
+        if emp and cons and cons < emp:
+            flash("O prazo do consolidado não pode ser antes do prazo das empresas.", "danger")
+            return _back("sistema")
+        c.deadline, c.deadline_consolidado = emp, cons
+        db.session.commit()
+        log_audit(current_user.id, "competencia_prazos", "competency", c.label)
+        flash(f"Prazos de {c.label} salvos.", "success")
         return _back("sistema")
 
     @app.route("/admin/competencia/<int:cid>/status", methods=["POST"])

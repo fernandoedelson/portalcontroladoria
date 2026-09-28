@@ -77,8 +77,12 @@ def create_app(config=Config):
         try:                          # depois da carteira existir
             ensure_clusters_defaults()
             from team.models import (ensure_macros, normaliza_prazos_cronograma,
-                                     ensure_frequencia_indicadores)
+                                     ensure_frequencia_indicadores,
+                                     ensure_prazo_consolidado)
             ensure_frequencia_indicadores()
+            n = ensure_prazo_consolidado()
+            if n:
+                app.logger.info("%s competência(s) ganharam o prazo do consolidado", n)
             ensure_macros()
             n = normaliza_prazos_cronograma()
             if n:
@@ -122,6 +126,7 @@ _COLUNAS_NOVAS = [
     ("activities", "nova_data_by", "INTEGER"),
     ("activities", "nova_data_at", "DATETIME"),
     ("indicator_defs", "frequencia", "VARCHAR(10) DEFAULT 'unica'"),
+    ("competencies", "deadline_consolidado", "DATE"),
 ]
 
 
@@ -195,7 +200,8 @@ def register_routes(app):
                             .filter(Activity.status.in_(["pendente", "em_andamento", "bloqueada"]))
                             .count())
                     topo = {"label": c.label, "du_hoje": du_hoje, "du_prazo": du_prazo,
-                            "prazo": c.deadline, "pendentes": pend,
+                            "prazo": c.deadline, "prazo_cons": c.deadline_consolidado,
+                            "pendentes": pend,
                             "vencido": bool(c.deadline and fuso.hoje() > c.deadline and pend)}
             except Exception:
                 topo = None

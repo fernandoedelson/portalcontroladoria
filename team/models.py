@@ -681,3 +681,25 @@ def ensure_frequencia_indicadores():
     db.session.commit()
     set_setting("indic_frequencia_ok", "1")
     return n
+
+
+def ensure_prazo_consolidado(nth=8):
+    """Preenche o prazo do CONSOLIDADO nas competências antigas (uma vez).
+
+    O portal passou a ter dois prazos: as empresas enviam no 5º dia útil e o
+    consolidado do grupo sai no 8º. Quem já existia ficou sem o segundo.
+    """
+    from models import Competency, get_setting, set_setting
+    from engine.calendar_br import deadline_for_competency
+    if get_setting("prazo_consolidado_ok") == "1":
+        return 0
+    n = 0
+    for c in Competency.query.filter(Competency.deadline_consolidado.is_(None)).all():
+        try:
+            c.deadline_consolidado = deadline_for_competency(c.year, c.month, nth=nth)
+            n += 1
+        except Exception:
+            continue
+    db.session.commit()
+    set_setting("prazo_consolidado_ok", "1")
+    return n

@@ -231,8 +231,12 @@ def generate_closing_activities(competency, created_by=None):
     return criadas, atualizadas, removidas, preservadas
 
 
-def ensure_competency(year, month, nth=5):
-    """Garante a Competency de (year, month) — cria 'planejada' se faltar."""
+def ensure_competency(year, month, nth=5, nth_cons=8):
+    """Garante a Competency de (year, month) — cria 'planejada' se faltar.
+
+    Dois prazos: as EMPRESAS mandam o fechamento no 5º dia útil e o
+    CONSOLIDADO do grupo sai no 8º (padrão, configurável).
+    """
     from engine.calendar_br import deadline_for_competency
     comp = Competency.query.filter_by(year=year, month=month).first()
     if comp:
@@ -241,7 +245,12 @@ def ensure_competency(year, month, nth=5):
         dl = deadline_for_competency(year, month, nth=nth)
     except Exception:
         dl = None
-    comp = Competency(year=year, month=month, deadline=dl, status="planejada")
+    try:
+        dl_cons = deadline_for_competency(year, month, nth=nth_cons)
+    except Exception:
+        dl_cons = None
+    comp = Competency(year=year, month=month, deadline=dl,
+                      deadline_consolidado=dl_cons, status="planejada")
     db.session.add(comp)
     db.session.commit()
     return comp
@@ -416,6 +425,7 @@ def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None, kinds=N
         pts = sorted((estado(a) for a in por_dia[d]), key=lambda e: ordem[e])
         cols.append({"tipo": "dia", "du": i + 1, "data": d, "dsem": _DSEM[d.weekday()],
                      "pts": pts, "hoje": d == ref, "prazo": d == comp.deadline,
+                     "prazo_cons": d == comp.deadline_consolidado,
                      "n": len(pts),
                      "c": {e: pts.count(e) for e in ("f", "a", "h", "")}})
     total = len(acts)
@@ -425,6 +435,9 @@ def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None, kinds=N
         "comp": comp, "total": total, "feitas": feitas,
         "pct": round(feitas / total * 100) if total else 0,
         "cols": cols, "n_dias": n, "du_hoje": du_hoje, "du_prazo": du_prazo,
+        "prazo": comp.deadline, "prazo_cons": comp.deadline_consolidado,
+        "du_prazo_cons": ((dias.index(comp.deadline_consolidado) + 1)
+                          if comp.deadline_consolidado in dias else None),
         "antes": [estado(a) for a in antes], "depois": [estado(a) for a in depois],
         "sem_prazo": len(sem_prazo), "n_atrasadas": len(atrasadas),
         "atraso_desde": (min(a.due_date for a in atrasadas) if atrasadas else None),
