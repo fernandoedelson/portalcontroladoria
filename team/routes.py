@@ -11,7 +11,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from config import Config
-from models import (db, User, Company, Competency, log_audit, notify)
+from models import (db, User, Company, Competency, log_audit, notify, set_setting)
 from team.models import (TeamMember, CompanyAssignment, Project, Milestone,
                          Activity, ClosingTemplateItem, Indicator, IndicatorResult,
                          AlertChannelSetting, AlertLog, ALERT_EVENTS,
@@ -1758,6 +1758,122 @@ def register_team_routes(app):
                                email_via=team_alerts.email_via(),
                                meu_email=current_user.email,
                                meu_whatsapp=(me.whatsapp if me else None))
+
+    # ==================================================================
+    # AVISO DE PRAZO ÀS EMPRESAS (e-mail automático para os contatos)
+    # ==================================================================
+    @app.route("/avisos-empresas")
+    @controladoria_required
+    def team_avisos_empresas():
+        from team import avisos_empresas as av
+        from team.models_workflow import CompanyNoticeLog, Segment
+        comp = _current_competency()
+        prazos_seg = {s.name: (s.prazo_du or 5) for s in Segment.query.all()}
+        assigns = {a.company_id: a for a in CompanyAssignment.query.all()}
+        linhas = []
+        for c in Company.query.filter_by(active=True).order_by(Company.name):
+            prazo, du = av.prazo_da_empresa(c.id, comp, prazos_seg, assigns)
+            a = assigns.get(c.id)
+            linhas.append({"c": c, "segmento": (a.segment if a else None),
+                           "prazo": prazo, "du": du,
+                           "contatos": [x for x in c.contatos if x.active]})
+        hist = (CompanyNoticeLog.query
+                .order_by(CompanyNoticeLog.sent_at.desc()).limit(40).all())
+        return render_template(
+            "team/avisos_empresas.html", linhas=linhas, comp=comp, hist=hist,
+            cfg={k: av.config(k) for k in av.PADRAO}, ligado=av.ligado(),
+            email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),
+            marcadas=sum(1 for l in linhas if l["c"].avisar_prazo and l["contatos"]),
+            meu_email=current_user.email)
+
+    @app.route("/avisos-empresas/config", methods=["POST"])
+    @controladoria_required
+    def team_avisos_config():
+        from team import avisos_empresas as av
+        set_setting("aviso_emp_ativo", "1" if request.form.get("ativo") else "0")
+        for k in ("aviso_emp_assunto_data", "aviso_emp_corpo_data",
+                  "aviso_emp_assunto_vence", "aviso_emp_corpo_vence"):
+            set_setting(k, (request.form.get(k) or "").strip() or av.PADRAO[k])
+        db.session.commit()
+        log_audit(current_user.id, "avisos_empresas_config", "setting", "")
+        flash("Mensagens salvas.", "success")
+        return redirect(url_for("team_avisos_empresas"))
+
+    @app.route("/avisos-empresas/empresas", methods=["POST"])
+    @controladoria_required
+    def team_avisos_empresas_salvar():
+        """Quem recebe o aviso + os contatos de cada empresa (uma tela só)."""
+        from team.models_workflow import CompanyContact
+        marcadas = {int(x) for x in request.form.getlist("avisar") if x.isdigit()}
+        n_emp = n_ct = 0
+        for c in Company.query.filter_by(active=True).all():
+            novo = c.id in marcadas
+            if bool(c.avisar_prazo) != novo:
+                c.avisar_prazo = novo
+                n_emp += 1
+            for ct in list(c.contatos):          # edição/remoção dos existentes
+                campo = f"ct{ct.id}_email"
+                if campo not in request.form:
+                    continue
+                email = (request.form.get(campo) or "").strip()
+                if not email or request.form.get(f"ct{ct.id}_excluir") == "1":
+                    db.session.delete(ct)
+                    n_ct += 1
+                    continue
+                nome = (request.form.get(f"ct{ct.id}_nome") or "").strip() or None
+                if (ct.email, ct.name) != (email, nome):
+                    ct.email, ct.name = email[:160], (nome[:120] if nome else None)
+                    n_ct += 1
+            novo_email = (request.form.get(f"novo{c.id}_email") or "").strip()
+            if novo_email:
+                if "@" not in novo_email:
+                    flash(f"E-mail inválido em {c.name}: {novo_email}", "danger")
+                    db.session.rollback()
+                    return redirect(url_for("team_avisos_empresas"))
+                db.session.add(CompanyContact(
+                    company_id=c.id, email=novo_email[:160],
+                    name=(request.form.get(f"novo{c.id}_nome") or "").strip()[:120] or None))
+                n_ct += 1
+        db.session.commit()
+        log_audit(current_user.id, "avisos_empresas_destinos", "company",
+                  f"{n_emp} empresa(s), {n_ct} contato(s)")
+        flash(f"Salvo: {n_emp} empresa(s) e {n_ct} contato(s).", "success")
+        return redirect(url_for("team_avisos_empresas"))
+
+    @app.route("/avisos-empresas/rodar", methods=["POST"])
+    @controladoria_required
+    def team_avisos_rodar():
+        from team import avisos_empresas as av
+        tipo = request.form.get("tipo")            # 'data' | 'vence' | None
+        dry = request.form.get("dry_run") == "1"
+        r = av.rodar(quem=current_user.id, forcar=(tipo if tipo in ("data", "vence") else None),
+                     dry_run=dry)
+        if r.get("pulado"):
+            flash(f"Nada enviado: {r['pulado']}.", "info")
+        else:
+            flash(f"{'Simulação: ' if dry else ''}{r['data']} aviso(s) de data e "
+                  f"{r['vence']} de vencimento" +
+                  (f", {r['falhas']} falha(s)." if r["falhas"] else "."), "success")
+        return redirect(url_for("team_avisos_empresas"))
+
+    @app.route("/avisos-empresas/teste", methods=["POST"])
+    @controladoria_required
+    def team_avisos_teste():
+        """Manda para o próprio e-mail o texto exato que a empresa receberia."""
+        from team import avisos_empresas as av
+        c = db.session.get(Company, _int(request.form.get("company_id")) or 0)
+        comp = _current_competency()
+        if not c:
+            flash("Escolha a empresa do teste.", "warning")
+            return redirect(url_for("team_avisos_empresas"))
+        prazo, du = av.prazo_da_empresa(c.id, comp)
+        kind = request.form.get("tipo") if request.form.get("tipo") in ("data", "vence") else "data"
+        assunto = av._texto(f"aviso_emp_assunto_{kind}", c, comp, prazo, du)
+        corpo = av._texto(f"aviso_emp_corpo_{kind}", c, comp, prazo, du)
+        ok, err = team_alerts.send_email(current_user.email, f"[TESTE] {assunto}", corpo)
+        flash(f"Teste enviado para {current_user.email}." if ok
+              else f"Não enviou: {err}.", "success" if ok else "warning")
+        return redirect(url_for("team_avisos_empresas"))
 
     @app.route("/alertas/teste", methods=["POST"])
     @team_required

@@ -606,3 +606,62 @@ class AtaReuniao(db.Model):
             return f"{meses[int(m)]}/{y}"
         except Exception:
             return self.comp_ym
+
+
+# ==========================================================================
+# AVISO DE PRAZO ÀS EMPRESAS — e-mail automático para os contatos da empresa
+# ==========================================================================
+class CompanyContact(db.Model):
+    """Quem, na empresa, recebe o aviso do prazo de fechamento."""
+    __tablename__ = "company_contacts"
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    name = db.Column(db.String(120))
+    email = db.Column(db.String(160), nullable=False)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship("Company", backref=db.backref(
+        "contatos", cascade="all, delete-orphan", order_by="CompanyContact.id"))
+
+
+class CompanyNoticeLog(db.Model):
+    """Registro de cada aviso enviado — evita repetir e vira histórico.
+
+    tipo: 'data' (1º dia útil, avisa a data) | 'vence' (no dia do prazo).
+    """
+    __tablename__ = "company_notice_log"
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    competency_id = db.Column(db.Integer, db.ForeignKey("competencies.id"), nullable=True)
+    kind = db.Column(db.String(10), nullable=False)
+    to_addr = db.Column(db.String(400))
+    subject = db.Column(db.String(240))
+    status = db.Column(db.String(20), default="enviado")   # enviado | falhou | simulado
+    detail = db.Column(db.String(300))
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sent_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+
+    company = db.relationship("Company")
+    competency = db.relationship("Competency")
+
+
+# textos padrão do e-mail (editáveis na tela Avisos às Empresas)
+AVISO_ASSUNTO_DATA = "Fechamento {competencia}: prazo de envio em {prazo}"
+AVISO_CORPO_DATA = """Olá, {empresa}.
+
+O fechamento de {competencia} deve ser enviado à Controladoria J&F até
+{prazo} ({du}º dia útil de {mes_envio}).
+
+Qualquer dúvida, é só responder este e-mail.
+
+Controladoria J&F"""
+AVISO_ASSUNTO_VENCE = "Hoje é o prazo do fechamento {competencia}"
+AVISO_CORPO_VENCE = """Olá, {empresa}.
+
+Hoje, {prazo}, é o prazo de envio do fechamento de {competencia} à
+Controladoria J&F.
+
+Se já enviou, desconsidere este aviso.
+
+Controladoria J&F"""

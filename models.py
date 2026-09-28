@@ -71,6 +71,8 @@ class Company(db.Model):
     tol_abs = db.Column(db.Float)   # piso absoluto R$
     # ROL LTM aproximada (base da tolerancia relativa) - alimentada pelo aceite
     rol_ltm = db.Column(db.Float, default=0.0)
+    # recebe o aviso automatico do prazo de fechamento (Avisos as Empresas)
+    avisar_prazo = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

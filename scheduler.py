@@ -52,7 +52,8 @@ def run_daily_tasks(app, force=False):
     from models import db, User, notify
     from team import alerts as team_alerts
 
-    resultado = {"alertas": None, "cobrancas": 0, "resumo": False, "tarefas": 0, "push_liberados": 0}
+    resultado = {"alertas": None, "cobrancas": 0, "resumo": False, "tarefas": 0,
+                 "push_liberados": 0, "avisos_empresas": None}
     hoje = fuso.hoje()
     # portal corporativo: nada de aviso em fim de semana nem feriado nacional.
     # O dia útil anterior já avisou o que cairia nesses dias (fuso.cobertura).
@@ -87,7 +88,16 @@ def run_daily_tasks(app, force=False):
         except Exception:
             _log(app, "falha nos avisos de tarefa:\n" + traceback.format_exc())
 
-    # (cobranca das empresas removida: pertencia ao modulo de Consolidacao)
+    # 2) aviso de prazo às EMPRESAS (1º dia útil e no dia do prazo de cada uma)
+    if force or not _already_ran(app, "avisos_empresas", hoje):
+        try:
+            from team import avisos_empresas
+            resultado["avisos_empresas"] = avisos_empresas.rodar(ref=hoje)
+            _mark(app, "avisos_empresas", hoje)
+            _log(app, f"avisos às empresas: {resultado['avisos_empresas']}")
+        except Exception:
+            _log(app, "falha nos avisos às empresas:\n" + traceback.format_exc())
+
 
     # 3) resumo semanal para a controladoria
     dia_resumo = int(_get(app, "digest_weekday", 0))

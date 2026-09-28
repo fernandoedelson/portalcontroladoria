@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Avisos às empresas{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Avisos às empresas</h1>
+    <div class="sub">E-mail automático do prazo de fechamento. O portal envia no <strong>1º dia útil</strong>
+      avisando a data e, de novo, <strong>no dia do prazo</strong> de cada empresa.</div></div>
+  <a href="/alertas" class="btn btn-outline">{{ icone('bell') }} Alertas do time</a>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi {{ 'ok' if ligado else 'warn' }}"><div class="kpi-label">Envio automático</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ligado' if ligado else 'Desligado' }}</div>
+    <div class="kpi-foot">todo dia útil, às 8h</div></div>
+  <div class="kpi accent"><div class="kpi-label">Empresas avisadas</div>
+    <div class="kpi-value">{{ marcadas }}</div>
+    <div class="kpi-foot">marcadas e com contato</div></div>
+  <div class="kpi {{ 'ok' if email_on else 'warn' }}"><div class="kpi-label">Canal e-mail</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if email_on else 'Simulado' }}</div>
+    <div class="kpi-foot">{{ email_via }}</div></div>
+  <div class="kpi"><div class="kpi-label">Competência</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ comp.label if comp else '—' }}</div>
+    <div class="kpi-foot">prazo por segmento</div></div>
+</div>
+
+<div class="card">
+  <h2>Mensagens</h2>
+  <p class="text-muted text-sm mb-2">Marcadores: <code>{empresa}</code>, <code>{competencia}</code>,
+    <code>{prazo}</code>, <code>{du}</code>, <code>{mes_envio}</code>, <code>{hoje}</code>.</p>
+  <form method="post" action="/avisos-empresas/config">
+    {{ csrf() }}
+    <label class="chk mb-2"><input type="checkbox" name="ativo" value="1" {{ 'checked' if ligado }}/>
+      Enviar automaticamente</label>
+    <div class="grid-2">
+      <div>
+        <div class="form-row"><label class="field-label">Assunto — aviso da data (1º dia útil)</label>
+          <input class="input" name="aviso_emp_assunto_data" value="{{ cfg.aviso_emp_assunto_data }}"/></div>
+        <div class="form-row"><label class="field-label">Mensagem — aviso da data</label>
+          <textarea class="input" name="aviso_emp_corpo_data" rows="9">{{ cfg.aviso_emp_corpo_data }}</textarea></div>
+      </div>
+      <div>
+        <div class="form-row"><label class="field-label">Assunto — vence hoje</label>
+          <input class="input" name="aviso_emp_assunto_vence" value="{{ cfg.aviso_emp_assunto_vence }}"/></div>
+        <div class="form-row"><label class="field-label">Mensagem — vence hoje</label>
+          <textarea class="input" name="aviso_emp_corpo_vence" rows="9">{{ cfg.aviso_emp_corpo_vence }}</textarea></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar mensagens</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Empresas e destinatários</h2>
+  <p class="text-muted text-sm mb-2">Marque quem recebe e cadastre os e-mails. O prazo vem do
+    segmento da empresa (Administração › Organização › Segmentos).</p>
+  <form method="post" action="/avisos-empresas/empresas">
+    {{ csrf() }}
+    <div class="barra-salvar"><span>Marque as empresas, ajuste os contatos e salve.</span>
+      <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar</button></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th scope="col" style="width:52px;">Avisar</th><th scope="col">Empresa</th>
+        <th scope="col">Segmento</th><th scope="col">Prazo</th>
+        <th scope="col">Destinatários</th><th scope="col">Novo destinatário</th></tr></thead>
+      <tbody>
+      {% for l in linhas %}
+      <tr>
+        <td class="text-center"><input type="checkbox" name="avisar" value="{{ l.c.id }}"
+              {{ 'checked' if l.c.avisar_prazo }} aria-label="Avisar {{ l.c.name }}"/></td>
+        <th scope="row">{{ l.c.name }}</th>
+        <td class="text-sm">{{ l.segmento or '—' }}</td>
+        <td class="text-sm">{% if l.prazo %}{{ l.prazo.strftime('%d/%m') }} · D+{{ l.du }}{% else %}—{% endif %}</td>
+        <td>
+          {% for ct in l.contatos %}
+          <div class="flex gap-1 mb-1" style="flex-wrap:wrap;">
+            <input class="input" name="ct{{ ct.id }}_nome" value="{{ ct.name or '' }}" placeholder="nome" style="width:120px;"/>
+            <input class="input" type="email" name="ct{{ ct.id }}_email" value="{{ ct.email }}" style="width:190px;"/>
+            <label class="chk chk-sm" title="Remover este destinatário">
+              <input type="checkbox" name="ct{{ ct.id }}_excluir" value="1"/> remover</label>
+          </div>
+          {% else %}<span class="text-muted text-sm">nenhum</span>{% endfor %}
+        </td>
+        <td><div class="flex gap-1" style="flex-wrap:wrap;">
+          <input class="input" name="novo{{ l.c.id }}_nome" placeholder="nome" style="width:110px;"/>
+          <input class="input" type="email" name="novo{{ l.c.id }}_email" placeholder="email@empresa.com" style="width:180px;"/>
+        </div></td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Enviar agora</h2>
+  <div class="flex gap-2" style="flex-wrap:wrap;">
+    <form method="post" action="/avisos-empresas/rodar" class="flex gap-1 items-center">
+      {{ csrf() }}<input type="hidden" name="dry_run" value="1"/>
+      <button class="btn btn-outline" type="submit">Simular (sem enviar)</button></form>
+    <form method="post" action="/avisos-empresas/rodar" class="flex gap-1 items-center"
+          onsubmit="return confirm('Enviar o aviso da DATA para todas as empresas marcadas?');">
+      {{ csrf() }}<input type="hidden" name="tipo" value="data"/>
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Enviar aviso da data</button></form>
+    <form method="post" action="/avisos-empresas/rodar" class="flex gap-1 items-center"
+          onsubmit="return confirm('Enviar o aviso de VENCE HOJE para todas as empresas marcadas?');">
+      {{ csrf() }}<input type="hidden" name="tipo" value="vence"/>
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Enviar “vence hoje”</button></form>
+    <form method="post" action="/avisos-empresas/teste" class="flex gap-1 items-center">
+      {{ csrf() }}
+      <select class="input" name="company_id" aria-label="Empresa do teste">
+        {% for l in linhas %}<option value="{{ l.c.id }}">{{ l.c.name }}</option>{% endfor %}</select>
+      <select class="input" name="tipo" aria-label="Tipo do teste">
+        <option value="data">aviso da data</option><option value="vence">vence hoje</option></select>
+      <button class="btn btn-outline" type="submit">Testar no meu e-mail</button></form>
+  </div>
+  <p class="help-txt mt-1">O envio automático roda junto com o ciclo diário, só em dia útil, e cada
+    empresa recebe uma vez por competência em cada tipo. Os botões acima ignoram essa trava.</p>
+</div>
+
+<div class="card">
+  <h2>Últimos envios</h2>
+  {% if hist %}
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Quando</th><th scope="col">Empresa</th><th scope="col">Tipo</th>
+      <th scope="col">Para</th><th scope="col">Assunto</th><th scope="col">Situação</th></tr></thead>
+    <tbody>
+    {% for h in hist %}
+    <tr>
+      <td class="text-sm text-muted">{{ (h.sent_at|local).strftime('%d/%m %H:%M') }}</td>
+      <td>{{ h.company.name if h.company else '—' }}</td>
+      <td><span class="kind-chip">{{ 'data' if h.kind == 'data' else 'vence hoje' }}</span></td>
+      <td class="text-sm">{{ h.to_addr }}</td>
+      <td class="text-sm">{{ h.subject }}</td>
+      <td><span class="st st-{{ 'aprovado' if h.status=='enviado' else ('validando' if h.status=='simulado' else 'reprovado') }}">{{ h.status }}</span>
+        {% if h.detail %}<div class="text-sm text-muted">{{ h.detail }}</div>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}
+  <div class="empty-box"><div class="empty-ico">{{ icone('mail', 28) }}</div>
+    <p><strong>Nenhum aviso enviado ainda.</strong></p></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -127,6 +127,7 @@ _COLUNAS_NOVAS = [
     ("activities", "nova_data_at", "DATETIME"),
     ("indicator_defs", "frequencia", "VARCHAR(10) DEFAULT 'unica'"),
     ("competencies", "deadline_consolidado", "DATE"),
+    ("companies", "avisar_prazo", "BOOLEAN DEFAULT 0"),
 ]
 
 
