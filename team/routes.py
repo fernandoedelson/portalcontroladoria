@@ -230,6 +230,11 @@ def register_team_routes(app):
         ref = fuso.hoje()
         members = _members()
         sel = request.args.get("member_id", type=int)
+        # profissional só vê a própria fila, mesmo sem filtro na URL (antes, sem
+        # member_id, a Fila do Dia trazia as pendências do time inteiro)
+        sid_escopo = _scoped_member_id()
+        if sid_escopo is not None:
+            sel = sid_escopo
         tipo = request.args.get("tipo")     # 'projeto' | 'fechamento' | None
         if tipo not in ("projeto", "fechamento"):
             tipo = None
@@ -244,7 +249,10 @@ def register_team_routes(app):
             mf = mfarol.get(m.id, {"total": 0, "atrasada": 0,
                                    "vence_hoje": 0, "aberta": 0})
             board.append({"member": m, "f": mf})
-        rg = engine.regua(comp, ref, member_id=sel) if comp else None
+        # régua: o profissional vê o fechamento INTEIRO (sem nomes) — é o retrato
+        # do mês, não a lista dele; para a controladoria vale o filtro escolhido
+        rg_member = None if sid_escopo is not None else sel
+        rg = engine.regua(comp, ref, member_id=rg_member) if comp else None
         # visão por pessoa (só para quem enxerga o time inteiro)
         # bloco "por pessoa": fechamento | projetos | indicadores
         vis = request.args.get("vis")
@@ -269,6 +277,40 @@ def register_team_routes(app):
     # ==================================================================
     # ATIVIDADES (motor unico) — lista, kanban, CRUD
     # ==================================================================
+    @app.route("/fechamento/dia")
+    @team_required
+    def team_fechamento_dia():
+        """Fechamento de um dia, SEM os responsáveis.
+
+        O profissional precisa enxergar como está o fechamento inteiro, mas sem
+        expor quem cuida do quê. As atividades dele vêm marcadas e clicáveis; as
+        dos colegas aparecem só como título, empresa, prioridade e situação.
+        """
+        try:
+            d = date.fromisoformat(request.args.get("d") or "")
+        except ValueError:
+            flash("Dia inválido.", "warning")
+            return redirect(url_for("team_hoje"))
+        ref = fuso.hoje()
+        comp = _current_competency()
+        q = (Activity.query
+             .filter(Activity.kind.in_(engine.KINDS_FECHAMENTO))
+             .filter(Activity.status != "cancelada")
+             .filter(Activity.due_date == d))
+        if comp:
+            q = q.filter(Activity.competency_id == comp.id)
+        acts = q.all()
+        prio = {"critica": 0, "alta": 1, "media": 2, "baixa": 3}
+        acts.sort(key=lambda a: (prio.get(a.priority, 2),
+                                 (a.company.name if a.company else ""), a.title))
+        sid = _scoped_member_id()
+        conta = {"total": len(acts),
+                 "feitas": sum(1 for a in acts if a.status == "concluida"),
+                 "minhas": sum(1 for a in acts if sid is not None and a.member_id == sid)}
+        return render_template("team/fechamento_dia.html", dia=d, acts=acts, comp=comp,
+                               today=ref, sid=sid, conta=conta,
+                               regua=(engine.regua(comp, ref) if comp else None))
+
     @app.route("/atividades")
     @team_required
     def team_atividades():

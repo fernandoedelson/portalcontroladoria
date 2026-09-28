@@ -57,7 +57,8 @@
       {% if c.tipo == 'feriado' %}
       <div class="rg-col rg-fer" title="Feriado — não conta como dia útil"><div class="d">—</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div><div class="rg-tag">feriado</div></div>
       {% else %}
-      <a class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}" href="/atividades?venc={{ c.data }}{{ '&member_id=%d'|format(sel) if sel }}"
+      <a class="rg-col{{ ' hoje' if c.hoje }}{{ ' prazo' if c.prazo }}"
+         href="{{ '/fechamento/dia?d=%s'|format(c.data) if eu_sozinho else '/atividades?venc=%s%s'|format(c.data, '&member_id=%d'|format(sel) if sel else '') }}"
          title="D+{{ c.du }} · {{ c.data.strftime('%d/%m/%Y') }} · {{ c.n }} atividade(s) — ver a lista do dia">
         <div class="d">D+{{ c.du }}</div><div class="dt"><span class="ds">{{ c.dsem }} </span>{{ c.data.strftime('%d/%m') }}</div>
         <div class="pts">{% for p in c.pts %}<i class="pt {{ p }}"></i>{% endfor %}</div>

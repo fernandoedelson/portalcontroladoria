@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Fechamento de {{ dia.strftime('%d/%m') }}{% endblock %}
+{% set ROT = {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'A fazer',
+              'em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada',
+              'concluida':'Concluída','cancelada':'Cancelada'} %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Fechamento de {{ dia.strftime('%d/%m/%Y') }}</h1>
+    <div class="sub">{{ comp.label if comp else '' }} · o que vence neste dia no time inteiro.
+      Sem responsáveis: só as suas atividades são identificadas.</div></div>
+  <a href="/time" class="btn btn-outline">{{ icone('arrow-left') }} Painel do Dia</a>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi accent"><div class="kpi-label">Atividades do dia</div>
+    <div class="kpi-value">{{ conta.total }}</div>
+    <div class="kpi-foot">{{ comp.label if comp else '—' }}</div></div>
+  <div class="kpi ok"><div class="kpi-label">Concluídas</div>
+    <div class="kpi-value">{{ conta.feitas }}</div>
+    <div class="kpi-foot">de {{ conta.total }} do dia</div></div>
+  {% if sid is not none %}
+  <div class="kpi"><div class="kpi-label">Suas neste dia</div>
+    <div class="kpi-value">{{ conta.minhas }}</div>
+    <div class="kpi-foot">clique para abrir</div></div>
+  {% endif %}
+  {% if regua and regua.total %}
+  <div class="kpi"><div class="kpi-label">Fechamento do mês</div>
+    <div class="kpi-value">{{ regua.feitas }}/{{ regua.total }}</div>
+    <div class="kpi-foot">{{ regua.pct }}% concluído</div></div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Atividades</h2>
+  {% if acts %}
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Atividade</th><th scope="col">Empresa</th>
+      <th scope="col">Prioridade</th><th scope="col">Situação</th><th scope="col"></th></tr></thead>
+    <tbody>
+    {% for a in acts %}
+    {% set minha = (sid is not none and a.member_id == sid) %}
+    {% set est = a.effective_status(today) %}
+    <tr>
+      <td>{% if minha %}<a href="/atividade/{{ a.id }}" style="font-weight:500;text-decoration:none;color:var(--text);">{{ a.title }}</a>
+          <span class="badge-soft">sua</span>
+        {% else %}{{ a.title }}{% endif %}</td>
+      <td class="text-sm">{{ a.company.name if a.company else '—' }}</td>
+      <td><span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span></td>
+      <td><span class="st st-{{ est }}">{{ ROT.get(est, est) }}</span></td>
+      <td class="text-right">{% if minha %}<a href="/atividade/{{ a.id }}" class="btn btn-outline btn-sm">Abrir</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+  <p class="help-txt mt-1">As atividades dos colegas aparecem sem responsável e não abrem —
+    assim você acompanha o fechamento sem ver observações e anexos de outras pessoas.</p>
+  {% else %}
+  <div class="empty-box"><div class="empty-ico">{{ icone('calendar', 28) }}</div>
+    <p><strong>Nada vence em {{ dia.strftime('%d/%m') }}.</strong></p></div>
+  {% endif %}
+</div>
+{% endblock %}
