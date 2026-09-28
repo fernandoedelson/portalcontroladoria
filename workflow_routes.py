@@ -830,19 +830,19 @@ def register_workflow_routes(app):
         return redirect(url_for("tarefas"))
 
     # ------------------------------------------------------------------
-    # DEFINICOES GERAIS — compartilhadas: todo o time ve; controladoria edita
+    # DEFINICOES GERAIS — os combinados da area: todo o time ve E edita
     # ------------------------------------------------------------------
     @app.route("/definicoes")
     @any_team_required
     def definicoes():
         listas = DefinitionList.query.order_by(DefinitionList.sort_order, DefinitionList.id).all()
-        if not listas and current_user.is_controladoria:
+        if not listas:
             l = DefinitionList(name="Definições gerais", created_by=current_user.id)
             db.session.add(l)
             db.session.commit()
             listas = [l]
         return render_template("team/definicoes.html", listas=listas,
-                               pode_editar=current_user.is_controladoria,
+                               pode_editar=True,
                                busca=(request.args.get("q") or "").strip()[:100],
                                total=Definition.query.count())
 
@@ -850,7 +850,7 @@ def register_workflow_routes(app):
         return redirect(url_for("definicoes") + (f"#lista-{lid}" if lid else ""))
 
     @app.route("/definicoes/lista/nova", methods=["POST"])
-    @team_required
+    @any_team_required
     def definicao_lista_nova():
         nome = (request.form.get("name") or "").strip() or "Nova lista"
         n = DefinitionList.query.count()
@@ -861,7 +861,7 @@ def register_workflow_routes(app):
         return _def_volta(l.id)
 
     @app.route("/definicoes/lista/<int:lid>/renomear", methods=["POST"])
-    @team_required
+    @any_team_required
     def definicao_lista_renomear(lid):
         l = db.session.get(DefinitionList, lid) or abort(404)
         nome = (request.form.get("name") or "").strip()
@@ -873,7 +873,7 @@ def register_workflow_routes(app):
         return _def_volta(lid)
 
     @app.route("/definicoes/lista/<int:lid>/excluir", methods=["POST"])
-    @team_required
+    @any_team_required
     def definicao_lista_excluir(lid):
         l = db.session.get(DefinitionList, lid) or abort(404)
         log_audit(current_user.id, "definicao_lista_excluida", "definicoes",
@@ -884,7 +884,7 @@ def register_workflow_routes(app):
         return _def_volta()
 
     @app.route("/definicao/nova", methods=["POST"])
-    @team_required
+    @any_team_required
     def definicao_nova():
         l = db.session.get(DefinitionList, request.form.get("list_id", type=int) or 0) or abort(404)
         texto = (request.form.get("text") or "").strip()
@@ -896,7 +896,7 @@ def register_workflow_routes(app):
         return _def_volta(l.id)
 
     @app.route("/definicao/<int:did>/editar", methods=["POST"])
-    @team_required
+    @any_team_required
     def definicao_editar(did):
         d = db.session.get(Definition, did) or abort(404)
         texto = (request.form.get("text") or "").strip()
@@ -910,7 +910,7 @@ def register_workflow_routes(app):
         return _def_volta(d.list_id)
 
     @app.route("/definicao/<int:did>/excluir", methods=["POST"])
-    @team_required
+    @any_team_required
     def definicao_excluir(did):
         d = db.session.get(Definition, did) or abort(404)
         lid = d.list_id

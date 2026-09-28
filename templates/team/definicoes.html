@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Definições gerais</h1>
-    <div class="sub">Os combinados da área — visíveis para todo o time.{% if not pode_editar %} Só a controladoria altera.{% endif %}</div></div>
+    <div class="sub">Os combinados da área — todo o time vê e registra.</div></div>
   {% if pode_editar %}
   <form method="post" action="/definicoes/lista/nova" class="flex gap-1 items-center">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
