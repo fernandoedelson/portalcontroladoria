@@ -1763,7 +1763,7 @@ def register_team_routes(app):
     # AVISO DE PRAZO ÀS EMPRESAS (e-mail automático para os contatos)
     # ==================================================================
     @app.route("/avisos-empresas")
-    @controladoria_required
+    @team_required
     def team_avisos_empresas():
         from team import avisos_empresas as av
         from team.models_workflow import CompanyNoticeLog, Segment
@@ -1787,7 +1787,7 @@ def register_team_routes(app):
             meu_email=current_user.email)
 
     @app.route("/avisos-empresas/config", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_avisos_config():
         from team import avisos_empresas as av
         set_setting("aviso_emp_ativo", "1" if request.form.get("ativo") else "0")
@@ -1800,7 +1800,7 @@ def register_team_routes(app):
         return redirect(url_for("team_avisos_empresas"))
 
     @app.route("/avisos-empresas/empresas", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_avisos_empresas_salvar():
         """Quem recebe o aviso + os contatos de cada empresa (uma tela só)."""
         from team.models_workflow import CompanyContact
@@ -1841,7 +1841,7 @@ def register_team_routes(app):
         return redirect(url_for("team_avisos_empresas"))
 
     @app.route("/avisos-empresas/rodar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_avisos_rodar():
         from team import avisos_empresas as av
         tipo = request.form.get("tipo")            # 'data' | 'vence' | None
@@ -1857,7 +1857,7 @@ def register_team_routes(app):
         return redirect(url_for("team_avisos_empresas"))
 
     @app.route("/avisos-empresas/teste", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_avisos_teste():
         """Manda para o próprio e-mail o texto exato que a empresa receberia."""
         from team import avisos_empresas as av

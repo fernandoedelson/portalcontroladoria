@@ -6,7 +6,7 @@
   <div><h1>Avisos às empresas</h1>
     <div class="sub">E-mail automático do prazo de fechamento. O portal envia no <strong>1º dia útil</strong>
       avisando a data e, de novo, <strong>no dia do prazo</strong> de cada empresa.</div></div>
-  <a href="/alertas" class="btn btn-outline">{{ icone('bell') }} Alertas do time</a>
+  {% if current_user.is_controladoria %}<a href="/alertas" class="btn btn-outline">{{ icone('bell') }} Alertas do time</a>{% endif %}
 </div>
 
 <div class="kpi-grid">
