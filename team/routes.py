@@ -1794,6 +1794,7 @@ def register_team_routes(app):
         for k in ("aviso_emp_assunto_data", "aviso_emp_corpo_data",
                   "aviso_emp_assunto_vence", "aviso_emp_corpo_vence"):
             set_setting(k, (request.form.get(k) or "").strip() or av.PADRAO[k])
+        set_setting("aviso_emp_copia", (request.form.get("aviso_emp_copia") or "").strip())
         db.session.commit()
         log_audit(current_user.id, "avisos_empresas_config", "setting", "")
         flash("Mensagens salvas.", "success")

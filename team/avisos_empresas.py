@@ -21,6 +21,7 @@ from team.models import CompanyAssignment
 
 PADRAO = {
     "aviso_emp_ativo": "1",
+    "aviso_emp_copia": "",          # e-mails de controle (vazio = admins do portal)
     "aviso_emp_assunto_data": AVISO_ASSUNTO_DATA,
     "aviso_emp_corpo_data": AVISO_CORPO_DATA,
     "aviso_emp_assunto_vence": AVISO_ASSUNTO_VENCE,
@@ -105,6 +106,42 @@ def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False):
     return ok, (err or "")
 
 
+def emails_de_controle():
+    """Para quem vai o aviso de que os e-mails saíram (admins, por padrão)."""
+    from models import User
+    manual = [e.strip() for e in (config("aviso_emp_copia") or "").replace(";", ",").split(",")
+              if "@" in e]
+    if manual:
+        return manual
+    return [u.email for u in User.query.filter(
+        User.role.in_(["controladoria", "admin"]), User.active.is_(True)).all() if u.email]
+
+
+def avisa_controle(ref, comp, enviados, falhas, dry_run=False):
+    """Manda ao administrador o comprovante do que foi disparado às empresas."""
+    from team import alerts
+    if not enviados and not falhas:
+        return False
+    destinos = emails_de_controle()
+    if not destinos or dry_run:
+        return False
+    linhas = [f"Avisos de prazo enviados em {ref.strftime('%d/%m/%Y')}"
+              + (f" — fechamento {comp.label}" if comp else ""), ""]
+    for kind, empresa, emails, prazo in enviados:
+        rot = "aviso da data" if kind == "data" else "vence hoje"
+        linhas.append(f"  • {empresa} — {rot} — para {', '.join(emails)}"
+                      + (f" — prazo {prazo.strftime('%d/%m/%Y')}" if prazo else ""))
+    if falhas:
+        linhas += ["", "Falhas:"] + [f"  • {e} — {d}" for e, d in falhas]
+    linhas += ["", f"Total: {len(enviados)} enviado(s)"
+               + (f", {len(falhas)} falha(s)." if falhas else ".")]
+    corpo = "\n".join(linhas)
+    assunto = (f"[Controle] {len(enviados)} aviso(s) de prazo enviado(s) às empresas"
+               + (f" — {comp.label}" if comp else ""))
+    ok, _err = alerts.send_email(", ".join(destinos), assunto, corpo)
+    return ok
+
+
 def rodar(ref=None, quem=None, forcar=None, dry_run=False):
     """Roda os avisos do dia. `forcar` ('data'|'vence') ignora a regra de data.
 
@@ -128,6 +165,7 @@ def rodar(ref=None, quem=None, forcar=None, dry_run=False):
     prazos_seg = {s.name: (s.prazo_du or 5) for s in Segment.query.all()}
     assigns = {a.company_id: a for a in CompanyAssignment.query.all()}
 
+    enviados, falhas = [], []
     for empresa, emails in empresas_do_aviso():
         prazo, du = prazo_da_empresa(empresa.id, comp, prazos_seg, assigns)
         for kind, quando in (("data", primeiro_du), ("vence", prazo)):
@@ -137,8 +175,11 @@ def rodar(ref=None, quem=None, forcar=None, dry_run=False):
                 continue
             if not forcar and _ja_enviado(empresa.id, comp.id, kind):
                 continue
-            ok, _det = envia(kind, empresa, emails, comp, prazo, du,
-                             quem=quem, dry_run=dry_run)
+            ok, det = envia(kind, empresa, emails, comp, prazo, du,
+                            quem=quem, dry_run=dry_run)
             resumo[kind] += 1 if ok else 0
             resumo["falhas"] += 0 if ok else 1
+            (enviados if ok else falhas).append(
+                (kind, empresa.name, emails, prazo) if ok else (empresa.name, det))
+    resumo["controle"] = avisa_controle(ref, comp, enviados, falhas, dry_run=dry_run)
     return resumo

@@ -616,3 +616,37 @@ def metas_painel(comp, member_id=None):
         l["peso"] = round(sum(x["ind"].weight or 0 for x in l["itens"]), 1)
     linhas.sort(key=lambda l: l["member"].name.lower())
     return linhas
+
+
+def vira_competencia(ref=None, gerar=True):
+    """No ÚLTIMO dia útil do mês: abre a competência do mês que termina, passa a
+    considerá-la a atual e já gera as atividades (que vencem no mês seguinte).
+
+    Sem isso, alguém tinha de trocar a competência na mão todo mês — e o aviso
+    às empresas saía com o mês errado. Idempotente: roda uma vez por mês.
+    """
+    from engine.calendar_br import business_days
+    from models import get_setting, set_setting
+    ref = ref or fuso.hoje()
+    dias = business_days(ref.year, ref.month)
+    if not dias or ref != dias[-1]:
+        return {"virou": False, "motivo": "não é o último dia útil do mês"}
+    marca = f"{ref.year:04d}-{ref.month:02d}"
+    if get_setting("virada_competencia") == marca:
+        return {"virou": False, "motivo": "já virou neste mês"}
+    comp = ensure_competency(ref.year, ref.month)
+    if comp.status == "planejada":
+        comp.status = "aberta"
+    anterior = (Competency.query
+                .filter(Competency.status == "aberta", Competency.id != comp.id)
+                .order_by(Competency.year.desc(), Competency.month.desc()).first())
+    set_setting("competencia_atual_id", str(comp.id))
+    db.session.commit()
+    criadas = atualizadas = 0
+    if gerar:
+        criadas, atualizadas, _rm, _pres = generate_closing_activities(comp)
+    set_setting("virada_competencia", marca)
+    db.session.commit()
+    return {"virou": True, "competencia": comp.label, "criadas": criadas,
+            "atualizadas": atualizadas,
+            "anterior": (anterior.label if anterior else None)}

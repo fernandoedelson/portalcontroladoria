@@ -32,6 +32,10 @@
     {{ csrf() }}
     <label class="chk mb-2"><input type="checkbox" name="ativo" value="1" {{ 'checked' if ligado }}/>
       Enviar automaticamente</label>
+    <div class="form-row"><label class="field-label">E-mail(s) de controle — recebem o comprovante de cada disparo</label>
+      <input class="input" name="aviso_emp_copia" value="{{ cfg.aviso_emp_copia }}"
+             placeholder="em branco = todos os administradores do portal" style="max-width:520px;"/>
+      <div class="help-txt">Separe por vírgula. A cada rodada sai um resumo com empresa, tipo, destinatários e falhas.</div></div>
     <div class="grid-2">
       <div>
         <div class="form-row"><label class="field-label">Assunto — aviso da data (1º dia útil)</label>

@@ -53,7 +53,7 @@ def run_daily_tasks(app, force=False):
     from team import alerts as team_alerts
 
     resultado = {"alertas": None, "cobrancas": 0, "resumo": False, "tarefas": 0,
-                 "push_liberados": 0, "avisos_empresas": None}
+                 "push_liberados": 0, "avisos_empresas": None, "virada": None}
     hoje = fuso.hoje()
     # portal corporativo: nada de aviso em fim de semana nem feriado nacional.
     # O dia útil anterior já avisou o que cairia nesses dias (fuso.cobertura).
@@ -87,6 +87,17 @@ def run_daily_tasks(app, force=False):
                 _log(app, f"avisos de tarefa: {resultado['tarefas']}")
         except Exception:
             _log(app, "falha nos avisos de tarefa:\n" + traceback.format_exc())
+
+    # 1c) virada do mês: no último dia útil abre a competência e gera as atividades
+    if force or not _already_ran(app, "virada", hoje):
+        try:
+            from team import engine as _eng
+            resultado["virada"] = _eng.vira_competencia(ref=hoje)
+            _mark(app, "virada", hoje)
+            if resultado["virada"].get("virou"):
+                _log(app, f"virada de competência: {resultado['virada']}")
+        except Exception:
+            _log(app, "falha na virada da competência:\n" + traceback.format_exc())
 
     # 2) aviso de prazo às EMPRESAS (1º dia útil e no dia do prazo de cada uma)
     if force or not _already_ran(app, "avisos_empresas", hoje):
