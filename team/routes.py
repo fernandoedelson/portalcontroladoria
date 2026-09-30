@@ -2023,9 +2023,19 @@ def register_team_routes(app):
         return render_template(
             "team/comunicacao.html", listas=listas, etapas=com.ETAPAS,
             desligadas=com.etapas_desligadas(current_user.id),
-            hora=int(get_setting("scheduler_hour", 8) or 8),
+            hora=com.hora_envio_txt(),
             email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),
             pode_listas=current_user.is_controladoria)
+
+    @app.route("/comunicacao/horario", methods=["POST"])
+    @controladoria_required
+    def team_comunicacao_horario():
+        from team import comunicacao as com
+        if com.salva_hora_envio(request.form.get("hora")):
+            flash(f"E-mail diário (e demais rotinas do dia) passa a sair às {com.hora_envio_txt()}.", "success")
+        else:
+            flash("Horário inválido. Use o formato HH:MM.", "warning")
+        return redirect(url_for("team_comunicacao"))
 
     @app.route("/comunicacao/regua", methods=["POST"])
     @team_required

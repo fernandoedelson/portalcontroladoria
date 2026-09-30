@@ -359,6 +359,12 @@ def flush_resumo(coletor, dry_run=False):
     if dry_run:
         return {}
     res = comunicacao.envia_coletor(coletor, PORTAL_URL, send_email)
+    falhou = {e: r[1] for e, r in res.items()
+              if not r[0] and r[1] not in ("email_desligado", "sem_destinatario", "simulado")}
+    if falhou:
+        comunicacao.avisa_sistema(
+            "email_diario", f"O e-mail diário falhou para {len(falhou)} pessoa(s)",
+            "\n".join(f"{e}: {err}" for e, err in list(falhou.items())[:30]))
     for email, d in coletor.por_email.items():
         ok, err, _n = res.get(email, (False, "sem_envio", 0))
         status = "enviado" if ok else ("simulado" if err == "email_desligado" else "falha")

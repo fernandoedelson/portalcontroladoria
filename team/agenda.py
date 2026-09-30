@@ -140,10 +140,37 @@ def participantes_fixos():
     return lista
 
 
+def participantes_da_empresa(company_id):
+    """Quem entra em TODO convite da empresa: os responsáveis cadastrados nela, o
+    responsável da Controladoria por ela (carteira) e as lideranças."""
+    from models import User
+    from team.models import CompanyAssignment
+    emails = []
+    if company_id:
+        c = db.session.get(Company, company_id)
+        if c:
+            emails += [x.email for x in c.contatos if x.active and x.email]
+        a = CompanyAssignment.query.filter_by(company_id=company_id).first()
+        if a and a.member and a.member.user and a.member.user.email:
+            emails.append(a.member.user.email)
+    emails += [u.email for u in User.query.filter_by(role="lideranca", active=True).all() if u.email]
+    return emails
+
+
+def participantes(r):
+    """Todos os e-mails do convite, sem repetir (o solicitante vem primeiro)."""
+    vistos, out = set(), []
+    for e in [r.email] + participantes_da_empresa(r.company_id) + participantes_fixos():
+        k = (e or "").strip().lower()
+        if k and k not in vistos:
+            vistos.add(k)
+            out.append(e.strip())
+    return out
+
+
 def _enviar(r, cancelar=False):
     from team import alerts
-    fixos = participantes_fixos()
-    todos = [r.email] + [e for e in fixos if e.lower() != r.email.lower()]
+    todos = participantes(r)
     anexo = ("convite.ics", ics(r, todos, cancelar=cancelar).encode("utf-8"),
              "text/calendar; method=" + ("CANCEL" if cancelar else "REQUEST"))
     quando = f"{r.inicio.strftime('%d/%m/%Y')} às {r.inicio.strftime('%H:%M')}"

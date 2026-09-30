@@ -115,7 +115,7 @@ def register_admin_routes(app):
         return {
             "status": sched.status(),
             "enabled": str(get_setting("scheduler_enabled", "1")) == "1",
-            "hour": int(get_setting("scheduler_hour", 8) or 8),
+            "hour": __import__("team.comunicacao", fromlist=["x"]).hora_envio_txt(),
             "weekday": int(get_setting("digest_weekday", 0) or 0),
             "last_alertas": get_setting("last_alertas"),
             "last_cobrancas": get_setting("last_cobrancas"),
@@ -912,9 +912,9 @@ def register_admin_routes(app):
     def admin_scheduler():
         set_setting("scheduler_enabled",
                     "1" if _bool(request.form.get("scheduler_enabled")) else "0")
-        hora = _int(request.form.get("scheduler_hour"))
-        if hora is not None and 0 <= hora <= 23:
-            set_setting("scheduler_hour", hora)
+        if request.form.get("scheduler_hora"):
+            from team import comunicacao
+            comunicacao.salva_hora_envio(request.form.get("scheduler_hora"))
         dia = _int(request.form.get("digest_weekday"))
         if dia is not None and 0 <= dia <= 6:
             set_setting("digest_weekday", dia)

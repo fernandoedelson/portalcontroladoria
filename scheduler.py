@@ -25,6 +25,14 @@ def _log(app, msg):
         app.logger.info("[scheduler] %s", msg)
     except Exception:
         print(f"[scheduler] {msg}")
+    if msg.startswith("falha") or msg.startswith("erro"):      # falha do ciclo -> lista "Avisos do sistema"
+        try:
+            from team import comunicacao
+            etapa = msg.split(":")[0][:60]
+            comunicacao.avisa_sistema("ciclo_" + etapa.replace(" ", "_")[:40],
+                                      f"Falha no ciclo diário: {etapa}", msg[:3500])
+        except Exception:
+            pass
 
 
 def _get(app, key, default):
@@ -225,9 +233,10 @@ def _loop(app):
             with app.app_context():
                 from models import get_setting
                 if _s(_get(app, "scheduler_enabled", "1")) == "1":
-                    hora = int(_get(app, "scheduler_hour", 8))
+                    from team import comunicacao
+                    h, m = comunicacao.hora_envio()
                     agora = fuso.agora()
-                    if agora.hour >= hora:
+                    if (agora.hour, agora.minute) >= (h, m):
                         run_daily_tasks(app)
         except Exception:
             _log(app, "erro no loop:\n" + traceback.format_exc())

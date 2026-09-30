@@ -123,6 +123,10 @@ def emails_de_controle():
 def avisa_controle(ref, comp, enviados, falhas, dry_run=False):
     """Manda ao administrador o comprovante do que foi disparado às empresas."""
     from team import alerts
+    if falhas and not dry_run:
+        from team import comunicacao
+        comunicacao.avisa_sistema("avisos_empresas", f"{len(falhas)} aviso(s) de prazo às empresas falharam",
+                                  "\n".join(f"{e}: {d}" for e, d in falhas[:30]))
     if not enviados and not falhas:
         return False
     destinos = emails_de_controle()

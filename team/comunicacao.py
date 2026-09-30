@@ -22,7 +22,7 @@ TIPOS_LISTA = [
     ("agenda", "Reuniões agendadas (participantes fixos)",
      "Quem entra em todo convite de reunião marcado pelas empresas."),
     ("sistema", "Avisos do sistema",
-     "Falhas de envio e demais avisos operacionais."),
+     "Só quando algo dá errado: e-mail do dia, report ou avisos às empresas que falharam, ou falha no ciclo diário (no máximo 1 aviso por tipo por dia)."),
 ]
 
 # Etapas da régua: (chave, título, quando acontece, quem costuma receber)
@@ -162,3 +162,64 @@ def envia_coletor(coletor, portal_url, enviar, dry_run=False):
         ok, err = enviar(email, assunto, monta_corpo(d["nome"], itens, portal_url))
         saida[email] = (ok, err, n)
     return saida
+
+
+# ------------------------------------------------------------ horário do envio
+def hora_envio():
+    """(hora, minuto) do disparo diário. `envio_diario_hora` 'HH:MM'; sem ele, cai no
+    antigo `scheduler_hour`; padrão 08:00."""
+    v = get_setting("envio_diario_hora")
+    try:
+        h, m = str(v).split(":")
+        h, m = int(h), int(m)
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h, m
+    except (TypeError, ValueError):
+        pass
+    try:
+        return max(0, min(23, int(get_setting("scheduler_hour", 8) or 8))), 0
+    except (TypeError, ValueError):
+        return 8, 0
+
+
+def hora_envio_txt():
+    h, m = hora_envio()
+    return f"{h:02d}:{m:02d}"
+
+
+def salva_hora_envio(txt):
+    """Grava 'HH:MM' (valida). Mantém o antigo `scheduler_hour` em dia. Retorna bool."""
+    try:
+        h, m = str(txt).strip().split(":")
+        h, m = int(h), int(m)
+        assert 0 <= h <= 23 and 0 <= m <= 59
+    except (ValueError, AssertionError):
+        return False
+    set_setting("envio_diario_hora", f"{h:02d}:{m:02d}")
+    set_setting("scheduler_hour", str(h))
+    db.session.commit()
+    return True
+
+
+# ------------------------------------------------------------ avisos do sistema
+def avisa_sistema(tipo, assunto, detalhe):
+    """Manda um aviso operacional à lista "Avisos do sistema" (no máximo 1 por tipo por
+    dia, para uma falha repetida não virar enxurrada). Nunca levanta erro."""
+    try:
+        from team import alerts
+        hoje = fuso.hoje().isoformat()
+        chave = f"sistema_aviso_{tipo}"
+        if get_setting(chave) == hoje:
+            return False
+        destinos = emails_da_lista("sistema")
+        if not destinos:
+            return False
+        set_setting(chave, hoje)
+        db.session.commit()
+        corpo = (f"{assunto}\n\n{detalhe}\n\nPortal: {alerts.PORTAL_URL}\n"
+                 "(Aviso automático do sistema; no máximo um por tipo por dia.)")
+        for e in destinos:
+            alerts.send_email(e, f"[Portal Controladoria] {assunto}", corpo, lista=True)
+        return True
+    except Exception:
+        return False

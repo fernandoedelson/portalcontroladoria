@@ -10,18 +10,31 @@
 
 <div class="kpi-grid">
   <div class="kpi accent"><div class="kpi-label">E-mail diário</div>
-    <div class="kpi-value" style="font-size:1.2rem;">{{ '%02d' % hora }}:00</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ hora }}</div>
     <div class="kpi-foot">um só e-mail por pessoa, em dia útil</div></div>
   <div class="kpi {{ 'ok' if email_on else 'warn' }}"><div class="kpi-label">Canal e-mail</div>
     <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if email_on else 'Simulado' }}</div>
     <div class="kpi-foot">{{ email_via }}</div></div>
 </div>
 
+{% if pode_listas %}
+<div class="card">
+  <h2>Horário do e-mail diário</h2>
+  <form method="post" action="/comunicacao/horario" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <label class="field-label" for="hora-envio">Enviar todo dia útil às</label>
+    <input class="input" type="time" id="hora-envio" name="hora" value="{{ hora }}" required style="width:130px;"/>
+    <button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar horário</button>
+  </form>
+  <p class="help-txt mt-1">É o horário em que o portal roda as rotinas do dia (e-mail diário, avisos às empresas, report). Se o servidor estiver desligado nessa hora, roda na primeira verificação depois dela.</p>
+</div>
+{% endif %}
+
 <div class="card" id="regua">
   <h2>Minha régua de avisos</h2>
   <p class="text-muted text-sm mb-2">Marque só as etapas em que você quer ser avisado. Vale para todos os
     canais (e-mail, WhatsApp e notificação). Mesmo com muitas pendências, você recebe
-    <strong>um único e-mail por dia</strong>, às {{ '%02d' % hora }}:00, juntando tudo.</p>
+    <strong>um único e-mail por dia</strong>, às {{ hora }}, juntando tudo.</p>
   <form method="post" action="/comunicacao/regua">
     {{ csrf() }}
     <div class="tbl-wrap"><table class="tbl">

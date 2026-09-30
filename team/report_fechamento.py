@@ -66,11 +66,22 @@ def _celula(a, ref):
                                            and rev.new_date > rev.old_date)
     efetivo = a.nova_data or a.due_date
     motivo = (a.nova_data_motivo if a.nova_data else (rev.reason if rev else None))
+    if a.nova_data:                      # combinada: o prazo original segue valendo no app
+        original, nova = a.due_date, a.nova_data
+    elif postergada:                     # prazo realinhado: original = antes da 1ª revisão
+        from team.models_workflow import DeadlineRevision
+        primeira = (DeadlineRevision.query.filter_by(entity_type="activity", entity_id=a.id,
+                                                     status="aplicada")
+                    .order_by(DeadlineRevision.created_at.asc()).first())
+        original, nova = (primeira.old_date if primeira else rev.old_date), a.due_date
+    else:
+        original = nova = None
     base = {"prazo": efetivo, "motivo": motivo, "activity_id": a.id,
             "responsavel": a.member.name if a.member else None,
-            "postergada": postergada}
+            "postergada": postergada, "original": original, "nova": nova}
     if efetivo and efetivo < ref:
-        dias = (ref - efetivo).days
+        from team.engine import business_days_between
+        dias = max(business_days_between(efetivo, ref) or 0, 1)       # dias úteis de atraso
         return dict(base, estado="atrasada", dias=dias,
                     rotulo=("Atrasada (prazo postergado vencido)" if postergada else "Atrasada"))
     if postergada:
@@ -95,6 +106,7 @@ def montar(comp, ref=None):
                 if ids else [])
     grupos = {g: [] for g, _ in GRUPOS}
     pend, tot = [], {"docs": 0, "entregues": 0, "atrasadas": 0, "postergadas": 0}
+    posterg = []
     completas = 0
     for c in empresas:
         cels, aplica, ok = {}, 0, 0
@@ -114,6 +126,10 @@ def montar(comp, ref=None):
                 elif cel["estado"] == "postergada":
                     tot["postergadas"] += 1
                 pend.append({"empresa": c.name, "doc": rot, **cel})
+                if cel.get("postergada") and cel.get("original") and cel.get("nova"):
+                    posterg.append({"empresa": c.name, "doc": rot, "original": cel["original"],
+                                    "nova": cel["nova"], "motivo": cel.get("motivo"),
+                                    "estado": cel["estado"]})
         datas = [x["data"] for x in cels.values()
                  if x["estado"] == "entregue" and x.get("data")]
         completa = aplica > 0 and ok == aplica
@@ -125,6 +141,7 @@ def montar(comp, ref=None):
             "data": max(datas) if completa and datas else None, "obs": obs})
     pend.sort(key=lambda x: (x["estado"] != "atrasada", -(x.get("dias") or 0), x["empresa"]))
     return {"comp": comp, "ref": ref, "grupos": grupos, "pendencias": pend,
+            "postergacoes": posterg,
             "totais": tot, "n_empresas": len(empresas), "empresas_completas": completas,
             "completo": bool(tot["docs"]) and tot["entregues"] == tot["docs"]}
 
@@ -136,12 +153,20 @@ _SIM = {"entregue": "&#10004;", "atrasada": "&#10008;", "postergada": "&#9203;",
         "pendente": "&#8226;", "na": "&ndash;"}
 
 
-def _txt_cel(cel):
-    if cel["estado"] == "entregue":
-        return cel["data"].strftime("%d/%m") if cel.get("data") else ""
-    if cel["estado"] in ("postergada", "atrasada") and cel.get("prazo"):
-        return ("até " if cel["estado"] == "postergada" else "venceu ") + cel["prazo"].strftime("%d/%m")
-    return ""
+def _linhas_cel(cel):
+    """Texto pequeno da célula, em linhas (vai dentro do quadro colorido)."""
+    e = cel["estado"]
+    if e == "entregue":
+        return [cel["data"].strftime("%d/%m")] if cel.get("data") else []
+    if e == "atrasada":
+        n = cel.get("dias") or 1
+        return [f"{n} d.u. de atraso", "prazo " + cel["prazo"].strftime("%d/%m")] if cel.get("prazo") \
+            else [f"{n} d.u. de atraso"]
+    if e == "postergada" and cel.get("prazo"):
+        return ["até " + cel["prazo"].strftime("%d/%m")]
+    if e == "pendente" and cel.get("prazo"):
+        return ["prazo " + cel["prazo"].strftime("%d/%m")]
+    return []
 
 
 def assunto(q):
@@ -167,21 +192,24 @@ def html(q, link):
             cs = ""
             for macro, _r in DOCS:
                 cel = l["cels"][macro]
+                pequeno = "<br>".join(escape(x) for x in _linhas_cel(cel))
+                marca = " *" if cel.get("postergada") and cel["estado"] in ("postergada", "atrasada") else ""
                 cs += (f'<td style="{td}background:{_COR[cel["estado"]]};text-align:center;">'
-                       f'{_SIM[cel["estado"]]} <span style="font-size:11px;color:#444;">{escape(_txt_cel(cel))}</span></td>')
+                       f'<b>{_SIM[cel["estado"]]}</b>{marca}'
+                       f'<div style="font-size:11px;color:#333;line-height:1.3;">{pequeno}</div></td>')
             data = l["data"].strftime("%d/%m") if l["data"] else ""
             linhas.append(f'<tr><td style="{td}">{escape(l["empresa"].name)}</td>'
                           f'<td style="{td}text-align:center;">{data}</td>{cs}'
                           f'<td style="{td}font-size:12px;">{escape(l["obs"])}</td></tr>')
-    pend = ""
-    if q["pendencias"]:
+    rodape = ""
+    if q.get("postergacoes"):
         li = "".join(
-            f'<li>{escape(p["empresa"])} — {escape(p["doc"])}: '
-            + (f'atrasado {p["dias"]} dia(s) (prazo {p["prazo"].strftime("%d/%m")})' if p["estado"] == "atrasada"
-               else (f'postergado até {p["prazo"].strftime("%d/%m")}' if p["estado"] == "postergada"
-                     else 'no prazo'))
-            + "</li>" for p in q["pendencias"])
-        pend = f'<p style="margin:14px 0 4px;"><b>Pendências</b></p><ul style="margin:0;padding-left:18px;font-size:13px;">{li}</ul>'
+            f'<li>* {escape(p["empresa"])} — {escape(p["doc"])}: prazo original '
+            f'<b>{p["original"].strftime("%d/%m")}</b>, nova data combinada <b>{p["nova"].strftime("%d/%m")}</b>'
+            + (f' ({escape(p["motivo"])})' if p.get("motivo") else "") + "</li>"
+            for p in q["postergacoes"])
+        rodape = (f'<p style="margin:14px 0 4px;font-size:12px;"><b>Entregas postergadas</b></p>'
+                  f'<ul style="margin:0;padding-left:16px;font-size:12px;list-style:none;">{li}</ul>')
     resumo = ("Todos os documentos foram entregues." if q["completo"] else
               f'{t["entregues"]} de {t["docs"]} documentos entregues · {q["empresas_completas"]} de {q["n_empresas"]} empresas completas'
               + (f' · {t["atrasadas"]} em atraso' if t["atrasadas"] else "")
@@ -194,8 +222,8 @@ def html(q, link):
 <tr><th style="{th}text-align:left;">Empresa</th><th style="{th}">Data</th><th style="{th}">Painel</th>
 <th style="{th}">Template</th><th style="{th}">Endividamento</th><th style="{th}">Obs</th></tr>
 {''.join(linhas)}
-</table>{pend}
-<p style="font-size:12px;color:#556;margin-top:14px;">&#10004; entregue &nbsp; &#10008; atrasado &nbsp; &#9203; postergado (nova data combinada) &nbsp; &#8226; no prazo.
+</table>{rodape}
+<p style="font-size:12px;color:#556;margin-top:14px;">&#10004; entregue &nbsp; &#10008; atrasado (dias úteis) &nbsp; &#9203; postergado (nova data combinada) &nbsp; &#8226; no prazo.
 Quadro ao vivo: <a href="{escape(link)}">{escape(link)}</a></p></div>"""
 
 
@@ -232,6 +260,9 @@ def envia(comp, ref=None, destinos=None, tipo="manual", dry_run=False):
             res["enviados"] += 1
         else:
             res["falhas"].append(f"{e}: {err}")
+    if res["falhas"] and tipo != "teste":
+        comunicacao.avisa_sistema("report_fechamento", "O report do fechamento não chegou a todos",
+                                  "\n".join(res["falhas"][:30]))
     if comp and tipo != "teste":
         set_setting(f"report_enviado_{comp.id}", ref.isoformat())
         if q["completo"]:

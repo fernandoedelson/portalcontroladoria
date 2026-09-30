@@ -646,9 +646,8 @@
         <label class="chk"><input type="checkbox" name="scheduler_enabled" value="1"
           {{ 'checked' if sched.enabled }}/> Executar automaticamente</label></div>
       <div class="form-row"><label class="field-label">Horário do disparo diário</label>
-        <input class="input" type="number" name="scheduler_hour" min="0" max="23"
-               value="{{ sched.hour }}"/>
-        <div class="help-txt">Hora do dia (0–23). Roda na primeira verificação após esse horário.</div></div>
+        <input class="input" type="time" name="scheduler_hora" value="{{ sched.hour }}" style="width:130px;"/>
+        <div class="help-txt">Horário (HH:MM) do e-mail diário e das rotinas do dia. Também editável em Comunicação.</div></div>
       <div class="form-row"><label class="field-label">Dia do resumo semanal</label>
         <select class="input" name="digest_weekday">
           {% for i, d in [(0,'Segunda'),(1,'Terça'),(2,'Quarta'),(3,'Quinta'),(4,'Sexta'),(5,'Sábado'),(6,'Domingo')] %}

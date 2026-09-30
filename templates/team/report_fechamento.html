@@ -48,7 +48,8 @@
         <td class="rf-cel rf-{{ c.estado }}" title="{{ c.rotulo }}{% if c.get('prazo') %} · prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% if c.get('motivo') %} · {{ c.motivo }}{% endif %}">
           <span class="rf-ico" aria-hidden="true">{{ {'entregue':'✔','atrasada':'✖','postergada':'⏳','pendente':'•','na':'–'}[c.estado] }}</span>
           <span class="rf-sr">{{ c.rotulo }}</span>
-          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado == 'postergada' and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' and c.get('prazo') %}venceu {{ c.prazo.strftime('%d/%m') }}{% endif %}</small>
+          {% if c.get('postergada') and c.estado in ('postergada','atrasada') %}<span title="Entrega postergada">*</span>{% endif %}
+          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado == 'postergada' and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' %}{{ c.dias }} d.u. de atraso{% if c.get('prazo') %}<br>prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% endif %}</small>
         </td>
         {% endfor %}
         <td class="text-sm">{{ l.obs }}</td>
@@ -56,28 +57,20 @@
       {% endfor %}
     {% endif %}{% endfor %}
     </tbody></table></div>
-  <p class="help-txt mt-1"><span class="rf-leg rf-entregue">✔ entregue</span> <span class="rf-leg rf-atrasada">✖ atrasado</span>
+  <p class="help-txt mt-1"><span class="rf-leg rf-entregue">✔ entregue</span> <span class="rf-leg rf-atrasada">✖ atrasado (dias úteis)</span>
     <span class="rf-leg rf-postergada">⏳ postergado (nova data)</span> <span class="rf-leg rf-pendente">• no prazo</span>
     O “OK” é a conclusão da atividade de cada documento no cronograma.</p>
 </div>
 
-{% if q.pendencias %}
+{% if q.postergacoes %}
 <div class="card">
-  <h2>Pendências ({{ q.pendencias|length }})</h2>
-  <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col">Empresa</th><th scope="col">Documento</th><th scope="col">Situação</th><th scope="col">Prazo</th>
-      {% if ver_nomes %}<th scope="col">Responsável</th>{% endif %}<th scope="col">Motivo</th></tr></thead>
-    <tbody>
-    {% for p in q.pendencias %}
-    <tr>
-      <td>{{ p.empresa }}</td><td>{{ p.doc }}</td>
-      <td><span class="rf-leg rf-{{ p.estado }}">{{ p.rotulo }}{% if p.estado == 'atrasada' %} · {{ p.dias }} dia(s){% endif %}</span></td>
-      <td class="text-sm">{{ p.prazo.strftime('%d/%m') if p.get('prazo') else '—' }}</td>
-      {% if ver_nomes %}<td class="text-sm">{{ p.responsavel or '—' }}</td>{% endif %}
-      <td class="text-sm">{{ p.motivo or '' }}</td>
-    </tr>
+  <h2>Entregas postergadas</h2>
+  <ul style="margin:0;padding-left:1rem;">
+    {% for p in q.postergacoes %}
+    <li>* {{ p.empresa }} — {{ p.doc }}: prazo original <strong>{{ p.original.strftime('%d/%m') }}</strong>,
+      nova data combinada <strong>{{ p.nova.strftime('%d/%m') }}</strong>{% if p.motivo %} ({{ p.motivo }}){% endif %}</li>
     {% endfor %}
-    </tbody></table></div>
+  </ul>
 </div>
 {% endif %}
 {% endif %}
