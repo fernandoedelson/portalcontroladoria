@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Rotas do agendamento: tela interna (controladoria) e páginas públicas por token."""
+"""Rotas do agendamento: tela interna (cada responsável com a sua agenda) e páginas públicas."""
 import fuso
 import secrets
 from datetime import datetime, timedelta
@@ -10,10 +10,20 @@ from flask_login import login_required, current_user
 
 from models import db, Company, log_audit, set_setting
 from team import agenda
+from team.models import TeamMember
 from team.models_workflow import AgendaJanela, AgendaBloqueio, AgendaLink, Reuniao
 
 
 def register_agenda_routes(app):
+
+    def team_required(f):
+        @wraps(f)
+        @login_required
+        def wrap(*a, **k):
+            if not current_user.is_team:
+                abort(403)
+            return f(*a, **k)
+        return wrap
 
     def controladoria_required(f):
         @wraps(f)
@@ -24,31 +34,73 @@ def register_agenda_routes(app):
             return f(*a, **k)
         return wrap
 
-    def _volta():
-        return redirect(url_for("team_agenda_reunioes"))
+    def _meu_membro():
+        return TeamMember.query.filter_by(user_id=current_user.id).first()
+
+    def _pode_agenda(member_id):
+        """Gestão vê/edita qualquer agenda; o profissional, só a própria."""
+        if current_user.is_controladoria:
+            return True
+        m = _meu_membro()
+        return bool(m and member_id == m.id)
+
+    def _membro_arg():
+        """Agenda em edição: ?membro=ID, 0 = agenda geral. Padrão: a minha."""
+        v = request.values.get("membro")
+        if v is not None and v != "":
+            try:
+                n = int(v)
+            except ValueError:
+                n = None
+            return (n or None) if n is not None else None
+        m = _meu_membro()
+        return m.id if m else None
+
+    def _volta(membro_id):
+        return redirect(url_for("team_agenda_reunioes", membro=(membro_id or 0)))
 
     # ==================================================================
     # TELA INTERNA
     # ==================================================================
     @app.route("/agenda-reunioes")
-    @controladoria_required
+    @team_required
     def team_agenda_reunioes():
         from team.models_workflow import ListaEmail
+        gestao = current_user.is_controladoria
+        membro_id = _membro_arg()
+        if not _pode_agenda(membro_id):
+            membro_id = (_meu_membro().id if _meu_membro() else None)
+            if not _pode_agenda(membro_id):
+                abort(403)
+        membros = (TeamMember.query.filter_by(active=True).order_by(TeamMember.name).all()
+                   if gestao else [m for m in [_meu_membro()] if m])
+        agora = fuso.agora()
         links = {l.company_id: l for l in AgendaLink.query.all()}
-        empresas = Company.query.filter_by(active=True).order_by(Company.name).all()
-        proximas = (Reuniao.query.filter(Reuniao.status == "marcada",
-                                         Reuniao.fim >= fuso.agora())
-                    .order_by(Reuniao.inicio).all())
-        passadas = (Reuniao.query.filter(Reuniao.fim < fuso.agora())
-                    .order_by(Reuniao.inicio.desc()).limit(10).all())
+        q_prox = Reuniao.query.filter(Reuniao.status == "marcada", Reuniao.fim >= agora)
+        q_pass = Reuniao.query.filter(Reuniao.fim < agora)
+        if not gestao:
+            q_prox = q_prox.filter(Reuniao.member_id == membro_id)
+            q_pass = q_pass.filter(Reuniao.member_id == membro_id)
+        empresas = []
+        if gestao:
+            for c in Company.query.filter_by(active=True).order_by(Company.name).all():
+                mem = agenda.membro_da_empresa(c.id)
+                empresas.append({"c": c, "link": links.get(c.id), "resp": mem,
+                                 "dia": agenda.dia_reuniao(c.id),
+                                 "regra": agenda.regra_do_dia(c.id)})
         return render_template(
             "team/agenda_reunioes.html", cfg=agenda.cfg, ativo=agenda.ativo(), dias=agenda.DIAS,
-            janelas=AgendaJanela.query.order_by(AgendaJanela.weekday, AgendaJanela.inicio).all(),
-            bloqueios=AgendaBloqueio.query.filter(AgendaBloqueio.fim >= fuso.agora())
+            gestao=gestao, membros=membros, membro_id=membro_id,
+            membro=(db.session.get(TeamMember, membro_id) if membro_id else None),
+            janelas=AgendaJanela.query.filter(AgendaJanela.member_id == membro_id)
+            .order_by(AgendaJanela.weekday, AgendaJanela.inicio).all(),
+            bloqueios=AgendaBloqueio.query.filter(
+                AgendaBloqueio.fim >= agora,
+                db.or_(AgendaBloqueio.member_id == membro_id, AgendaBloqueio.member_id.is_(None)))
             .order_by(AgendaBloqueio.inicio).all(),
-            empresas=empresas, links=links, proximas=proximas, passadas=passadas,
-            url_publica=agenda.url_publica,
-            geral=links.get(None),
+            empresas=empresas, geral=links.get(None), url_publica=agenda.url_publica,
+            proximas=q_prox.order_by(Reuniao.inicio).all(),
+            passadas=q_pass.order_by(Reuniao.inicio.desc()).limit(10).all(),
             fixos=ListaEmail.query.filter_by(tipo="agenda").count())
 
     @app.route("/agenda-reunioes/config", methods=["POST"])
@@ -62,17 +114,23 @@ def register_agenda_routes(app):
             v = f.get(campo, type=int)
             if v is not None and lo <= v <= hi:
                 set_setting(chave, str(v))
+        off = f.get("offset_du", type=int)
+        if off is not None and 0 <= off <= 15:
+            set_setting("ag_offset_du", str(off))
         set_setting("ag_titulo", (f.get("titulo") or "").strip()[:120] or agenda.PADRAO["ag_titulo"])
         set_setting("ag_local", (f.get("local") or "").strip()[:240])
         org = (f.get("organizador") or "").strip().lower()
         set_setting("ag_organizador", org if "@" in org else "")
         db.session.commit()
         flash("Configuração do agendamento salva.", "success")
-        return _volta()
+        return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/janela", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_janela_add():
+        mid = _membro_arg()
+        if not _pode_agenda(mid):
+            abort(403)
         dias = [int(x) for x in request.form.getlist("dia") if x.isdigit() and 0 <= int(x) <= 6]
         ini, fim = request.form.get("inicio") or "", request.form.get("fim") or ""
         try:
@@ -81,45 +139,58 @@ def register_agenda_routes(app):
             ok = False
         if not dias or not ok:
             flash("Escolha os dias e um horário inicial antes do final.", "warning")
-            return _volta()
+            return _volta(mid)
         for d in dias:
-            db.session.add(AgendaJanela(weekday=d, inicio=ini, fim=fim))
+            db.session.add(AgendaJanela(member_id=mid, weekday=d, inicio=ini, fim=fim))
         db.session.commit()
         flash(f"{len(dias)} janela(s) incluída(s).", "success")
-        return _volta()
+        return _volta(mid)
 
     @app.route("/agenda-reunioes/janela/<int:jid>/remover", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_janela_del(jid):
         j = db.session.get(AgendaJanela, jid) or abort(404)
+        if not _pode_agenda(j.member_id):
+            abort(403)
+        mid = j.member_id
         db.session.delete(j)
         db.session.commit()
-        return _volta()
+        return _volta(mid)
 
     @app.route("/agenda-reunioes/bloqueio", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_bloqueio_add():
+        mid = _membro_arg()
+        if not _pode_agenda(mid):
+            abort(403)
         try:
             d1 = datetime.strptime(request.form.get("inicio_dia") + " " + (request.form.get("inicio_hora") or "00:00"), "%Y-%m-%d %H:%M")
             d2 = datetime.strptime((request.form.get("fim_dia") or request.form.get("inicio_dia")) + " " + (request.form.get("fim_hora") or "23:59"), "%Y-%m-%d %H:%M")
         except (TypeError, ValueError):
             flash("Informe o dia (e, se quiser, o horário) do bloqueio.", "warning")
-            return _volta()
+            return _volta(mid)
         if d2 <= d1:
             flash("O fim precisa ser depois do início.", "warning")
-            return _volta()
-        db.session.add(AgendaBloqueio(inicio=d1, fim=d2, motivo=(request.form.get("motivo") or "").strip()[:160] or None))
+            return _volta(mid)
+        para_todos = bool(request.form.get("todos")) and current_user.is_controladoria
+        db.session.add(AgendaBloqueio(member_id=(None if para_todos else mid), inicio=d1, fim=d2,
+                                      motivo=(request.form.get("motivo") or "").strip()[:160] or None))
         db.session.commit()
-        flash("Período bloqueado: não aparece para agendamento.", "success")
-        return _volta()
+        flash("Período bloqueado" + (" para todas as agendas." if para_todos else "."), "success")
+        return _volta(mid)
 
     @app.route("/agenda-reunioes/bloqueio/<int:bid>/remover", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_bloqueio_del(bid):
         b = db.session.get(AgendaBloqueio, bid) or abort(404)
+        if b.member_id is None and not current_user.is_controladoria:
+            abort(403)
+        if b.member_id is not None and not _pode_agenda(b.member_id):
+            abort(403)
+        mid = b.member_id
         db.session.delete(b)
         db.session.commit()
-        return _volta()
+        return _volta(_membro_arg() if mid is None else mid)
 
     @app.route("/agenda-reunioes/link/<int:cid>/<acao>", methods=["POST"])
     @controladoria_required
@@ -136,16 +207,50 @@ def register_agenda_routes(app):
             l.active = True
             flash("Novo link gerado: o anterior deixou de funcionar.", "success")
         db.session.commit()
-        return _volta()
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/link/<int:cid>/dia", methods=["POST"])
+    @controladoria_required
+    def team_agenda_link_dia(cid):
+        """Define o dia da reunião de UMA empresa: data fixa, ou N dias úteis após o prazo,
+        ou volta para a regra geral (campos vazios)."""
+        l = agenda.link_da_empresa(cid or None)
+        fixo = request.form.get("dia_fixo")
+        off = request.form.get("offset_du", type=int)
+        try:
+            l.dia_fixo = datetime.strptime(fixo, "%Y-%m-%d").date() if fixo else None
+        except ValueError:
+            l.dia_fixo = None
+        l.offset_du = off if (off is not None and 0 <= off <= 15 and not l.dia_fixo) else None
+        db.session.commit()
+        log_audit(current_user.id, "agenda_dia_empresa", "company", f"{cid} fixo={l.dia_fixo} off={l.offset_du}")
+        flash("Dia da reunião da empresa atualizado.", "success")
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/teste", methods=["POST"])
+    @controladoria_required
+    def team_agenda_teste():
+        """Convite de teste para o e-mail de quem clicou (ninguém mais recebe)."""
+        cid = request.form.get("company_id", type=int) or None
+        if not current_user.email:
+            flash("Seu usuário não tem e-mail.", "warning")
+            return _volta(_membro_arg())
+        (ok, err), quando = agenda.enviar_teste(current_user.email, cid)
+        flash(f"Convite de teste enviado para {current_user.email} ({quando}). Abra o anexo no Outlook." if ok
+              else f"Não foi possível enviar o teste: {err}. Em Comunicação, veja se o canal de e-mail está ativo.",
+              "success" if ok else "warning")
+        return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/<int:rid>/cancelar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_cancelar(rid):
         r = db.session.get(Reuniao, rid) or abort(404)
+        if not _pode_agenda(r.member_id):
+            abort(403)
         agenda.cancelar(r)
         log_audit(current_user.id, "reuniao_cancelada", "reuniao", str(rid))
         flash("Reunião cancelada e o cancelamento foi enviado aos participantes.", "success")
-        return _volta()
+        return _volta(r.member_id)
 
     # ==================================================================
     # PÁGINAS PÚBLICAS (sem login) — só mostram horários livres
@@ -166,10 +271,12 @@ def register_agenda_routes(app):
             else:
                 feito, erro = agenda.reservar(l, request.form.get("nome"), request.form.get("email"),
                                               request.form.get("assunto"), inicio)
-        livres = {} if feito else agenda.horarios_livres()
+        livres, mem = ({}, agenda.membro_da_empresa(l.company_id)) if feito else agenda.livres_do_link(l)
+        dia = agenda.dia_reuniao(l.company_id) if l.company_id else None
         return render_template("agendar.html", link=l, livres=livres, erro=erro, feito=feito,
                                titulo=agenda.cfg("ag_titulo"), local=agenda.cfg("ag_local"),
                                duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
+                               responsavel=(mem.name if mem else None), dia=dia,
                                pre_email=request.form.get("email", ""), pre_nome=request.form.get("nome", ""))
 
     @app.route("/agendar/cancelar/<token>", methods=["GET", "POST"])

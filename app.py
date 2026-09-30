@@ -137,6 +137,11 @@ _COLUNAS_NOVAS = [
     ("competencies", "deadline_consolidado", "DATE"),
     ("companies", "avisar_prazo", "BOOLEAN DEFAULT 0"),
     ("companies", "grupo_report", "VARCHAR(20)"),
+    ("agenda_janelas", "member_id", "INTEGER"),
+    ("agenda_bloqueios", "member_id", "INTEGER"),
+    ("agenda_reunioes", "member_id", "INTEGER"),
+    ("agenda_links", "offset_du", "INTEGER"),
+    ("agenda_links", "dia_fixo", "DATE"),
 ]
 
 

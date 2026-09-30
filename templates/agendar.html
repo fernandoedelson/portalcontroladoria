@@ -58,7 +58,8 @@
 
 {% else %}
   <h1>{{ titulo }}</h1>
-  <p class="sub">{% if link.company %}{{ link.company.name }} · {% endif %}Escolha um horário livre ({{ duracao }} minutos). Horário de Brasília.</p>
+  <p class="sub">{% if link.company %}{{ link.company.name }} · {% endif %}{% if responsavel %}com {{ responsavel }} · {% endif %}{{ duracao }} minutos · horário de Brasília.
+    {% if dia %}<br>Dia da reunião: <strong>{{ dias[dia.weekday()] }}, {{ dia.strftime('%d/%m/%Y') }}</strong> (dia útil seguinte ao prazo de entrega).{% endif %}</p>
   {% if erro %}<div class="erro" role="alert">{{ erro }}</div>{% endif %}
   {% if livres %}
   <form method="post">
@@ -79,8 +80,8 @@
     </div>
   </form>
   {% else %}
-  <div class="card"><p><strong>Não há horários livres no momento.</strong></p>
-    <p class="muted">Tente novamente mais tarde ou responda ao e-mail da Controladoria.</p></div>
+  <div class="card"><p><strong>Não há horários livres{% if dia %} em {{ dia.strftime('%d/%m') }}{% endif %}.</strong></p>
+    <p class="muted">{% if dia %}As reuniões desta empresa acontecem só nesse dia. {% endif %}Se os horários acabaram ou o dia já passou, responda ao e-mail da Controladoria.</p></div>
   {% endif %}
 {% endif %}
 </main></body></html>

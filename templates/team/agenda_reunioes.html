@@ -4,80 +4,66 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Agenda de reuniões</h1>
-    <div class="sub">As empresas escolhem um horário livre pelo link que vai no e-mail. O convite chega ao Outlook de todos os envolvidos.</div></div>
-  <a href="/comunicacao#listas" class="btn btn-outline">{{ icone('mail') }} Participantes fixos ({{ fixos }})</a>
+    <div class="sub">Cada responsável tem a sua agenda. A empresa marca sempre no dia útil seguinte ao prazo dela, com o responsável dela. Reuniões de pessoas diferentes podem acontecer ao mesmo tempo.</div></div>
+  {% if gestao %}<a href="/comunicacao#listas" class="btn btn-outline">{{ icone('mail') }} Participantes fixos ({{ fixos }})</a>{% endif %}
 </div>
 
 <div class="card">
-  <h2>Quem entra em cada convite</h2>
-  <p class="text-sm" style="margin:0;">Sempre: <strong>quem marcou</strong>, os <strong>responsáveis da empresa</strong> (cadastro em Administração › Entidades),
-    o <strong>responsável da Controladoria</strong> por aquela empresa (Carteira), os usuários de perfil <strong>Liderança</strong>,
-    o <strong>seu e-mail</strong> abaixo e a lista <a href="/comunicacao#listas">participantes fixos</a> (para incluir outros líderes).</p>
-</div>
-
-<div class="card">
-  <h2>Configuração</h2>
-  <form method="post" action="/agenda-reunioes/config" class="adm-grid">
-    {{ csrf() }}
-    <label class="chk"><input type="checkbox" name="ativo" value="1" {{ 'checked' if ativo }}/> Agendamento ligado</label>
-    <div class="grid-2">
-      <div class="form-row"><label class="field-label">Título da reunião</label>
-        <input class="input" name="titulo" value="{{ cfg('ag_titulo') }}"/></div>
-      <div class="form-row"><label class="field-label">Local / link do Teams</label>
-        <input class="input" name="local" value="{{ cfg('ag_local') }}" placeholder="https://teams.microsoft.com/... ou sala"/></div>
-      <div class="form-row"><label class="field-label">Duração (minutos)</label>
-        <input class="input" type="number" name="duracao" min="10" max="240" value="{{ cfg('ag_duracao') }}"/></div>
-      <div class="form-row"><label class="field-label">Antecedência mínima (horas)</label>
-        <input class="input" type="number" name="antecedencia" min="0" max="720" value="{{ cfg('ag_antecedencia_h') }}"/></div>
-      <div class="form-row"><label class="field-label">Até quantos dias à frente</label>
-        <input class="input" type="number" name="janela" min="1" max="180" value="{{ cfg('ag_janela_dias') }}"/></div>
-      <div class="form-row"><label class="field-label">Seu e-mail (participante fixo)</label>
-        <input class="input" type="email" name="organizador" value="{{ cfg('ag_organizador') }}" placeholder="voce@jfsa.com.br"/></div>
-    </div>
-    <div><button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar</button></div>
+  <h2>Agenda de {{ membro.name if membro else 'uso geral (link sem empresa)' }}</h2>
+  {% if gestao %}
+  <form method="get" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    <label class="field-label" for="ag-membro">Ver e editar a agenda de</label>
+    <select class="input" id="ag-membro" name="membro" onchange="this.form.submit()" style="width:auto;">
+      {% for m in membros %}<option value="{{ m.id }}" {{ 'selected' if membro_id == m.id }}>{{ m.name }}</option>{% endfor %}
+      <option value="0" {{ 'selected' if not membro_id }}>Agenda geral (link sem empresa)</option>
+    </select>
   </form>
+  {% endif %}
+  <p class="help-txt mt-1">Só aparecem para a empresa os horários livres <strong>desta agenda</strong>, no <strong>dia da reunião da empresa</strong> — por padrão o dia útil seguinte ao prazo de entrega (prazo no 5º d.u. → reunião no 6º), e você pode mudar (abaixo, em “Links por empresa”, ou no padrão geral). Se quem cuida da empresa mudar na Carteira, a agenda que vale muda junto.</p>
 </div>
 
 <div class="grid-2">
   <div class="card">
-    <h2>Quando atendo</h2>
+    <h2>Horários em que atende</h2>
     {% if janelas %}
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Dia</th><th scope="col">Horário</th><th scope="col"></th></tr></thead><tbody>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Dia da semana</th><th scope="col">Horário</th><th scope="col"></th></tr></thead><tbody>
       {% for j in janelas %}<tr><td>{{ dias[j.weekday] }}</td><td>{{ j.inicio }} – {{ j.fim }}</td>
         <td class="text-right"><form method="post" action="/agenda-reunioes/janela/{{ j.id }}/remover">{{ csrf() }}
           <button class="btn btn-outline btn-danger btn-sm" type="submit" aria-label="Remover janela">{{ icone('trash') }}</button></form></td></tr>{% endfor %}
     </tbody></table></div>
-    {% else %}<p class="text-sm"><strong>Nenhuma janela cadastrada</strong> — sem janelas, ninguém consegue marcar.</p>{% endif %}
+    {% else %}<p class="text-sm"><strong>Nenhum horário cadastrado</strong> — sem horários, as empresas desta agenda não conseguem marcar.</p>{% endif %}
     <form method="post" action="/agenda-reunioes/janela" class="mt-2">
-      {{ csrf() }}
+      {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+      <p class="text-muted text-sm mb-1">O dia exato é definido pelo calendário; aqui você diz em quais dias da semana e horários atende.</p>
       <div class="flex gap-1" style="flex-wrap:wrap;">
         {% for n in dias %}<label class="chk chk-sm"><input type="checkbox" name="dia" value="{{ loop.index0 }}"/> {{ n[:3] }}</label>{% endfor %}
       </div>
       <div class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
         <input class="input" type="time" name="inicio" value="14:00" style="width:120px;" aria-label="Início"/> até
         <input class="input" type="time" name="fim" value="17:00" style="width:120px;" aria-label="Fim"/>
-        <button class="btn btn-outline" type="submit">Incluir janela</button></div>
+        <button class="btn btn-outline" type="submit">Incluir horário</button></div>
     </form>
   </div>
 
   <div class="card">
     <h2>Bloquear horário</h2>
-    <p class="text-muted text-sm mb-1">Férias, reunião interna, feriado local: esse período some do agendamento.</p>
+    <p class="text-muted text-sm mb-1">Férias, compromisso, folga: o período some desta agenda.</p>
     {% for b in bloqueios %}
     <div class="flex gap-1 items-center mb-1" style="justify-content:space-between;">
-      <span class="text-sm">{{ b.inicio.strftime('%d/%m %H:%M') }} → {{ b.fim.strftime('%d/%m %H:%M') }}{% if b.motivo %} · {{ b.motivo }}{% endif %}</span>
-      <form method="post" action="/agenda-reunioes/bloqueio/{{ b.id }}/remover">{{ csrf() }}
+      <span class="text-sm">{{ b.inicio.strftime('%d/%m %H:%M') }} → {{ b.fim.strftime('%d/%m %H:%M') }}{% if b.motivo %} · {{ b.motivo }}{% endif %}{% if not b.member_id %} · <em>todas as agendas</em>{% endif %}</span>
+      <form method="post" action="/agenda-reunioes/bloqueio/{{ b.id }}/remover">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
         <button class="btn btn-outline btn-danger btn-sm" type="submit" aria-label="Remover bloqueio">{{ icone('trash') }}</button></form>
     </div>
     {% endfor %}
     <form method="post" action="/agenda-reunioes/bloqueio" class="adm-grid mt-1">
-      {{ csrf() }}
+      {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
       <div class="flex gap-1 items-center" style="flex-wrap:wrap;">
         De <input class="input" type="date" name="inicio_dia" required aria-label="Dia inicial"/>
         <input class="input" type="time" name="inicio_hora" value="00:00" style="width:110px;" aria-label="Hora inicial"/>
         até <input class="input" type="date" name="fim_dia" aria-label="Dia final"/>
         <input class="input" type="time" name="fim_hora" value="23:59" style="width:110px;" aria-label="Hora final"/></div>
       <input class="input" name="motivo" placeholder="motivo (opcional)"/>
+      {% if gestao %}<label class="chk chk-sm"><input type="checkbox" name="todos" value="1"/> Vale para todas as agendas (ex.: feriado local)</label>{% endif %}
       <div><button class="btn btn-outline" type="submit">Bloquear período</button></div>
     </form>
   </div>
@@ -86,8 +72,9 @@
 <div class="card">
   <h2>Reuniões marcadas ({{ proximas|length }})</h2>
   {% if proximas %}
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Quando</th><th scope="col">Empresa</th><th scope="col">Quem marcou</th><th scope="col">Assunto</th><th scope="col"></th></tr></thead><tbody>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Quando</th><th scope="col">Empresa</th>{% if gestao %}<th scope="col">Responsável</th>{% endif %}<th scope="col">Quem marcou</th><th scope="col">Assunto</th><th scope="col"></th></tr></thead><tbody>
     {% for r in proximas %}<tr><td>{{ r.inicio.strftime('%d/%m %H:%M') }}</td><td>{{ r.company.name if r.company else '—' }}</td>
+      {% if gestao %}<td class="text-sm">{{ r.member.name if r.member else '—' }}</td>{% endif %}
       <td class="text-sm">{{ r.nome }}<br><span class="text-muted">{{ r.email }}</span></td><td class="text-sm">{{ r.assunto or '' }}</td>
       <td class="text-right"><form method="post" action="/agenda-reunioes/{{ r.id }}/cancelar" onsubmit="return confirm('Cancelar esta reunião e avisar os participantes?');">{{ csrf() }}
         <button class="btn btn-outline btn-danger btn-sm" type="submit">Cancelar</button></form></td></tr>{% endfor %}
@@ -97,19 +84,75 @@
     {% for r in passadas %}{{ r.inicio.strftime('%d/%m') }} {{ r.company.name if r.company else r.nome }}{{ ' (cancelada)' if r.status == 'cancelada' }}{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
 </div>
 
+{% if gestao %}
+<div class="card">
+  <h2>Quem entra em cada convite</h2>
+  <p class="text-sm" style="margin:0;">Sempre: <strong>quem marcou</strong>, os <strong>responsáveis da empresa</strong> (Administração › Entidades),
+    o <strong>responsável da Controladoria</strong> daquela empresa (é com quem a reunião acontece), os usuários de perfil <strong>Liderança</strong>,
+    o e-mail abaixo e a lista <a href="/comunicacao#listas">participantes fixos</a> (para incluir outros líderes).</p>
+</div>
+
+<div class="card">
+  <h2>Configuração geral</h2>
+  <form method="post" action="/agenda-reunioes/config" class="adm-grid">
+    {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+    <label class="chk"><input type="checkbox" name="ativo" value="1" {{ 'checked' if ativo }}/> Agendamento ligado</label>
+    <div class="grid-2">
+      <div class="form-row"><label class="field-label">Título da reunião</label>
+        <input class="input" name="titulo" value="{{ cfg('ag_titulo') }}"/></div>
+      <div class="form-row"><label class="field-label">Local / link do Teams</label>
+        <input class="input" name="local" value="{{ cfg('ag_local') }}" placeholder="https://teams.microsoft.com/... ou sala"/></div>
+      <div class="form-row"><label class="field-label">Reunião: dias úteis após o prazo de entrega (padrão geral)</label>
+        <input class="input" type="number" name="offset_du" min="0" max="15" value="{{ cfg('ag_offset_du') }}"/></div>
+      <div class="form-row"><label class="field-label">Duração (minutos)</label>
+        <input class="input" type="number" name="duracao" min="10" max="240" value="{{ cfg('ag_duracao') }}"/></div>
+      <div class="form-row"><label class="field-label">Antecedência mínima (horas)</label>
+        <input class="input" type="number" name="antecedencia" min="0" max="720" value="{{ cfg('ag_antecedencia_h') }}"/></div>
+      <div class="form-row"><label class="field-label">Até quantos dias à frente</label>
+        <input class="input" type="number" name="janela" min="1" max="180" value="{{ cfg('ag_janela_dias') }}"/></div>
+      <div class="form-row"><label class="field-label">E-mail sempre copiado (participante fixo)</label>
+        <input class="input" type="email" name="organizador" value="{{ cfg('ag_organizador') }}" placeholder="voce@jfsa.com.br"/></div>
+    </div>
+    <div><button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Ver como a empresa recebe</h2>
+  <p class="text-muted text-sm mb-1">Manda o convite de teste <strong>só para o seu e-mail</strong> ({{ current_user.email }}), igual ao que a empresa recebe — com o anexo <code>.ics</code> para abrir no Outlook. Nenhuma reserva é criada.</p>
+  <form method="post" action="/agenda-reunioes/teste" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+    <select class="input" name="company_id" aria-label="Empresa do teste" style="width:auto;">
+      <option value="">— link geral —</option>
+      {% for e in empresas %}<option value="{{ e.c.id }}">{{ e.c.name }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-primary" type="submit">{{ icone('mail') }} Enviar convite de teste para mim</button>
+  </form>
+  <p class="help-txt mt-1">Para ver a página de marcação que a empresa abre (sem login), copie o link da empresa na tabela abaixo e abra numa janela anônima.</p>
+</div>
+
 <div class="card">
   <h2>Links por empresa</h2>
-  <p class="text-muted text-sm mb-2">O link da empresa entra no e-mail de aviso de prazo (marcador <code>{agendar}</code>). Quem tem o link vê só os horários livres e o nome da empresa.</p>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
-    <tr><th scope="row">Link geral (sem empresa)</th>
-      <td class="text-sm">{% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:100%;min-width:260px;"/>{% else %}—{% endif %}</td>
+  <p class="text-muted text-sm mb-2">O link da empresa entra no e-mail de aviso de prazo (marcador <code>{agendar}</code>). Quem tem o link vê só os horários livres do responsável da empresa, no dia da reunião, e o nome da empresa.</p>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
+    <tr><th scope="row">Link geral (sem empresa)</th><td class="text-sm">agenda geral</td><td class="text-sm">qualquer dia das janelas</td>
+      <td class="text-sm">{% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:100%;min-width:240px;"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if geral %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/0/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if geral.active else 'Ativar' }}</button></form>
         <form method="post" action="/agenda-reunioes/link/0/renovar" onsubmit="return confirm('Gerar novo link? O atual deixa de funcionar.');">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Renovar</button></form></div>
         {% else %}<form method="post" action="/agenda-reunioes/link/0/criar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Criar</button></form>{% endif %}</td></tr>
-    {% for c in empresas %}{% set l = links.get(c.id) %}
+    {% for e in empresas %}{% set c = e.c %}{% set l = e.link %}
     <tr><th scope="row">{{ c.name }}</th>
-      <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:260px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
+      <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}</td>
+      <td class="text-sm">
+        <div><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong> <span class="text-muted">({{ e.regra }})</span></div>
+        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
+          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+          <input class="input input-sm" type="number" name="offset_du" min="0" max="15" placeholder="d.u." title="Dias úteis após o prazo de entrega (vazio = regra geral)" value="{{ e.link.offset_du if e.link and e.link.offset_du is not none else '' }}" style="width:64px;"/>
+          <input class="input input-sm" type="date" name="dia_fixo" title="Ou uma data fixa" value="{{ e.link.dia_fixo.isoformat() if e.link and e.link.dia_fixo else '' }}" style="width:140px;"/>
+          <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
+        </form></td>
+      <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:240px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if l %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if l.active else 'Ativar' }}</button></form>
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/renovar" onsubmit="return confirm('Gerar novo link? O atual deixa de funcionar.');">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Renovar</button></form></div>
@@ -117,4 +160,5 @@
     {% endfor %}
   </tbody></table></div>
 </div>
+{% endif %}
 {% endblock %}

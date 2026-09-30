@@ -699,6 +699,7 @@ class AgendaJanela(db.Model):
     """Janela semanal em que a Controladoria atende (ex.: terça 14:00–17:00)."""
     __tablename__ = "agenda_janelas"
     id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey("team_members.id"), nullable=True, index=True)   # vazio = agenda geral
     weekday = db.Column(db.Integer, nullable=False)        # 0 = segunda
     inicio = db.Column(db.String(5), nullable=False)       # 'HH:MM'
     fim = db.Column(db.String(5), nullable=False)
@@ -709,6 +710,7 @@ class AgendaBloqueio(db.Model):
     """Período em que NÃO se atende (férias, reunião interna, feriado...)."""
     __tablename__ = "agenda_bloqueios"
     id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey("team_members.id"), nullable=True, index=True)   # vazio = vale para todos
     inicio = db.Column(db.DateTime, nullable=False)        # horário de Brasília (sem fuso)
     fim = db.Column(db.DateTime, nullable=False)
     motivo = db.Column(db.String(160))
@@ -722,6 +724,10 @@ class AgendaLink(db.Model):
     token = db.Column(db.String(40), unique=True, nullable=False, index=True)
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # dia da reunião desta empresa: vazio = regra geral (dia útil seguinte ao prazo);
+    # offset_du = dias úteis após o prazo; dia_fixo = uma data específica (vale mais)
+    offset_du = db.Column(db.Integer)
+    dia_fixo = db.Column(db.Date)
     company = db.relationship("Company")
 
 
@@ -730,6 +736,7 @@ class Reuniao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     link_id = db.Column(db.Integer, db.ForeignKey("agenda_links.id"), nullable=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+    member_id = db.Column(db.Integer, db.ForeignKey("team_members.id"), nullable=True, index=True)   # de quem é a agenda
     nome = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(160), nullable=False)
     assunto = db.Column(db.String(240))
@@ -741,6 +748,7 @@ class Reuniao(db.Model):
     sequencia = db.Column(db.Integer, default=0)
     criada_em = db.Column(db.DateTime, default=datetime.utcnow)
     company = db.relationship("Company")
+    member = db.relationship("TeamMember", foreign_keys=[member_id])
 
 
 # ==========================================================================
