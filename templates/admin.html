@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Administração{% endblock %}
 {% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
-{% macro perfil(r) %}{{ {'admin':'Administrador','controladoria':'Controladoria','profissional':'Profissional','empresa':'Empresa'}.get(r, r) }}{% endmacro %}
+{% macro perfil(r) %}{{ {'admin':'Administrador','controladoria':'Controladoria','lideranca':'Liderança','profissional':'Profissional','empresa':'Empresa'}.get(r, r) }}{% endmacro %}
 {% block content %}
 <div class="page-head">
   <div><h1>Administração</h1>
@@ -395,6 +395,27 @@
             <label>Carga real<input class="input input-sm" type="number" name="{{ P }}load_real" value="{{ a.load_real or 0 }}"/></label>
             <label>Carga ideal<input class="input input-sm" type="number" name="{{ P }}load_ideal" value="{{ a.load_ideal or 0 }}"/></label>
             <span class="ent-cod">Código {{ a.company.code }}</span>
+            <div class="ent-contatos" style="grid-column:1/-1;display:flex;flex-direction:column;align-items:flex-start;gap:.45rem;text-align:left;">
+              <input type="hidden" name="{{ P }}ct_presente" value="1"/>
+              <strong class="text-sm">Responsáveis da empresa (recebem o aviso de prazo do fechamento)</strong>
+              <label class="text-sm" style="display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;">Grupo no report do fechamento
+                <select class="input input-sm" name="{{ P }}grupo_report" style="width:auto;">
+                  <option value="" {{ 'selected' if not a.company.grupo_report }}>automático</option>
+                  <option value="consolidado" {{ 'selected' if a.company.grupo_report=='consolidado' }}>Consolidado</option>
+                  <option value="demais" {{ 'selected' if a.company.grupo_report=='demais' }}>Demais</option></select></label>
+              <label class="chk chk-sm" style="display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;"><input type="checkbox" name="{{ P }}avisar" value="1" {{ 'checked' if a.company.avisar_prazo }}/> Enviar o aviso de prazo a esta empresa</label>
+              {% for ct in a.company.contatos %}
+              <div class="flex gap-1 mb-1" style="flex-wrap:wrap;">
+                <input class="input input-sm" name="{{ P }}ct{{ ct.id }}_nome" value="{{ ct.name or '' }}" placeholder="nome" style="width:140px;"/>
+                <input class="input input-sm" type="email" name="{{ P }}ct{{ ct.id }}_email" value="{{ ct.email }}" style="width:230px;"/>
+                <label class="chk chk-sm" style="display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;"><input type="checkbox" name="{{ P }}ct{{ ct.id }}_excluir" value="1"/> remover</label>
+              </div>
+              {% else %}<span class="text-muted text-sm">Nenhum responsável cadastrado.</span>{% endfor %}
+              <div class="flex gap-1" style="flex-wrap:wrap;align-items:center;"><span class="text-muted text-sm">Novo:</span>
+                <input class="input input-sm" name="{{ P }}novo_nome" placeholder="nome" style="width:140px;"/>
+                <input class="input input-sm" type="email" name="{{ P }}novo_email" placeholder="email@empresa.com" style="width:230px;"/>
+              </div>
+            </div>
           </div>
         </div>
         {% endfor %}
@@ -441,6 +462,7 @@
               <option value="empresa">Empresa</option>
               <option value="profissional">Profissional (vê só o que é dele)</option>
               <option value="controladoria">Controladoria</option>
+              <option value="lideranca">Liderança (recebe as escaladas)</option>
               <option value="admin">Administrador</option></select></div>
           <div class="form-row"><label class="field-label">Empresa vinculada</label>
             <select class="input" name="company_id"><option value="">—</option>
@@ -495,6 +517,7 @@
           <option value="empresa" {{ 'selected' if u.role=='empresa' }}>Empresa</option>
           <option value="profissional" {{ 'selected' if u.role=='profissional' }}>Profissional</option>
           <option value="controladoria" {{ 'selected' if u.role=='controladoria' }}>Controladoria</option>
+          <option value="lideranca" {{ 'selected' if u.role=='lideranca' }}>Liderança</option>
           <option value="admin" {{ 'selected' if u.role=='admin' }}>Admin</option></select></td>
         <td><select class="input" name="{{ P }}company_id"><option value="">—</option>
           {% for c in companies %}<option value="{{ c.id }}" {{ 'selected' if u.company_id==c.id }}>{{ c.name }}</option>{% endfor %}</select></td>

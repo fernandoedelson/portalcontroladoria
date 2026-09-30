@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Feriados{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Feriados</h1>
+    <div class="sub">Controle quais dias contam como feriado no calendário do portal: prazos do fechamento, avisos e dias úteis.</div></div>
+  <form method="get" class="flex gap-1 items-center">
+    <label class="sr-only" for="fe-ano">Ano</label>
+    <select class="input" id="fe-ano" name="ano" onchange="this.form.submit()">
+      {% for a in range(hoje.year - 1, hoje.year + 3) %}<option value="{{ a }}" {{ 'selected' if a == ano }}>{{ a }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Adicionar feriado (municipal, Carnaval, ponto facultativo)</h2>
+  <form method="post" action="/feriados/incluir" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    {{ csrf() }}
+    <input class="input" type="date" name="data" required aria-label="Data" style="width:170px;"/>
+    <input class="input" name="nome" placeholder="nome (ex.: Aniversário de São Paulo)" style="width:320px;max-width:100%;" aria-label="Nome"/>
+    <button class="btn btn-primary" type="submit">{{ icone('plus') }} Adicionar</button>
+  </form>
+  {% if sugestoes %}
+  <p class="text-muted text-sm mt-2 mb-1">Sugestões de {{ ano }} (não são feriados nacionais):</p>
+  <div class="flex gap-1" style="flex-wrap:wrap;">
+    {% for d, n in sugestoes %}
+    <form method="post" action="/feriados/incluir">{{ csrf() }}
+      <input type="hidden" name="data" value="{{ d.isoformat() }}"/><input type="hidden" name="nome" value="{{ n }}"/>
+      <button class="btn btn-outline btn-sm" type="submit">{{ d.strftime('%d/%m') }} · {{ n }}</button></form>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Adicionados por você ({{ incluidos|length }})</h2>
+    {% if incluidos %}
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Data</th><th scope="col">Nome</th><th scope="col"></th></tr></thead><tbody>
+      {% for f in incluidos %}<tr><td>{{ f.data.strftime('%d/%m/%Y') }} <span class="text-muted text-sm">{{ ['seg','ter','qua','qui','sex','sáb','dom'][f.data.weekday()] }}</span></td><td>{{ f.nome }}</td>
+        <td class="text-right"><form method="post" action="/feriados/{{ f.id }}/remover" onsubmit="return confirm('Remover este feriado?');">{{ csrf() }}
+          <button class="btn btn-outline btn-danger btn-sm" type="submit" aria-label="Remover {{ f.nome }}">{{ icone('trash') }}</button></form></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p class="text-sm text-muted">Nenhum feriado adicionado em {{ ano }}.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Feriados nacionais de {{ ano }}</h2>
+    <p class="text-muted text-sm mb-1">Desmarque “vale” para um feriado que <strong>não</strong> deve pesar no calendário daqui.</p>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Data</th><th scope="col">Feriado</th><th scope="col">Vale?</th></tr></thead><tbody>
+      {% for d, n in nacionais %}{% set ign = d in ignorados %}
+      <tr style="{{ 'opacity:.55;' if ign }}"><td>{{ d.strftime('%d/%m') }} <span class="text-muted text-sm">{{ ['seg','ter','qua','qui','sex','sáb','dom'][d.weekday()] }}</span></td><td>{{ n }}</td>
+        <td><form method="post" action="/feriados/ignorar">{{ csrf() }}
+          <input type="hidden" name="data" value="{{ d.isoformat() }}"/><input type="hidden" name="nome" value="{{ n }}"/>
+          <button class="btn btn-outline btn-sm" type="submit">{{ 'Não vale — reativar' if ign else 'Vale' }}</button></form></td></tr>
+      {% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Prazos com o calendário atual</h2>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Fechamento de</th><th scope="col">Empresas (5º d.u.)</th><th scope="col">Consolidado (8º d.u.)</th></tr></thead><tbody>
+    {% for p in prazos %}<tr><td>{{ p.comp }}</td><td>{{ p.empresas.strftime('%d/%m/%Y') if p.empresas else '—' }}</td><td>{{ p.consolidado.strftime('%d/%m/%Y') if p.consolidado else '—' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <form method="post" action="/feriados/recalcular" class="mt-2"
+        onsubmit="return confirm('Recalcular os prazos das competências abertas e das atividades em aberto? Atividades concluídas não mudam.');">
+    {{ csrf() }}
+    <button class="btn btn-primary" type="submit">{{ icone('refresh') }} Recalcular prazos agora</button>
+  </form>
+  <p class="help-txt mt-1">Mudar feriados não mexe sozinho em prazos já gerados: use o botão para refazer o prazo das competências não fechadas e atualizar as atividades em aberto do cronograma (as concluídas ficam como estão).
+    O calendário vale para o portal inteiro — não há calendário por empresa.</p>
+</div>
+{% endblock %}

@@ -190,7 +190,7 @@ def register_team_routes(app):
         if not nova or not motivo:
             flash("Informe a nova data e a justificativa.", "danger")
             return redirect(back_url)
-        if _pode_aprovar_revisao(entity_type, entity_id):
+        if entity_type == "activity" or _pode_aprovar_revisao(entity_type, entity_id):
             rev = DeadlineRevision(
                 entity_type=entity_type, entity_id=entity_id, old_date=old_date,
                 new_date=nova, reason=motivo, created_by=current_user.id,
@@ -199,6 +199,10 @@ def register_team_routes(app):
             db.session.add(rev)
             _aplicar_revisao(rev)
             db.session.commit()
+            if entity_type == "activity":
+                from team import movimentos
+                movimentos.prazo_alterado(db.session.get(Activity, entity_id), old_date, nova,
+                                          motivo, current_user.display_name, current_user.id)
             flash("Prazo realinhado e registrado no histórico.", "success")
         else:
             rev = DeadlineRevision(
@@ -350,10 +354,10 @@ def register_team_routes(app):
         elif f_status and f_status != "todos":
             acts = [a for a in acts if a.effective_status(ref) == f_status]
         # colunas do kanban por status efetivo
-        columns = {"atrasada": [], "vence_hoje": [], "pendente": [], "em_andamento": [],
-                   "aguardando": [], "bloqueada": [], "concluida": [], "cancelada": []}
-        for a in acts:
-            columns.setdefault(a.effective_status(ref), []).append(a)
+        columns = {"pendente": [], "em_andamento": [], "bloqueada": [], "concluida": []}
+        for a in acts:                       # o cartão muda de coluna = muda o status
+            if a.status in columns:
+                columns[a.status].append(a)
         # agrupamento por STATUS efetivo (colapsável), quando pedido
         st_ordem = ["atrasada", "vence_hoje", "pendente", "em_andamento",
                     "aguardando", "bloqueada", "concluida", "cancelada"]
@@ -386,6 +390,10 @@ def register_team_routes(app):
             db.session.add(a)
             db.session.commit()
             log_audit(current_user.id, "atividade_criada", "activity", str(a.id))
+            from team import movimentos
+            movimentos.movimento_projeto(
+                a, f"{current_user.display_name} criou a atividade “{a.title[:90]}”.",
+                current_user.id)
             flash("Atividade criada.", "success")
             return redirect(url_for("team_atividade", aid=a.id))
         return render_template("team/atividade_form.html", a=None,
@@ -463,8 +471,17 @@ def register_team_routes(app):
     def team_atividade_edit(aid):
         a = db.session.get(Activity, aid) or abort(404)
         if request.method == "POST":
+            antigo, resp_antes = a.due_date, a.member_id
             _apply_activity_form(a, request.form)
             db.session.commit()
+            from team import movimentos
+            if a.due_date != antigo:
+                movimentos.prazo_alterado(a, antigo, a.due_date, "alterado na edição da atividade",
+                                          current_user.display_name, current_user.id)
+            if a.member_id != resp_antes:
+                movimentos.movimento_projeto(
+                    a, f"{current_user.display_name} trocou o responsável de “{a.title[:90]}”.",
+                    current_user.id)
             log_audit(current_user.id, "atividade_editada", "activity", str(a.id))
             flash("Atividade atualizada.", "success")
             return redirect(url_for("team_atividade", aid=a.id))
@@ -485,8 +502,18 @@ def register_team_routes(app):
             if new != "concluida":
                 a.done_at = None
                 a.done_by = None
+            obs = (request.form.get("obs") or "").strip()
+            if obs:
+                from team.models_workflow import ActivityNote
+                db.session.add(ActivityNote(
+                    activity_id=a.id, user_id=current_user.id, kind="comentario",
+                    body=f"Movida para “{new}”: {obs}"))
             db.session.commit()
             log_audit(current_user.id, f"atividade_{new}", "activity", str(a.id))
+            from team import movimentos
+            movimentos.movimento_projeto(
+                a, f"{current_user.display_name} moveu “{a.title[:80]}” para {new}."
+                   + (f" {obs[:120]}" if obs else ""), current_user.id)
         if request.form.get("ajax"):
             return jsonify(ok=True, status=a.effective_status())
         flash("Status atualizado.", "success")
@@ -501,6 +528,62 @@ def register_team_routes(app):
         log_audit(current_user.id, "atividade_excluida", "activity", str(aid))
         flash("Atividade excluída.", "success")
         return redirect(url_for("team_atividades"))
+
+    @app.route("/atividade/<int:aid>/alterar", methods=["POST"])
+    @team_required
+    def team_atividade_alterar(aid):
+        """Altera prazo e/ou responsável a partir de qualquer tela. Vale na hora,
+        a justificativa é obrigatória e quem precisa saber é avisado (sem aprovação)."""
+        from team.models_workflow import DeadlineRevision, ActivityNote
+        from team import movimentos
+        from models import notify
+        a = db.session.get(Activity, aid) or abort(404)
+        sid = _scoped_member_id()
+        if sid is not None and a.member_id != sid:
+            abort(403)
+        back = request.referrer or url_for("team_atividade", aid=aid)
+        motivo = (request.form.get("justificativa") or "").strip()
+        nova = _date(request.form.get("new_date"))
+        novo_m = _int(request.form.get("member_id")) if request.form.get("member_id") else None
+        mudou_prazo = bool(nova and nova != a.due_date)
+        mudou_resp = bool(novo_m and novo_m != a.member_id)
+        if not (mudou_prazo or mudou_resp):
+            flash("Nada mudou: informe outro prazo ou outro responsável.", "warning")
+            return redirect(back)
+        if not motivo:
+            flash("A justificativa é obrigatória para alterar prazo ou responsável.", "danger")
+            return redirect(back)
+        autor = current_user.display_name
+        if mudou_prazo:
+            antigo = a.due_date
+            db.session.add(DeadlineRevision(
+                entity_type="activity", entity_id=a.id, old_date=antigo, new_date=nova,
+                reason=motivo, created_by=current_user.id, status="aplicada",
+                approved_by=current_user.id, approved_at=datetime.utcnow()))
+            a.due_date, a.due_provisional = nova, False
+        if mudou_resp:
+            antes = a.member
+            depois = db.session.get(TeamMember, novo_m) or abort(404)
+            a.member_id = depois.id
+            db.session.add(ActivityNote(
+                activity_id=a.id, user_id=current_user.id, kind="sistema",
+                body=(f"Responsável: {antes.name if antes else 'sem responsável'} → "
+                      f"{depois.name}. Motivo: {motivo}")))
+        db.session.commit()
+        if mudou_prazo:
+            movimentos.prazo_alterado(a, antigo, nova, motivo, autor, current_user.id)
+        if mudou_resp:
+            if depois.user_id and depois.user_id != current_user.id:
+                notify(depois.user_id, "Atividade atribuída a você",
+                       f"{autor} passou “{a.title[:90]}” para você. Motivo: {motivo[:140]}",
+                       kind="prazo", url=f"/atividade/{a.id}")
+            movimentos.movimento_projeto(
+                a, f"{autor} trocou o responsável de “{a.title[:80]}” para {depois.name}. "
+                   f"Motivo: {motivo[:140]}", current_user.id)
+        log_audit(current_user.id, "atividade_alterada", "activity",
+                  f"{a.id} prazo={mudou_prazo} resp={mudou_resp}")
+        flash("Alteração registrada e o líder foi avisado.", "success")
+        return redirect(back)
 
     @app.route("/atividade/<int:aid>/reatribuir", methods=["POST"])
     @team_required
@@ -1760,6 +1843,238 @@ def register_team_routes(app):
                                meu_whatsapp=(me.whatsapp if me else None))
 
     # ==================================================================
+    # FERIADOS — quais dias contam como feriado no calendário de dias úteis
+    # ==================================================================
+    def _sugestoes_feriado(ano):
+        """Dias que costumam virar feriado/ponto facultativo e não são nacionais."""
+        from dateutil.easter import easter
+        pascoa = easter(ano)
+        return [(pascoa - timedelta(days=48), "Carnaval (segunda)"),
+                (pascoa - timedelta(days=47), "Carnaval (terça)"),
+                (pascoa - timedelta(days=46), "Quarta de Cinzas (ponto facultativo)"),
+                (pascoa + timedelta(days=60), "Corpus Christi")]
+
+    @app.route("/feriados")
+    @controladoria_required
+    def team_feriados():
+        from engine.calendar_br import feriados_nacionais, deadline_for_competency
+        from team.models_workflow import Feriado
+        hoje = fuso.hoje()
+        ano = request.args.get("ano", type=int) or hoje.year
+        ajustes = Feriado.query.filter(Feriado.data >= date(ano, 1, 1),
+                                       Feriado.data <= date(ano, 12, 31)).order_by(Feriado.data).all()
+        ignorados = {f.data: f for f in ajustes if f.tipo == "ignorar"}
+        incluidos = [f for f in ajustes if f.tipo == "incluir"]
+        nacionais = sorted(feriados_nacionais(ano).items())
+        ja = {f.data for f in incluidos}
+        sugestoes = [(d, n) for d, n in _sugestoes_feriado(ano) if d not in ja]
+        prazos = []
+        y, m = hoje.year, hoje.month
+        for _ in range(4):                      # prazos dos próximos meses com o calendário atual
+            prox = (y + 1, 1) if m == 12 else (y, m + 1)
+            prazos.append({"comp": f"{m:02d}/{y}",
+                           "empresas": deadline_for_competency(y, m, 5),
+                           "consolidado": deadline_for_competency(y, m, 8)})
+            y, m = prox
+        return render_template("team/feriados.html", ano=ano, nacionais=nacionais,
+                               ignorados=ignorados, incluidos=incluidos, sugestoes=sugestoes,
+                               prazos=prazos, hoje=hoje)
+
+    @app.route("/feriados/incluir", methods=["POST"])
+    @controladoria_required
+    def team_feriado_incluir():
+        from engine.calendar_br import invalida
+        from team.models_workflow import Feriado
+        d = _date(request.form.get("data"))
+        nome = (request.form.get("nome") or "").strip()[:120] or "Feriado"
+        if not d:
+            flash("Informe a data.", "warning")
+            return redirect(url_for("team_feriados"))
+        if not Feriado.query.filter_by(data=d, tipo="incluir").first():
+            db.session.add(Feriado(data=d, nome=nome, tipo="incluir", created_by=current_user.id))
+            db.session.commit()
+            invalida()
+            log_audit(current_user.id, "feriado_incluido", "feriado", f"{d} {nome}")
+        flash(f"{d.strftime('%d/%m/%Y')} passa a contar como feriado. Recalcule os prazos se preciso.", "success")
+        return redirect(url_for("team_feriados", ano=d.year))
+
+    @app.route("/feriados/ignorar", methods=["POST"])
+    @controladoria_required
+    def team_feriado_ignorar():
+        """Liga/desliga um feriado NACIONAL (ignorado = vira dia útil aqui)."""
+        from engine.calendar_br import invalida
+        from team.models_workflow import Feriado
+        d = _date(request.form.get("data"))
+        if not d:
+            abort(400)
+        ex = Feriado.query.filter_by(data=d, tipo="ignorar").first()
+        if ex:
+            db.session.delete(ex)
+            msg = f"{d.strftime('%d/%m')} volta a contar como feriado."
+        else:
+            db.session.add(Feriado(data=d, nome=(request.form.get("nome") or "")[:120],
+                                   tipo="ignorar", created_by=current_user.id))
+            msg = f"{d.strftime('%d/%m')} passa a ser dia útil neste portal."
+        db.session.commit()
+        invalida()
+        log_audit(current_user.id, "feriado_ignorar", "feriado", str(d))
+        flash(msg + " Recalcule os prazos se preciso.", "success")
+        return redirect(url_for("team_feriados", ano=d.year))
+
+    @app.route("/feriados/<int:fid>/remover", methods=["POST"])
+    @controladoria_required
+    def team_feriado_remover(fid):
+        from engine.calendar_br import invalida
+        from team.models_workflow import Feriado
+        f = db.session.get(Feriado, fid) or abort(404)
+        ano = f.data.year
+        db.session.delete(f)
+        db.session.commit()
+        invalida()
+        flash("Feriado removido. Recalcule os prazos se preciso.", "success")
+        return redirect(url_for("team_feriados", ano=ano))
+
+    @app.route("/feriados/recalcular", methods=["POST"])
+    @controladoria_required
+    def team_feriados_recalcular():
+        """Refaz os prazos das competências não fechadas e sincroniza as atividades
+        em aberto do cronograma (concluídas ficam como estão)."""
+        from engine.calendar_br import invalida, deadline_for_competency
+        invalida()
+        n_comp = n_ativ = 0
+        for c in Competency.query.filter(Competency.status != "fechada").all():
+            dl = deadline_for_competency(c.year, c.month, 5)
+            dc = deadline_for_competency(c.year, c.month, 8)
+            if (c.deadline, c.deadline_consolidado) != (dl, dc):
+                c.deadline, c.deadline_consolidado = dl, dc
+                n_comp += 1
+        db.session.commit()
+        for c in Competency.query.filter(Competency.status == "aberta").all():
+            cr, at, rm, pr = engine.generate_closing_activities(c)
+            n_ativ += at + cr
+        db.session.commit()
+        log_audit(current_user.id, "feriados_recalculo", "feriado", f"{n_comp} comp, {n_ativ} ativ")
+        flash(f"Prazos recalculados: {n_comp} competência(s) e {n_ativ} atividade(s) atualizada(s).", "success")
+        return redirect(url_for("team_feriados"))
+
+    # ==================================================================
+    # REPORT DO FECHAMENTO — quem já enviou os 3 documentos
+    # ==================================================================
+    @app.route("/report-fechamento")
+    @team_required
+    def team_report_fechamento():
+        from team import report_fechamento as rf
+        from models import Competency, get_setting
+        comp = _current_competency()
+        cid = request.args.get("comp", type=int)
+        if cid:
+            comp = db.session.get(Competency, cid) or comp
+        q = rf.montar(comp, fuso.hoje())
+        return render_template(
+            "team/report_fechamento.html", q=q, docs=rf.DOCS, grupos=rf.GRUPOS,
+            ligado=rf.ligado(), inicio_du=rf.config("report_inicio_du"),
+            ultimo=(get_setting(f"report_enviado_{comp.id}") if comp else None),
+            competencias=Competency.query.order_by(
+                Competency.year.desc(), Competency.month.desc()).limit(12).all(),
+            ver_nomes=current_user.is_controladoria)
+
+    @app.route("/report-fechamento/config", methods=["POST"])
+    @controladoria_required
+    def team_report_config():
+        set_setting("report_ativo", "1" if request.form.get("ativo") else "0")
+        du = request.form.get("inicio_du", type=int)
+        set_setting("report_inicio_du", str(du if du is not None and 0 <= du <= 10 else 1))
+        db.session.commit()
+        flash("Configuração do report salva.", "success")
+        return redirect(url_for("team_report_fechamento"))
+
+    @app.route("/report-fechamento/enviar", methods=["POST"])
+    @controladoria_required
+    def team_report_enviar():
+        from team import report_fechamento as rf
+        comp = _current_competency()
+        if request.form.get("teste"):
+            r = rf.envia(comp, destinos=[current_user.email], tipo="teste")
+            flash(f"Teste enviado para {current_user.email}." if r["enviados"]
+                  else "Não enviou o teste: " + "; ".join(r["falhas"]), "success" if r["enviados"] else "warning")
+        else:
+            r = rf.envia(comp, tipo="manual")
+            if r["enviados"]:
+                flash(f"Report enviado a {r['enviados']} destinatário(s).", "success")
+            else:
+                flash("Nada enviado: " + ("; ".join(r["falhas"]) or "sem destinatários") +
+                      ". Cadastre em Comunicação › Report do fechamento.", "warning")
+        return redirect(url_for("team_report_fechamento"))
+
+    # ==================================================================
+    # COMUNICAÇÃO — listas de destinatários por tipo + régua de cada pessoa
+    # ==================================================================
+    @app.route("/comunicacao")
+    @team_required
+    def team_comunicacao():
+        from team import comunicacao as com
+        from team.models_workflow import ListaEmail
+        from models import get_setting
+        listas = []
+        for tipo, titulo, desc in com.TIPOS_LISTA:
+            listas.append({"tipo": tipo, "titulo": titulo, "desc": desc,
+                           "itens": ListaEmail.query.filter_by(tipo=tipo)
+                           .order_by(ListaEmail.id).all()})
+        return render_template(
+            "team/comunicacao.html", listas=listas, etapas=com.ETAPAS,
+            desligadas=com.etapas_desligadas(current_user.id),
+            hora=int(get_setting("scheduler_hour", 8) or 8),
+            email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),
+            pode_listas=current_user.is_controladoria)
+
+    @app.route("/comunicacao/regua", methods=["POST"])
+    @team_required
+    def team_comunicacao_regua():
+        from team import comunicacao as com
+        com.salva_etapas(current_user.id, request.form.getlist("etapa"))
+        flash("Sua régua foi salva. Só chegam a você as etapas marcadas.", "success")
+        return redirect(url_for("team_comunicacao") + "#regua")
+
+    @app.route("/comunicacao/lista/adicionar", methods=["POST"])
+    @controladoria_required
+    def team_lista_adicionar():
+        from team import comunicacao as com
+        from team.models_workflow import ListaEmail
+        tipo = request.form.get("tipo")
+        email = (request.form.get("email") or "").strip().lower()
+        if tipo not in {t for t, *_ in com.TIPOS_LISTA} or "@" not in email or "." not in email:
+            flash("Informe um e-mail válido e o tipo da lista.", "warning")
+            return redirect(url_for("team_comunicacao") + "#listas")
+        nome = (request.form.get("nome") or "").strip()[:120] or None
+        ja = ListaEmail.query.filter_by(tipo=tipo, email=email).first()
+        if ja:
+            ja.active = True
+            ja.nome = nome or ja.nome
+        else:
+            db.session.add(ListaEmail(tipo=tipo, email=email[:160], nome=nome))
+        db.session.commit()
+        log_audit(current_user.id, "lista_email_add", "lista", f"{tipo}:{email}")
+        flash(f"{email} incluído na lista.", "success")
+        return redirect(url_for("team_comunicacao") + "#listas")
+
+    @app.route("/comunicacao/lista/<int:lid>/<acao>", methods=["POST"])
+    @controladoria_required
+    def team_lista_acao(lid, acao):
+        from team.models_workflow import ListaEmail
+        x = db.session.get(ListaEmail, lid) or abort(404)
+        if acao == "remover":
+            log_audit(current_user.id, "lista_email_del", "lista", f"{x.tipo}:{x.email}")
+            db.session.delete(x)
+            flash("Removido da lista.", "success")
+        elif acao == "alternar":
+            x.active = not x.active
+            flash("Reativado." if x.active else "Pausado: não recebe até ser reativado.", "success")
+        else:
+            abort(404)
+        db.session.commit()
+        return redirect(url_for("team_comunicacao") + "#listas")
+
+    # ==================================================================
     # AVISO DE PRAZO ÀS EMPRESAS (e-mail automático para os contatos)
     # ==================================================================
     @app.route("/avisos-empresas")
@@ -1794,51 +2109,9 @@ def register_team_routes(app):
         for k in ("aviso_emp_assunto_data", "aviso_emp_corpo_data",
                   "aviso_emp_assunto_vence", "aviso_emp_corpo_vence"):
             set_setting(k, (request.form.get(k) or "").strip() or av.PADRAO[k])
-        set_setting("aviso_emp_copia", (request.form.get("aviso_emp_copia") or "").strip())
         db.session.commit()
         log_audit(current_user.id, "avisos_empresas_config", "setting", "")
         flash("Mensagens salvas.", "success")
-        return redirect(url_for("team_avisos_empresas"))
-
-    @app.route("/avisos-empresas/empresas", methods=["POST"])
-    @team_required
-    def team_avisos_empresas_salvar():
-        """Quem recebe o aviso + os contatos de cada empresa (uma tela só)."""
-        from team.models_workflow import CompanyContact
-        marcadas = {int(x) for x in request.form.getlist("avisar") if x.isdigit()}
-        n_emp = n_ct = 0
-        for c in Company.query.filter_by(active=True).all():
-            novo = c.id in marcadas
-            if bool(c.avisar_prazo) != novo:
-                c.avisar_prazo = novo
-                n_emp += 1
-            for ct in list(c.contatos):          # edição/remoção dos existentes
-                campo = f"ct{ct.id}_email"
-                if campo not in request.form:
-                    continue
-                email = (request.form.get(campo) or "").strip()
-                if not email or request.form.get(f"ct{ct.id}_excluir") == "1":
-                    db.session.delete(ct)
-                    n_ct += 1
-                    continue
-                nome = (request.form.get(f"ct{ct.id}_nome") or "").strip() or None
-                if (ct.email, ct.name) != (email, nome):
-                    ct.email, ct.name = email[:160], (nome[:120] if nome else None)
-                    n_ct += 1
-            novo_email = (request.form.get(f"novo{c.id}_email") or "").strip()
-            if novo_email:
-                if "@" not in novo_email:
-                    flash(f"E-mail inválido em {c.name}: {novo_email}", "danger")
-                    db.session.rollback()
-                    return redirect(url_for("team_avisos_empresas"))
-                db.session.add(CompanyContact(
-                    company_id=c.id, email=novo_email[:160],
-                    name=(request.form.get(f"novo{c.id}_nome") or "").strip()[:120] or None))
-                n_ct += 1
-        db.session.commit()
-        log_audit(current_user.id, "avisos_empresas_destinos", "company",
-                  f"{n_emp} empresa(s), {n_ct} contato(s)")
-        flash(f"Salvo: {n_emp} empresa(s) e {n_ct} contato(s).", "success")
         return redirect(url_for("team_avisos_empresas"))
 
     @app.route("/avisos-empresas/rodar", methods=["POST"])
@@ -1871,7 +2144,8 @@ def register_team_routes(app):
         kind = request.form.get("tipo") if request.form.get("tipo") in ("data", "vence") else "data"
         assunto = av._texto(f"aviso_emp_assunto_{kind}", c, comp, prazo, du)
         corpo = av._texto(f"aviso_emp_corpo_{kind}", c, comp, prazo, du)
-        ok, err = team_alerts.send_email(current_user.email, f"[TESTE] {assunto}", corpo)
+        ok, err = team_alerts.send_email(current_user.email, f"[TESTE] {assunto}", corpo,
+                                         teste=True)
         flash(f"Teste enviado para {current_user.email}." if ok
               else f"Não enviou: {err}.", "success" if ok else "warning")
         return redirect(url_for("team_avisos_empresas"))
@@ -1892,7 +2166,7 @@ def register_team_routes(app):
             ok, err = team_alerts.send_email(
                 destino, "Teste de alerta — Portal Controladoria",
                 "Se você recebeu este e-mail, o canal de e-mail do portal está "
-                f"funcionando.\n\nPortal: {team_alerts.PORTAL_URL}")
+                f"funcionando.\n\nPortal: {team_alerts.PORTAL_URL}", teste=True)
         else:
             me = _current_member()
             numero = team_alerts.normaliza_whatsapp(

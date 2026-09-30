@@ -61,6 +61,8 @@ def run_daily_tasks(app, force=False):
         resultado["pulado"] = "dia não útil"
         return resultado
     cobre = fuso.cobertura(hoje) or [hoje]
+    from team import comunicacao
+    coletor = comunicacao.Coletor()       # tudo que vai no e-mail diario de cada pessoa
 
     # 0) pushes guardados do fim de semana/feriado
     try:
@@ -72,7 +74,7 @@ def run_daily_tasks(app, force=False):
     # 1) ciclo de alertas do time (lembrete previo, vence hoje, atraso)
     if force or not _already_ran(app, "alertas", hoje):
         try:
-            resultado["alertas"] = team_alerts.run_alert_cycle()
+            resultado["alertas"] = team_alerts.run_alert_cycle(coletor=coletor)
             _mark(app, "alertas", hoje)
             _log(app, f"ciclo de alertas: {resultado['alertas']}")
         except Exception:
@@ -81,7 +83,7 @@ def run_daily_tasks(app, force=False):
     # 1b) aviso de vencimento das tarefas pessoais
     if force or not _already_ran(app, "tarefas", hoje):
         try:
-            resultado["tarefas"] = _avisar_tarefas(app, hoje, cobre[-1])
+            resultado["tarefas"] = _avisar_tarefas(app, hoje, cobre[-1], coletor)
             _mark(app, "tarefas", hoje)
             if resultado["tarefas"]:
                 _log(app, f"avisos de tarefa: {resultado['tarefas']}")
@@ -99,6 +101,15 @@ def run_daily_tasks(app, force=False):
         except Exception:
             _log(app, "falha na virada da competência:\n" + traceback.format_exc())
 
+    # 1d) e-mail diario UNICO por pessoa: alertas + tarefas pessoais juntos
+    try:
+        res = team_alerts.flush_resumo(coletor)
+        resultado["emails_do_dia"] = len(res)
+        if res:
+            _log(app, f"e-mail diário: {len(res)} pessoa(s)")
+    except Exception:
+        _log(app, "falha no e-mail diário:\n" + traceback.format_exc())
+
     # 2) aviso de prazo às EMPRESAS (1º dia útil e no dia do prazo de cada uma)
     if force or not _already_ran(app, "avisos_empresas", hoje):
         try:
@@ -109,6 +120,16 @@ def run_daily_tasks(app, force=False):
         except Exception:
             _log(app, "falha nos avisos às empresas:\n" + traceback.format_exc())
 
+
+    # 2b) report interno do andamento do fechamento (depois do prazo; só se houver atraso)
+    if force or not _already_ran(app, "report_fechamento", hoje):
+        try:
+            from team import report_fechamento
+            resultado["report_fechamento"] = report_fechamento.rodar(ref=hoje)
+            _mark(app, "report_fechamento", hoje)
+            _log(app, f"report do fechamento: {resultado['report_fechamento']}")
+        except Exception:
+            _log(app, "falha no report do fechamento:\n" + traceback.format_exc())
 
     # 3) resumo semanal para a controladoria
     dia_resumo = int(_get(app, "digest_weekday", 0))
@@ -132,7 +153,7 @@ def run_daily_tasks(app, force=False):
     return resultado
 
 
-def _avisar_tarefas(app, hoje, ate=None):
+def _avisar_tarefas(app, hoje, ate=None, coletor=None):
     """Notifica o dono de cada tarefa com aviso ligado.
 
     Comeca na data do aviso (vencimento - antecedencia escolhida) e continua
@@ -143,6 +164,7 @@ def _avisar_tarefas(app, hoje, ate=None):
     from team.models import TeamMember
     from team.models_workflow import PersonalTask
     from team import alerts as canais
+    from team import comunicacao
     canais_dia_util = fuso.dia_util
 
     ate = ate or hoje                         # último dia coberto (sexta cobre sáb e dom)
@@ -168,15 +190,18 @@ def _avisar_tarefas(app, hoje, ate=None):
             quando, titulo = f"venceu há {-faltam} dia(s)", "Tarefa atrasada"
         texto = (f"“{t.title[:120]}” {quando} "
                  f"({t.due_date.strftime('%d/%m/%Y')}).")
+        if not comunicacao.quer(t.user_id, "tarefa_pessoal"):
+            t.reminded_on = hoje            # etapa desligada por ela: nada sai
+            continue
         notify(t.user_id, titulo, texto, kind="tarefa", url="/tarefas")
-        # tarefa pessoal: o e-mail vai so para o dono, pode trazer o titulo
+        # tarefa pessoal: o e-mail vai so para o dono, no e-mail diario unico
         u = db.session.get(User, t.user_id)
         if u and u.email:
-            ok, err = canais.send_email(
-                u.email, f"{titulo} — Portal Controladoria",
-                f"{texto}\n\nAbra suas tarefas: {canais.PORTAL_URL}/tarefas")
-            if err and err != "email_desligado":
-                _log(app, f"aviso de tarefa por e-mail falhou ({u.email}): {err}")
+            if coletor is not None:
+                coletor.add(u.email, u.display_name, "tarefa_pessoal", f"{titulo}: {texto}")
+            else:
+                canais.send_email(u.email, f"{titulo} — Portal Controladoria",
+                                  f"{texto}\n\nAbra suas tarefas: {canais.PORTAL_URL}/tarefas")
         # WhatsApp (terceiro): mensagem generica, sem o titulo da tarefa
         m = TeamMember.query.filter_by(user_id=t.user_id).first()
         numero = canais.normaliza_whatsapp(m.whatsapp) if m else None

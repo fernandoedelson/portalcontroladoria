@@ -282,6 +282,7 @@ def register_admin_routes(app):
             a.load_real = _int(request.form.get(pref + "load_real")) or 0
             a.load_ideal = _int(request.form.get(pref + "load_ideal")) or 0
             _regra_cluster(a, membro_antes, cluster_antes)
+            alterados += _salva_contatos(a, pref)
             depois = (a.member_id, a.seat, a.segment, a.flow, a.responsibility,
                       tuple(a.deliverables), a.load_real, a.load_ideal, a.cluster_id)
             if antes != depois:
@@ -292,6 +293,41 @@ def register_admin_routes(app):
         flash(f"{alterados} linha(s) da carteira salva(s)." if alterados
               else "Nenhuma alteração para salvar.", "success" if alterados else "info")
         return _back("carteira")
+
+    def _salva_contatos(a, pref):
+        """Contatos da empresa (quem recebe o aviso de prazo) — ficam no cadastro dela."""
+        from team.models_workflow import CompanyContact
+        if (pref + "ct_presente") not in request.form:
+            return 0
+        c, n = a.company, 0
+        g = request.form.get(pref + "grupo_report") or None
+        if g in ("consolidado", "demais", None) and (c.grupo_report or None) != g:
+            c.grupo_report, n = g, n + 1
+        avisar = (pref + "avisar") in request.form
+        if bool(c.avisar_prazo) != avisar:
+            c.avisar_prazo, n = avisar, n + 1
+        for ct in list(c.contatos):
+            campo = f"{pref}ct{ct.id}_email"
+            if campo not in request.form:
+                continue
+            email = (request.form.get(campo) or "").strip()
+            if not email or request.form.get(f"{pref}ct{ct.id}_excluir") == "1":
+                db.session.delete(ct)
+                n += 1
+                continue
+            nome = (request.form.get(f"{pref}ct{ct.id}_nome") or "").strip() or None
+            if (ct.email, ct.name) != (email[:160], (nome[:120] if nome else None)):
+                ct.email, ct.name = email[:160], (nome[:120] if nome else None)
+                n += 1
+        novo = (request.form.get(f"{pref}novo_email") or "").strip()
+        if novo and "@" in novo:
+            db.session.add(CompanyContact(
+                company_id=c.id, email=novo[:160],
+                name=(request.form.get(f"{pref}novo_nome") or "").strip()[:120] or None))
+            n += 1
+        elif novo:
+            flash(f"E-mail inválido em {c.name}: {novo}", "danger")
+        return n
 
     def _regra_cluster(a, membro_antes, cluster_antes):
         """Trocou só o cluster -> assume a pessoa do cluster novo.
@@ -457,7 +493,7 @@ def register_admin_routes(app):
             email = (g("email") or u.email).strip().lower()
             role = g("role") or u.role
             active = _bool(g("active"))
-            if u.id == current_user.id and (role not in ("admin", "controladoria") or not active):
+            if u.id == current_user.id and (role not in ("admin", "controladoria", "lideranca") or not active):
                 erros.append("Você não pode rebaixar nem inativar o próprio usuário."); continue
             u.email = email
             u.display_name = (g("display_name") or u.display_name).strip()
@@ -723,7 +759,7 @@ def register_admin_routes(app):
             return _back("org")
         # nao permite remover o proprio acesso de admin (evita lockout)
         new_role = request.form.get("role") or u.role
-        if u.id == current_user.id and new_role not in ("admin", "controladoria"):
+        if u.id == current_user.id and new_role not in ("admin", "controladoria", "lideranca"):
             flash("Você não pode rebaixar o próprio perfil.", "danger")
             return _back("org")
         u.email = email

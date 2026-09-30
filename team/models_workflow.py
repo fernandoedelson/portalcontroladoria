@@ -654,6 +654,7 @@ O fechamento de {competencia} deve ser enviado à Controladoria J&F até
 {prazo} ({du}º dia útil de {mes_envio}).
 
 Qualquer dúvida, é só responder este e-mail.
+Se preferir conversar, agende um horário: {agendar}
 
 Controladoria J&F"""
 AVISO_ASSUNTO_VENCE = "Hoje é o prazo do fechamento {competencia}"
@@ -665,3 +666,94 @@ Controladoria J&F.
 Se já enviou, desconsidere este aviso.
 
 Controladoria J&F"""
+
+
+# ==========================================================================
+# LISTAS DE DESTINATÁRIOS (por tipo) e PREFERÊNCIAS DE AVISO (por pessoa)
+# ==========================================================================
+class ListaEmail(db.Model):
+    """Quem recebe cada tipo de e-mail do portal (o administrador não recebe nada
+    por conta própria: tudo o que era dele sai por estas listas)."""
+    __tablename__ = "listas_email"
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(30), nullable=False, index=True)
+    nome = db.Column(db.String(120))
+    email = db.Column(db.String(160), nullable=False)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class PreferenciaAviso(db.Model):
+    """Etapa da régua de comunicação que a pessoa DESLIGOU para si (ausência = ligada)."""
+    __tablename__ = "preferencias_aviso"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    etapa = db.Column(db.String(40), nullable=False)
+    __table_args__ = (db.UniqueConstraint("user_id", "etapa", name="uq_pref_aviso"),)
+
+
+# ==========================================================================
+# AGENDAMENTO DE REUNIÕES (página pública por empresa, dentro do portal)
+# ==========================================================================
+class AgendaJanela(db.Model):
+    """Janela semanal em que a Controladoria atende (ex.: terça 14:00–17:00)."""
+    __tablename__ = "agenda_janelas"
+    id = db.Column(db.Integer, primary_key=True)
+    weekday = db.Column(db.Integer, nullable=False)        # 0 = segunda
+    inicio = db.Column(db.String(5), nullable=False)       # 'HH:MM'
+    fim = db.Column(db.String(5), nullable=False)
+    active = db.Column(db.Boolean, default=True)
+
+
+class AgendaBloqueio(db.Model):
+    """Período em que NÃO se atende (férias, reunião interna, feriado...)."""
+    __tablename__ = "agenda_bloqueios"
+    id = db.Column(db.Integer, primary_key=True)
+    inicio = db.Column(db.DateTime, nullable=False)        # horário de Brasília (sem fuso)
+    fim = db.Column(db.DateTime, nullable=False)
+    motivo = db.Column(db.String(160))
+
+
+class AgendaLink(db.Model):
+    """Link público de agendamento; um por empresa (company_id vazio = link geral)."""
+    __tablename__ = "agenda_links"
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True, index=True)
+    token = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    company = db.relationship("Company")
+
+
+class Reuniao(db.Model):
+    __tablename__ = "agenda_reunioes"
+    id = db.Column(db.Integer, primary_key=True)
+    link_id = db.Column(db.Integer, db.ForeignKey("agenda_links.id"), nullable=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+    nome = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(160), nullable=False)
+    assunto = db.Column(db.String(240))
+    inicio = db.Column(db.DateTime, nullable=False, index=True)   # horário de Brasília
+    fim = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(12), default="marcada", index=True)   # marcada | cancelada
+    uid = db.Column(db.String(60), unique=True)
+    token_cancelar = db.Column(db.String(40), unique=True)
+    sequencia = db.Column(db.Integer, default=0)
+    criada_em = db.Column(db.DateTime, default=datetime.utcnow)
+    company = db.relationship("Company")
+
+
+# ==========================================================================
+# FERIADOS AJUSTÁVEIS — o calendário de dias úteis é o nacional + este ajuste
+# ==========================================================================
+class Feriado(db.Model):
+    """Ajuste ao calendário: 'incluir' = dia que conta como feriado (municipal,
+    Carnaval, ponto facultativo); 'ignorar' = feriado nacional que NÃO pesa aqui."""
+    __tablename__ = "feriados"
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False, index=True)
+    nome = db.Column(db.String(120))
+    tipo = db.Column(db.String(10), nullable=False, default="incluir")   # incluir | ignorar
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint("data", "tipo", name="uq_feriado_data_tipo"),)

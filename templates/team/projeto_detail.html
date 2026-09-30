@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ p.name }}{% endblock %}
 {% block content %}
+{% include "team/_alterar.html" %}
 <div class="page-head">
   <div><h1>{{ p.name }}
       {% if p.confidential %}<span class="lock-badge" title="Projeto bloqueado (confidencial): o nome não é enviado a canais externos de notificação">{{ icone('lock') }} confidencial</span>{% endif %}</h1>
@@ -213,7 +214,7 @@
   <div class="card">
     <h2>Atividades do projeto ({{ acts|length }})</h2>
     <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Atividade</th><th>Responsável</th><th>Prazo</th><th>Status</th></tr></thead>
+      <thead><tr><th>Atividade</th><th>Responsável</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
       <tbody>
       {% for a in acts %}
       <tr class="row-link" onclick="location.href='/atividade/{{ a.id }}'" title="Abrir atividade">
@@ -221,8 +222,9 @@
         <td>{{ a.member.name.split()[0] if a.member else '—' }}</td>
         <td>{{ a.due_date.strftime('%d/%m') if a.due_date else '—' }}</td>
         <td><span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','concluida':'Concluída','bloqueada':'Bloqueada','cancelada':'Cancelada','aguardando':'Aguardando'}.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+        <td class="text-right" onclick="event.stopPropagation()"><button type="button" class="btn btn-outline btn-sm btn-alterar" title="Alterar prazo ou responsável" aria-label="Alterar prazo ou responsável de {{ a.title }}" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}" data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }}</button></td>
       </tr>
-      {% else %}<tr><td colspan="4" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma atividade vinculada.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="5" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma atividade vinculada.</td></tr>{% endfor %}
       </tbody></table></div>
     <a href="/atividade/nova?project_id={{ p.id }}" class="btn btn-outline btn-sm mt-2">+ Nova atividade</a>
   </div>

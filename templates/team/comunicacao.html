@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Comunicação{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Comunicação</h1>
+    <div class="sub">Quem recebe cada e-mail do portal e quais avisos chegam até você.</div></div>
+  {% if current_user.is_controladoria %}<a href="/alertas" class="btn btn-outline">{{ icone('bell') }} Matriz de alertas</a>{% endif %}
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi accent"><div class="kpi-label">E-mail diário</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ '%02d' % hora }}:00</div>
+    <div class="kpi-foot">um só e-mail por pessoa, em dia útil</div></div>
+  <div class="kpi {{ 'ok' if email_on else 'warn' }}"><div class="kpi-label">Canal e-mail</div>
+    <div class="kpi-value" style="font-size:1.2rem;">{{ 'Ativo' if email_on else 'Simulado' }}</div>
+    <div class="kpi-foot">{{ email_via }}</div></div>
+</div>
+
+<div class="card" id="regua">
+  <h2>Minha régua de avisos</h2>
+  <p class="text-muted text-sm mb-2">Marque só as etapas em que você quer ser avisado. Vale para todos os
+    canais (e-mail, WhatsApp e notificação). Mesmo com muitas pendências, você recebe
+    <strong>um único e-mail por dia</strong>, às {{ '%02d' % hora }}:00, juntando tudo.</p>
+  <form method="post" action="/comunicacao/regua">
+    {{ csrf() }}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th scope="col" style="width:70px;">Quero</th><th scope="col">Etapa</th>
+        <th scope="col">Quando acontece</th></tr></thead>
+      <tbody>
+      {% for chave, titulo, quando, quem in etapas %}
+      <tr>
+        <td class="text-center"><input type="checkbox" name="etapa" value="{{ chave }}"
+              {{ 'checked' if chave not in desligadas }} aria-label="Quero receber: {{ titulo }}"/></td>
+        <th scope="row">{{ titulo }}{% if quem == 'gestão' %} <span class="kind-chip">gestão</span>{% endif %}</th>
+        <td class="text-sm">{{ quando }}</td>
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    <button class="btn btn-primary mt-2" type="submit">{{ icone('check') }} Salvar minha régua</button>
+  </form>
+  <p class="help-txt mt-1">Fim de semana e feriado nacional: nada sai. O que venceria nesses dias é avisado no dia útil anterior.</p>
+</div>
+
+<div class="card" id="listas">
+  <h2>Listas de destinatários</h2>
+  <p class="text-muted text-sm mb-2">Cada tipo de e-mail tem a sua lista. O administrador <strong>não recebe</strong>
+    e-mails do portal por ser administrador: para receber, o endereço precisa estar na lista.
+    Qualquer pessoa pode entrar, inclusive quem não tem login no portal.</p>
+  {% for l in listas %}
+  <div class="mb-3">
+    <h3 style="margin-bottom:.15rem;">{{ l.titulo }}</h3>
+    <div class="text-muted text-sm mb-1">{{ l.desc }}</div>
+    {% if l.itens %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th scope="col">Nome</th><th scope="col">E-mail</th><th scope="col">Situação</th>
+        {% if pode_listas %}<th scope="col" style="width:190px;">Ações</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for x in l.itens %}
+      <tr>
+        <td>{{ x.nome or '—' }}</td><td>{{ x.email }}</td>
+        <td>{{ 'Recebe' if x.active else 'Pausado' }}</td>
+        {% if pode_listas %}<td><div class="flex gap-1">
+          <form method="post" action="/comunicacao/lista/{{ x.id }}/alternar">{{ csrf() }}
+            <button class="btn btn-outline btn-sm" type="submit">{{ 'Pausar' if x.active else 'Reativar' }}</button></form>
+          <form method="post" action="/comunicacao/lista/{{ x.id }}/remover"
+                onsubmit="return confirm('Retirar {{ x.email }} desta lista?');">{{ csrf() }}
+            <button class="btn btn-outline btn-danger btn-sm" type="submit" aria-label="Retirar {{ x.email }}">{{ icone('trash') }}</button></form>
+        </div></td>{% endif %}
+      </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% else %}
+    <p class="text-sm"><strong>Lista vazia</strong> — ninguém recebe este e-mail.</p>
+    {% endif %}
+    {% if pode_listas %}
+    <form method="post" action="/comunicacao/lista/adicionar" class="flex gap-1 mt-1" style="flex-wrap:wrap;">
+      {{ csrf() }}<input type="hidden" name="tipo" value="{{ l.tipo }}"/>
+      <input class="input" name="nome" placeholder="nome (opcional)" style="width:170px;" aria-label="Nome"/>
+      <input class="input" type="email" name="email" placeholder="email@jfsa.com.br" required style="width:260px;" aria-label="E-mail"/>
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Incluir na lista</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

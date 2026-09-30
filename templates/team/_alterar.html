@@ -1,0 +1,48 @@
+{# Modal "Alterar prazo / responsável" — incluído nas telas que listam atividades.
+   Uso: <button type="button" class="btn btn-outline btn-sm" data-alt-id="ID" data-alt-titulo="..."
+        data-alt-prazo="AAAA-MM-DD" data-alt-membro="ID" onclick="abrirAlterar(this)">. #}
+<dialog id="dlg-alterar" class="dlg-alt" aria-labelledby="alt-h">
+  <form method="post" id="form-alterar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <h3 id="alt-h" style="margin:0 0 .15rem;">Alterar prazo ou responsável</h3>
+    <p id="alt-titulo" class="text-sm text-muted" style="margin:0 0 .8rem;"></p>
+    <div class="alt-grade">
+      <label class="field-label">Novo prazo
+        <input class="input" type="date" name="new_date" id="alt-prazo"/></label>
+      <label class="field-label">Responsável
+        <select class="input" name="member_id" id="alt-resp">
+          <option value="">— manter o atual —</option>
+          {% for m in membros_ativos() %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+        </select></label>
+    </div>
+    <label class="field-label" style="display:block;margin-top:.7rem;">Justificativa <span style="color:var(--danger);">(obrigatória)</span>
+      <textarea class="input" name="justificativa" id="alt-just" rows="3" required
+                placeholder="Por que está mudando? Isso fica registrado no histórico."
+                style="width:100%;"></textarea></label>
+    <p class="help-txt" style="margin:.5rem 0 0;">Vale na hora, sem aprovação. A liderança e o líder do projeto são avisados da mudança de prazo.</p>
+    <div class="flex gap-1" style="justify-content:flex-end;margin-top:.9rem;">
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('dlg-alterar').close()">Cancelar</button>
+      <button type="submit" class="btn btn-primary">{{ icone('check') }} Salvar alteração</button>
+    </div>
+  </form>
+</dialog>
+<style>
+  .dlg-alt{margin:auto;position:fixed;inset:0;height:fit-content;max-height:calc(100vh - 2rem);overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);
+    padding:1.2rem 1.3rem;width:min(520px,calc(100vw - 2rem));box-shadow:0 18px 50px rgba(8,16,28,.35);}
+  .dlg-alt::backdrop{background:rgba(8,16,28,.45);}
+  .alt-grade{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;}
+  .alt-grade .input{width:100%;margin-top:.2rem;}
+  @media (max-width:520px){.alt-grade{grid-template-columns:1fr;}}
+  .btn-alterar{padding:.3rem .5rem;}
+</style>
+<script>
+function abrirAlterar(btn){
+  var d=document.getElementById('dlg-alterar'), f=document.getElementById('form-alterar');
+  f.action='/atividade/'+btn.getAttribute('data-alt-id')+'/alterar';
+  document.getElementById('alt-titulo').textContent=btn.getAttribute('data-alt-titulo')||'';
+  document.getElementById('alt-prazo').value=btn.getAttribute('data-alt-prazo')||'';
+  document.getElementById('alt-resp').value='';
+  document.getElementById('alt-just').value='';
+  d.showModal();
+}
+</script>

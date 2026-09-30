@@ -117,21 +117,27 @@ def envia_resumo(enviado_por=None, base_url=None):
     base = (base_url or os.environ.get("TEAM_PORTAL_URL")
             or os.environ.get("RENDER_EXTERNAL_URL") or alerts.PORTAL_URL)
     link = base.rstrip("/") + caminho
-    alvo = User.query.filter(User.role.in_(["controladoria", "admin"]),
+    alvo = User.query.filter(User.role.in_(["controladoria", "lideranca", "admin"]),
                              User.active.is_(True)).all()
-    falhas, ok = [], 0
-    for u in alvo:
+    for u in alvo:                                   # painel/push: como antes
         notify(u.id, "Resumo do fechamento", texto[:380], kind="resumo", url=caminho)
+    # e-mail: so para a lista "Resumo semanal" (o administrador nao recebe por ser admin)
+    from team import comunicacao
+    destinos = comunicacao.emails_da_lista("resumo")
+    falhas, ok = [], 0
+    for email in destinos:
         certo, erro = alerts.send_email(
-            u.email, "Resumo do fechamento — Controladoria J&F",
-            f"{texto}\n\nAbrir no portal: {link}\n")
+            email, "Resumo do fechamento — Controladoria J&F",
+            f"{texto}\n\nAbrir no portal: {link}\n", lista=True)
         if certo:
             ok += 1
         else:
-            falhas.append(f"{u.display_name or u.email}: {_MOTIVO_EMAIL.get(erro, erro)}")
+            falhas.append(f"{email}: {_MOTIVO_EMAIL.get(erro, erro)}")
+    if not destinos:
+        falhas.append("lista 'Resumo semanal' vazia — cadastre os e-mails em Comunicação")
     snap.email_ok = ok
     snap.email_falhas = "\n".join(falhas) or None
-    snap.destinos = len(alvo)
+    snap.destinos = len(destinos)
     db.session.commit()
     return snap
 
@@ -179,6 +185,9 @@ def register_workflow_routes(app):
         a.done_by = current_user.id
         db.session.commit()
         log_audit(current_user.id, "atividade_concluida", "activity", str(aid))
+        from team import movimentos
+        movimentos.movimento_projeto(
+            a, f"{current_user.display_name} concluiu “{a.title[:90]}”.", current_user.id)
         if request.form.get("ajax"):
             return jsonify(ok=True)
         flash(f"“{a.title[:60]}” concluída.", "success")
@@ -256,6 +265,10 @@ def register_workflow_routes(app):
         elif kind == "desbloqueio" and a.status == "bloqueada":
             a.status = "em_andamento"
         db.session.commit()
+        from team import movimentos
+        movimentos.movimento_projeto(
+            a, f"{current_user.display_name} registrou em “{a.title[:70]}”: {body[:140]}",
+            current_user.id)
         # avisa o gestor quando algo trava
         if kind == "bloqueio":
             for m in TeamMember.query.filter_by(is_manager=True).all():

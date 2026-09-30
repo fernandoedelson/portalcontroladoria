@@ -10,10 +10,48 @@ except Exception:
     _HAS = False
 
 
-def _br_holidays(year):
+def feriados_nacionais(year):
+    """{data: nome} dos feriados nacionais do ano (sem ajustes)."""
     if _HAS:
-        return set(_holidays.Brazil(years=year).keys())
-    return set()
+        return dict(_holidays.Brazil(years=year).items())
+    return {}
+
+
+_CACHE = {}
+
+
+def _ajustes(year):
+    """(incluir, ignorar) cadastrados em Feriados; sem banco/contexto, vazio."""
+    try:
+        from team.models_workflow import Feriado
+        linhas = Feriado.query.filter(Feriado.data >= date(year, 1, 1),
+                                      Feriado.data <= date(year, 12, 31)).all()
+    except Exception:
+        return None
+    return ({f.data for f in linhas if f.tipo == "incluir"},
+            {f.data for f in linhas if f.tipo == "ignorar"})
+
+
+def _br_holidays(year):
+    """Feriados que valem para o calendário: nacionais, menos os ignorados, mais os
+    incluídos (municipais, Carnaval...). Memoizado; `invalida()` após editar."""
+    if year not in _CACHE:
+        aj = _ajustes(year)
+        if aj is None:                 # sem banco/contexto: só os nacionais, sem memoizar
+            return set(feriados_nacionais(year))
+        inc, ign = aj
+        _CACHE[year] = (set(feriados_nacionais(year)) - ign) | inc
+    return set(_CACHE[year])
+
+
+def invalida():
+    """Esquece o que foi memoizado (chamar depois de mudar os feriados)."""
+    _CACHE.clear()
+    try:
+        from team import engine
+        engine._year_holidays.cache_clear()
+    except Exception:
+        pass
 
 
 def business_days(year, month):

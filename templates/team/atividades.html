@@ -44,22 +44,102 @@
 </div>
 
 {% if view == 'kanban' %}
-<div class="kanban">
-  {% for col, items in columns.items() %}{% if items or col in ['atrasada','vence_hoje','pendente','em_andamento','concluida'] %}
-  <div class="kan-col">
+<p class="help-txt mb-1">Arraste o cartão pela alça <span aria-hidden="true">⠿</span> para outra coluna: o status da atividade muda na hora.
+  Atrasos e vencimentos aparecem como selo no cartão.</p>
+<div class="kanban" id="kanban">
+  {% for col, items in columns.items() %}
+  <div class="kan-col" data-col="{{ col }}">
     <h3>{{ stlabels.get(col, col) }} <span class="kan-count">{{ items|length }}</span></h3>
+    <div class="kan-lista" data-col="{{ col }}">
     {% for a in items %}
-    <div class="kan-card kl-{{ a.priority }}">
+    {% set est = a.effective_status(today) %}
+    <div class="kan-card kl-{{ a.priority }}" data-id="{{ a.id }}" data-titulo="{{ a.title }}">
+      <span class="kan-alca" title="Arraste para mudar de coluna" aria-label="Arrastar {{ a.title }}">⠿</span>
       <a href="/atividade/{{ a.id }}">{{ a.title }}</a>
       <div class="kan-meta">
         <span class="kind-chip">{{ a.kind_pt() }}</span>
         {% if a.member %}<span class="mini-av" style="width:20px;height:20px;font-size:.6rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{% endif %}
         {% if a.due_date %}<span>{{ a.due_date.strftime('%d/%m') }}</span>{% endif %}
+        {% if est == 'atrasada' %}<span class="st st-atrasada">atrasada</span>{% elif est == 'vence_hoje' %}<span class="st st-vence_hoje">vence hoje</span>{% endif %}
+        <button type="button" class="btn btn-outline btn-sm btn-alterar" title="Alterar prazo ou responsável" aria-label="Alterar prazo ou responsável de {{ a.title }}" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}" data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }}</button>
       </div>
     </div>
     {% endfor %}
-  </div>{% endif %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
 </div>
+<div class="kan-toast" id="kan-toast" role="status" aria-live="polite" hidden></div>
+{% include "team/_alterar.html" %}
+<style>
+  .kan-card{position:relative;padding-left:1.45rem;}
+  .kan-alca{position:absolute;left:.3rem;top:.55rem;cursor:grab;color:var(--text-muted);font-size:1rem;line-height:1;
+    touch-action:none;user-select:none;padding:.1rem .15rem;}
+  .kan-card.arrastando{opacity:.35;}
+  .kan-col.alvo{outline:2px dashed var(--r-ouro-ui);outline-offset:-3px;}
+  .kan-lista{min-height:60px;}
+  .kan-fantasma{position:fixed;z-index:3000;pointer-events:none;width:240px;opacity:.92;box-shadow:0 10px 28px rgba(8,16,28,.35);}
+  .kan-toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);z-index:2500;background:var(--r-tinta);color:var(--r-papel);
+    padding:.6rem .9rem;border-radius:10px;font-size:.85rem;display:flex;gap:.8rem;align-items:center;box-shadow:0 10px 30px rgba(8,16,28,.35);}
+  .kan-toast[hidden]{display:none;}
+  .kan-toast button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:.15rem .55rem;cursor:pointer;}
+  .kan-meta{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;}
+</style>
+<script>
+(function(){
+  var RODULOS={pendente:'A fazer',em_andamento:'Em andamento',bloqueada:'Bloqueada',concluida:'Concluída'};
+  var token='{{ csrf_token() }}', arrasto=null, toast=document.getElementById('kan-toast'), tToast=null;
+  function contagens(){ document.querySelectorAll('.kan-col').forEach(function(c){
+    c.querySelector('.kan-count').textContent=c.querySelectorAll('.kan-card').length; }); }
+  function aviso(html,ms){ toast.innerHTML=html; toast.hidden=false; clearTimeout(tToast);
+    tToast=setTimeout(function(){toast.hidden=true;}, ms||7000); }
+  function salva(id,status,obs,cb){
+    var fd=new FormData(); fd.append('csrf_token',token); fd.append('status',status); fd.append('ajax','1');
+    if(obs) fd.append('obs',obs);
+    fetch('/atividade/'+id+'/status',{method:'POST',body:fd,credentials:'same-origin'})
+      .then(function(r){ return r.ok?r.json():Promise.reject(); }).then(function(){ cb(true); })
+      .catch(function(){ cb(false); });
+  }
+  function colunaEm(x,y){
+    var el=document.elementFromPoint(x,y); return el?el.closest('.kan-col'):null;
+  }
+  document.querySelectorAll('.kan-alca').forEach(function(alca){
+    alca.addEventListener('pointerdown',function(ev){
+      ev.preventDefault();
+      var card=alca.closest('.kan-card'); var origem=card.closest('.kan-col');
+      var fant=card.cloneNode(true); fant.classList.add('kan-fantasma'); document.body.appendChild(fant);
+      card.classList.add('arrastando');
+      arrasto={card:card,origem:origem,fant:fant};
+      function move(e){
+        fant.style.left=(e.clientX-20)+'px'; fant.style.top=(e.clientY-14)+'px';
+        document.querySelectorAll('.kan-col.alvo').forEach(function(c){c.classList.remove('alvo');});
+        var c=colunaEm(e.clientX,e.clientY); if(c) c.classList.add('alvo');
+      }
+      function fim(e){
+        document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',fim);
+        document.removeEventListener('pointercancel',fim);
+        fant.remove(); card.classList.remove('arrastando');
+        document.querySelectorAll('.kan-col.alvo').forEach(function(c){c.classList.remove('alvo');});
+        var destino=colunaEm(e.clientX,e.clientY);
+        if(!destino || destino===origem) return;
+        var id=card.getAttribute('data-id'), novo=destino.getAttribute('data-col');
+        destino.querySelector('.kan-lista').appendChild(card); contagens();
+        salva(id,novo,null,function(ok){
+          if(!ok){ origem.querySelector('.kan-lista').appendChild(card); contagens();
+            aviso('Não consegui salvar a mudança. Tente de novo.',5000); return; }
+          aviso('Movida para <b>'+RODULOS[novo]+'</b>. <button type="button" id="kan-obs">Adicionar observação</button>',8000);
+          document.getElementById('kan-obs').onclick=function(){
+            var t=window.prompt('Observação sobre esta mudança (opcional):','');
+            if(t && t.trim()) salva(id,novo,t.trim(),function(ok2){ aviso(ok2?'Observação registrada.':'Não consegui registrar a observação.',3500); });
+          };
+        });
+      }
+      document.addEventListener('pointermove',move); document.addEventListener('pointerup',fim);
+      document.addEventListener('pointercancel',fim); move(ev);
+    });
+  });
+})();
+</script>
 {% else %}
 <div class="card">
   <form method="post" action="/atividades/concluir-lote" id="lote">
@@ -90,6 +170,7 @@
           <button class="btn btn-primary btn-sm" type="submit"
                   formaction="/atividade/{{ a.id }}/concluir" title="Concluir">{{ icone("check") }}</button>
           {% endif %}
+          <button type="button" class="btn btn-outline btn-sm btn-alterar" title="Alterar prazo ou responsável" aria-label="Alterar prazo ou responsável de {{ a.title }}" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}" data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }}</button>
           <a href="/atividade/{{ a.id }}" class="btn btn-outline btn-sm">Ver</a>
         </div></td>
       </tr>
@@ -124,6 +205,7 @@
     ou marque várias e conclua de uma vez.</p>
 </div>
 
+{% include "team/_alterar.html" %}
 <script>
 function atualizaSel(){
   var n=document.querySelectorAll('.chk-act:checked').length;

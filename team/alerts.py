@@ -50,18 +50,37 @@ def email_via():
 # --------------------------------------------------------------------------
 # Canal: E-mail — SMTP (Gmail) com fallback no Outlook COM local
 # --------------------------------------------------------------------------
-def send_email(to_addr, subject, body):
-    """Envia e-mail pelo canal configurado. Retorna (ok, erro) sem lancar."""
+def _sem_administradores(to_addr):
+    """Tira do destino quem e administrador: o admin nao recebe e-mail do portal por
+    conta propria (o que era dele sai pelas listas de destinatarios)."""
+    itens = [e.strip() for e in str(to_addr or "").replace(";", ",").split(",") if e.strip()]
+    if not itens:
+        return ""
+    admins = {(u.email or "").strip().lower()
+              for u in User.query.filter_by(role="admin").all() if u.email}
+    return ", ".join(e for e in itens if e.lower() not in admins)
+
+
+def send_email(to_addr, subject, body, lista=False, teste=False, html=None, anexos=None):
+    """Envia e-mail pelo canal configurado. Retorna (ok, erro) sem lancar.
+
+    `lista=True`: destino vem de uma lista de destinatarios (vale para qualquer
+    endereco, inclusive o de um administrador que foi colocado la de proposito);
+    `teste=True`: a propria pessoa pediu o teste na tela."""
+    if not lista and not teste:
+        to_addr = _sem_administradores(to_addr)
+        if not to_addr:
+            return False, "sem_destinatario"
     if not EMAIL_ENABLED:
         return False, "email_desligado"
     if not to_addr:
         return False, "sem_destinatario"
     if SMTP_USER:
-        return _send_email_smtp(to_addr, subject, body)
-    return send_email_outlook(to_addr, subject, body)
+        return _send_email_smtp(to_addr, subject, body, html, anexos)
+    return send_email_outlook(to_addr, subject, body, html, anexos)
 
 
-def _send_email_smtp(to_addr, subject, body):
+def _send_email_smtp(to_addr, subject, body, html=None, anexos=None):
     import smtplib
     from email.message import EmailMessage
     if not SMTP_PASSWORD:
@@ -71,6 +90,12 @@ def _send_email_smtp(to_addr, subject, body):
     msg["From"] = f"Controladoria J&F <{SMTP_FROM}>"
     msg["To"] = to_addr
     msg.set_content(body)
+    if html:
+        msg.add_alternative(html, subtype="html")
+    for nome, dados, mime in (anexos or []):
+        tipo, _, resto = mime.partition("/")
+        sub_tipo, _, params = resto.partition(";")
+        msg.add_attachment(dados, maintype=tipo, subtype=sub_tipo.strip(), filename=nome)
     try:   # pragma: no cover - depende de rede/credencial
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
             s.starttls()
@@ -81,7 +106,7 @@ def _send_email_smtp(to_addr, subject, body):
         return False, f"{type(e).__name__}: {e}"
 
 
-def send_email_outlook(to_addr, subject, body):
+def send_email_outlook(to_addr, subject, body, html=None, anexos=None):
     """Envia e-mail pela instancia local do Outlook (COM) — so em Windows.
 
     Retorna (ok, error). Se pywin32/Outlook indisponivel, retorna (False, motivo)
@@ -98,7 +123,17 @@ def send_email_outlook(to_addr, subject, body):
             mail = outlook.CreateItem(0)  # olMailItem
             mail.To = to_addr
             mail.Subject = subject
-            mail.Body = body
+            if html:
+                mail.HTMLBody = html
+            else:
+                mail.Body = body
+            import os, tempfile
+            tmpdir = tempfile.mkdtemp()
+            for nome, dados, _mime in (anexos or []):
+                caminho = os.path.join(tmpdir, nome)
+                with open(caminho, "wb") as fh:
+                    fh.write(dados)
+                mail.Attachments.Add(caminho)
             mail.Send()
             return True, None
         finally:
@@ -224,13 +259,18 @@ def _record(event_key, channel, member_id, activity_id, dedup_key,
 
 
 def _dispatch(event_key, setting, member, activity, subject, body,
-              n_generic=1, ref=None):
+              n_generic=1, ref=None, coletor=None, linha=None):
     """Envia um evento por todos os canais ligados na matriz, com idempotencia.
 
-    Retorna lista de dicts {channel, status, error}.
+    O e-mail nao sai aqui: entra no `coletor` e vai num unico e-mail diario por
+    pessoa (ver `flush_resumo`). Quem desligou a etapa na sua regua nao recebe
+    por nenhum canal. Retorna lista de dicts {channel, status, error}.
     """
+    from team import comunicacao
     ref = ref or fuso.hoje()
     out = []
+    if member and not comunicacao.quer(member.user_id, event_key):
+        return [{"channel": "todos", "status": "etapa_desligada", "error": None}]
     aid = activity.id if activity else None
     mid = member.id if member else None
     base = f"{ref.isoformat()}:{event_key}:{mid}:{aid}"
@@ -253,16 +293,21 @@ def _dispatch(event_key, setting, member, activity, subject, body,
             _record(event_key, "push", mid, aid, dk, subject, body, st, err)
             out.append({"channel": "push", "status": st, "error": err})
 
-    # email
+    # email — vai no e-mail diario unico da pessoa
     if setting.email and member:
         to = member.user.email if member.user else None
         dk = base + ":email"
         if not _already_sent(dk):
-            ok, err = send_email(to, subject, body)
-            _record(event_key, "email", mid, aid, dk, subject, body,
-                    "enviado" if ok else "simulado", err)
-            out.append({"channel": "email", "status": "enviado" if ok else "simulado",
-                        "error": err})
+            if coletor is not None and to:
+                coletor.add(to, member.name, event_key, linha or subject,
+                            meta=(event_key, mid, aid, dk))
+                out.append({"channel": "email", "status": "no_resumo", "error": None})
+            else:
+                ok, err = send_email(to, subject, body)
+                _record(event_key, "email", mid, aid, dk, subject, body,
+                        "enviado" if ok else "simulado", err)
+                out.append({"channel": "email", "status": "enviado" if ok else "simulado",
+                            "error": err})
 
     # whatsapp (generico!)
     if setting.whatsapp and member:
@@ -287,10 +332,45 @@ def _manager():
     return TeamMember.query.filter_by(is_manager=True, active=True).first()
 
 
+def _liderancas():
+    """Usuários do perfil Liderança (quem recebe as escaladas)."""
+    return User.query.filter_by(role="lideranca", active=True).all()
+
+
 # --------------------------------------------------------------------------
 # Ciclo de alertas (idempotente por dia) — o "controle e aviso de execucao/atraso"
 # --------------------------------------------------------------------------
-def run_alert_cycle(ref=None, dry_run=False):
+def _linha(a, ref):
+    """Uma linha do e-mail diario para a atividade."""
+    partes = [f"“{a.title}”"]
+    if a.company:
+        partes.append(a.company.name)
+    if a.due_date:
+        if a.due_date < ref:
+            partes.append(f"venceu {a.due_date.strftime('%d/%m')} ({abs(a.days_to_due(ref) or 0)} d.u. de atraso)")
+        else:
+            partes.append(f"prazo {a.due_date.strftime('%d/%m')}")
+    return " — ".join(partes)
+
+
+def flush_resumo(coletor, dry_run=False):
+    """Manda o e-mail diario (um por pessoa) e registra o que entrou nele."""
+    from team import comunicacao
+    if dry_run:
+        return {}
+    res = comunicacao.envia_coletor(coletor, PORTAL_URL, send_email)
+    for email, d in coletor.por_email.items():
+        ok, err, _n = res.get(email, (False, "sem_envio", 0))
+        status = "enviado" if ok else ("simulado" if err == "email_desligado" else "falha")
+        for etapa, linha, meta in d["itens"]:
+            if meta:
+                _e, mid, aid, dk = meta
+                _record(etapa, "email", mid, aid, dk, (linha or "")[:200], None, status, err)
+    db.session.commit()
+    return res
+
+
+def run_alert_cycle(ref=None, dry_run=False, coletor=None):
     """Varre atividades abertas e dispara lembretes/vencimentos/atrasos conforme a matriz.
 
     Idempotente: cada (dia, evento, membro, atividade, canal) so dispara uma vez.
@@ -298,6 +378,9 @@ def run_alert_cycle(ref=None, dry_run=False):
     Retorna um resumo.
     """
     from team.engine import add_business_days
+    from team import comunicacao
+    proprio = coletor is None
+    coletor = comunicacao.Coletor() if coletor is None else coletor
     ref = ref or fuso.hoje()
     # dia útil cobre os dias não úteis seguintes: o que vence sáb/dom/feriado sai hoje
     cobre = set(fuso.cobertura(ref)) or {ref}
@@ -338,7 +421,8 @@ def run_alert_cycle(ref=None, dry_run=False):
                 summary["lembrete_previo"] += 1
                 if not dry_run:
                     res = _dispatch("lembrete_previo", s, member, a, subject, body,
-                                    n_generic=n_open, ref=ref)
+                                    n_generic=n_open, ref=ref, coletor=coletor,
+                                    linha=_linha(a, ref))
                     _tally(summary, res)
 
         # --- vence hoje ---
@@ -350,7 +434,8 @@ def run_alert_cycle(ref=None, dry_run=False):
             summary["vence_hoje"] += 1
             if not dry_run:
                 res = _dispatch("vence_hoje", s, member, a, subject, body,
-                                n_generic=n_open, ref=ref)
+                                n_generic=n_open, ref=ref, coletor=coletor,
+                                linha=_linha(a, ref))
                 _tally(summary, res)
 
         # --- atraso (com escalada ao gestor) ---
@@ -362,34 +447,47 @@ def run_alert_cycle(ref=None, dry_run=False):
             summary["atraso"] += 1
             if not dry_run:
                 res = _dispatch("atraso", s, member, a, subject, body,
-                                n_generic=n_open, ref=ref)
+                                n_generic=n_open, ref=ref, coletor=coletor,
+                                linha=_linha(a, ref))
                 _tally(summary, res)
-                # escalada: notifica o gestor no painel
+                # escalada: só o perfil Liderança recebe (a controladoria não)
                 if s.escalate_manager:
-                    mgr = _manager()
-                    if mgr and mgr.user_id and mgr.id != (member.id if member else None):
-                        dk = f"{ref.isoformat()}:atraso_escalada:{a.id}"
-                        if not _already_sent(dk):
-                            who = member.name if member else "sem responsável"
-                            msg = (f"Atividade “{a.title}” de {who} está atrasada "
-                                   f"({a.due_date.strftime('%d/%m/%Y')}).")
-                            n_esc = Notification(
-                                user_id=mgr.user_id, title="Escalada de atraso",
-                                message=msg, kind="cobranca", url=f"/atividade/{a.id}")
-                            n_esc._sem_push = True     # push segue a coluna da matriz
-                            db.session.add(n_esc)
-                            _record("atraso", "painel", mgr.id, a.id, dk,
-                                    "Escalada de atraso", msg, "enviado")
-                            _tally(summary, [{"channel": "escalada", "status": "enviado"}])
-                            if getattr(s, "push", False) and not _already_sent(dk + ":push"):
-                                st, err = send_push("atraso", mgr, a, "Escalada de atraso",
-                                                    "Escalada de atraso\n" + msg)
-                                _record("atraso", "push", mgr.id, a.id, dk + ":push",
-                                        "Escalada de atraso", msg, st, err)
-                                _tally(summary, [{"channel": "push", "status": st}])
+                    who = member.name if member else "sem responsável"
+                    msg = (f"Atividade “{a.title}” de {who} está atrasada "
+                           f"({a.due_date.strftime('%d/%m/%Y')}).")
+                    for lu in _liderancas():
+                        if member and member.user_id == lu.id:
+                            continue
+                        if not comunicacao.quer(lu.id, "escalada_atraso"):
+                            continue
+                        dk = f"{ref.isoformat()}:atraso_escalada:{a.id}:{lu.id}"
+                        if _already_sent(dk):
+                            continue
+                        n_esc = Notification(
+                            user_id=lu.id, title="Escalada de atraso",
+                            message=msg, kind="cobranca", url=f"/atividade/{a.id}")
+                        n_esc._sem_push = True     # push segue a coluna da matriz
+                        db.session.add(n_esc)
+                        _record("atraso", "painel", None, a.id, dk,
+                                "Escalada de atraso", msg, "enviado")
+                        _tally(summary, [{"channel": "escalada", "status": "enviado"}])
+                        if s.email and lu.email:
+                            coletor.add(lu.email, lu.display_name, "escalada_atraso",
+                                        f"{who}: {_linha(a, ref)}",
+                                        meta=("atraso", None, a.id, dk + ":email"))
+                        if getattr(s, "push", False) and not _already_sent(dk + ":push"):
+                            alvo = TeamMember.query.filter_by(user_id=lu.id).first() \
+                                or type("M", (), {"user_id": lu.id, "id": None})()
+                            st, err = send_push("atraso", alvo, a, "Escalada de atraso",
+                                                "Escalada de atraso\n" + msg)
+                            _record("atraso", "push", None, a.id, dk + ":push",
+                                    "Escalada de atraso", msg, st, err)
+                            _tally(summary, [{"channel": "push", "status": st}])
 
     if not dry_run:
         db.session.commit()   # persiste todos os AlertLog/Notification do ciclo em lote
+        if proprio:
+            summary["emails_do_dia"] = len(flush_resumo(coletor))
         log_audit(None, "ciclo_alertas", "team",
                   f"prev={summary['lembrete_previo']} hoje={summary['vence_hoje']} "
                   f"atraso={summary['atraso']}")

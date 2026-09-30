@@ -21,7 +21,6 @@ from team.models import CompanyAssignment
 
 PADRAO = {
     "aviso_emp_ativo": "1",
-    "aviso_emp_copia": "",          # e-mails de controle (vazio = admins do portal)
     "aviso_emp_assunto_data": AVISO_ASSUNTO_DATA,
     "aviso_emp_corpo_data": AVISO_CORPO_DATA,
     "aviso_emp_assunto_vence": AVISO_ASSUNTO_VENCE,
@@ -77,9 +76,17 @@ def _texto(chave, empresa, comp, prazo, du):
              "du": du or "", "mes_envio": MESES[prazo.month] if prazo else "",
              "hoje": fuso.hoje().strftime("%d/%m/%Y")}
     try:
-        return config(chave).format(**dados)
+        from team import agenda
+        dados["agendar"] = agenda.url_para_empresa(empresa.id)
+    except Exception:
+        dados["agendar"] = ""
+    base = config(chave)
+    if not dados["agendar"]:          # agendamento desligado: some a linha do convite
+        base = "\n".join(l for l in base.split("\n") if "{agendar}" not in l)
+    try:
+        return base.format(**dados)
     except (KeyError, IndexError, ValueError):
-        return config(chave)          # marcador digitado errado não derruba o envio
+        return base          # marcador digitado errado não derruba o envio
 
 
 def _ja_enviado(company_id, comp_id, kind):
@@ -107,14 +114,10 @@ def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False):
 
 
 def emails_de_controle():
-    """Para quem vai o aviso de que os e-mails saíram (admins, por padrão)."""
-    from models import User
-    manual = [e.strip() for e in (config("aviso_emp_copia") or "").replace(";", ",").split(",")
-              if "@" in e]
-    if manual:
-        return manual
-    return [u.email for u in User.query.filter(
-        User.role.in_(["controladoria", "admin"]), User.active.is_(True)).all() if u.email]
+    """Para quem vai o protocolo de envio: a lista "Protocolo" (Comunicação).
+    O administrador não recebe por ser administrador."""
+    from team import comunicacao
+    return comunicacao.emails_da_lista("protocolo")
 
 
 def avisa_controle(ref, comp, enviados, falhas, dry_run=False):
@@ -138,7 +141,7 @@ def avisa_controle(ref, comp, enviados, falhas, dry_run=False):
     corpo = "\n".join(linhas)
     assunto = (f"[Controle] {len(enviados)} aviso(s) de prazo enviado(s) às empresas"
                + (f" — {comp.label}" if comp else ""))
-    ok, _err = alerts.send_email(", ".join(destinos), assunto, corpo)
+    ok, _err = alerts.send_email(", ".join(destinos), assunto, corpo, lista=True)
     return ok
 
 

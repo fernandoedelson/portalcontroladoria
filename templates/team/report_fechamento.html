@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Report do Fechamento{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+{% set t = q.totais %}
+<div class="page-head">
+  <div><h1>Report do Fechamento</h1>
+    <div class="sub">Quem já enviou os 3 documentos à Controladoria — {{ q.comp.label if q.comp else '—' }}, até {{ q.ref.strftime('%d/%m/%Y') }}.</div></div>
+  <form method="get" class="flex gap-1 items-center">
+    <label class="sr-only" for="rf-comp">Competência</label>
+    <select class="input" id="rf-comp" name="comp" onchange="this.form.submit()">
+      {% for c in competencias %}<option value="{{ c.id }}" {{ 'selected' if q.comp and c.id == q.comp.id }}>{{ c.label }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi {{ 'ok' if q.completo else 'accent' }}"><div class="kpi-label">Documentos entregues</div>
+    <div class="kpi-value">{{ t.entregues }}<small style="font-size:.5em;"> / {{ t.docs }}</small></div>
+    <div class="kpi-foot">Painel, Template e Endividamento</div></div>
+  <div class="kpi"><div class="kpi-label">Empresas completas</div>
+    <div class="kpi-value">{{ q.empresas_completas }}<small style="font-size:.5em;"> / {{ q.n_empresas }}</small></div>
+    <div class="kpi-foot">com os 3 documentos</div></div>
+  <div class="kpi {{ 'warn' if t.atrasadas }}"><div class="kpi-label">Em atraso</div>
+    <div class="kpi-value">{{ t.atrasadas }}</div><div class="kpi-foot">prazo (ou nova data) vencido</div></div>
+  <div class="kpi"><div class="kpi-label">Postergados</div>
+    <div class="kpi-value">{{ t.postergadas }}</div><div class="kpi-foot">nova data ainda no futuro</div></div>
+</div>
+
+{% if not q.n_empresas %}
+<div class="card"><div class="empty-box"><p><strong>Ainda não há atividades de Painel, Template ou Endividamento nesta competência.</strong></p>
+  <p class="text-muted text-sm">Elas nascem do cronograma (itens com entrega) quando a competência é aberta. Em Administração › Entidades, marque as entregas de cada empresa.</p></div></div>
+{% else %}
+<div class="card">
+  <h2>Status Fechamento</h2>
+  <div class="tbl-wrap"><table class="tbl rf-tbl">
+    <thead><tr><th scope="col">Empresa</th><th scope="col">Data</th>
+      {% for macro, rot in docs %}<th scope="col" class="text-center">{{ rot }}</th>{% endfor %}
+      <th scope="col">Obs</th></tr></thead>
+    <tbody>
+    {% for g, rotg in grupos %}{% if q.grupos[g] %}
+      <tr class="rf-grupo"><td colspan="6">{{ rotg }}</td></tr>
+      {% for l in q.grupos[g] %}
+      <tr>
+        <td style="font-weight:600;">{{ l.empresa.name }}</td>
+        <td class="text-sm">{{ l.data.strftime('%d/%m') if l.data else '' }}</td>
+        {% for macro, rot in docs %}{% set c = l.cels[macro] %}
+        <td class="rf-cel rf-{{ c.estado }}" title="{{ c.rotulo }}{% if c.get('prazo') %} · prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% if c.get('motivo') %} · {{ c.motivo }}{% endif %}">
+          <span class="rf-ico" aria-hidden="true">{{ {'entregue':'✔','atrasada':'✖','postergada':'⏳','pendente':'•','na':'–'}[c.estado] }}</span>
+          <span class="rf-sr">{{ c.rotulo }}</span>
+          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado == 'postergada' and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' and c.get('prazo') %}venceu {{ c.prazo.strftime('%d/%m') }}{% endif %}</small>
+        </td>
+        {% endfor %}
+        <td class="text-sm">{{ l.obs }}</td>
+      </tr>
+      {% endfor %}
+    {% endif %}{% endfor %}
+    </tbody></table></div>
+  <p class="help-txt mt-1"><span class="rf-leg rf-entregue">✔ entregue</span> <span class="rf-leg rf-atrasada">✖ atrasado</span>
+    <span class="rf-leg rf-postergada">⏳ postergado (nova data)</span> <span class="rf-leg rf-pendente">• no prazo</span>
+    O “OK” é a conclusão da atividade de cada documento no cronograma.</p>
+</div>
+
+{% if q.pendencias %}
+<div class="card">
+  <h2>Pendências ({{ q.pendencias|length }})</h2>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Empresa</th><th scope="col">Documento</th><th scope="col">Situação</th><th scope="col">Prazo</th>
+      {% if ver_nomes %}<th scope="col">Responsável</th>{% endif %}<th scope="col">Motivo</th></tr></thead>
+    <tbody>
+    {% for p in q.pendencias %}
+    <tr>
+      <td>{{ p.empresa }}</td><td>{{ p.doc }}</td>
+      <td><span class="rf-leg rf-{{ p.estado }}">{{ p.rotulo }}{% if p.estado == 'atrasada' %} · {{ p.dias }} dia(s){% endif %}</span></td>
+      <td class="text-sm">{{ p.prazo.strftime('%d/%m') if p.get('prazo') else '—' }}</td>
+      {% if ver_nomes %}<td class="text-sm">{{ p.responsavel or '—' }}</td>{% endif %}
+      <td class="text-sm">{{ p.motivo or '' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if current_user.is_controladoria %}
+<div class="card">
+  <h2>Envio do report</h2>
+  <p class="text-muted text-sm mb-2">Sai por e-mail para a lista <strong>Report do fechamento</strong>
+    (do time até a diretoria) — <a href="/comunicacao#listas">gerenciar destinatários</a>.
+    Começa {{ 'no dia do prazo' if inicio_du|string == '0' else (inicio_du ~ ' dia(s) útil(eis) depois do prazo') }},
+    repete <strong>só enquanto houver documento em atraso</strong> (entrega postergada só volta se o novo prazo também falhar)
+    e termina com um aviso de fechamento completo.{% if ultimo %} Último envio: {{ ultimo[8:10] }}/{{ ultimo[5:7] }}.{% endif %}</p>
+  <form method="post" action="/report-fechamento/config" class="flex gap-2 items-center mb-2" style="flex-wrap:wrap;">
+    {{ csrf() }}
+    <label class="chk"><input type="checkbox" name="ativo" value="1" {{ 'checked' if ligado }}/> Enviar automaticamente</label>
+    <label class="field-label">Começar
+      <input class="input" type="number" name="inicio_du" min="0" max="10" value="{{ inicio_du }}" style="width:70px;"/> d.u. após o prazo</label>
+    <button class="btn btn-outline" type="submit">Salvar</button>
+  </form>
+  <div class="flex gap-1" style="flex-wrap:wrap;">
+    <form method="post" action="/report-fechamento/enviar">{{ csrf() }}<input type="hidden" name="teste" value="1"/>
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Testar no meu e-mail</button></form>
+    <form method="post" action="/report-fechamento/enviar" onsubmit="return confirm('Enviar o report agora a toda a lista?');">{{ csrf() }}
+      <button class="btn btn-primary" type="submit">{{ icone('send') }} Enviar agora</button></form>
+  </div>
+</div>
+{% endif %}
+
+<style>
+  .rf-tbl th[scope=row]{font-weight:600;}
+  .rf-grupo td{background:var(--surface-2);font-weight:700;letter-spacing:.03em;font-size:.78rem;text-transform:uppercase;color:var(--text-muted);}
+  .rf-cel{text-align:center;min-width:110px;}
+  .rf-cel small{display:block;font-size:.7rem;color:var(--text-muted);}
+  .rf-ico{font-size:1.05rem;font-weight:700;}
+  .rf-sr{position:absolute;left:-9999px;}
+  .rf-entregue{background:#C6EFCE;color:#1d5c2d;}
+  .rf-atrasada{background:#FFC7CE;color:#8a1f2b;}
+  .rf-postergada{background:#FFEB9C;color:#7a5a00;}
+  .rf-pendente{background:#ECEFF1;color:#46525b;}
+  .rf-na{color:var(--text-muted);}
+  .rf-leg{display:inline-block;border-radius:6px;padding:.1rem .45rem;font-size:.78rem;font-weight:600;margin-right:.3rem;}
+  [data-theme="dark"] .rf-entregue{background:rgba(116,195,160,.22);color:#9BD6BB;}
+  [data-theme="dark"] .rf-atrasada{background:rgba(232,121,109,.22);color:#F2A69D;}
+  [data-theme="dark"] .rf-postergada{background:rgba(221,174,88,.22);color:#EBCB8E;}
+  [data-theme="dark"] .rf-pendente{background:rgba(255,255,255,.08);color:#9AA6A5;}
+</style>
+{% endblock %}

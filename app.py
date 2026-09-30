@@ -36,6 +36,11 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 
 
+def _semeia_listas():
+    from team import comunicacao
+    return comunicacao.semeia_listas()
+
+
 def create_app(config=Config):
     app = Flask(__name__)
     app.config.from_object(config)
@@ -54,7 +59,8 @@ def create_app(config=Config):
             app.logger.warning("Push desativado: %s", e)
         for fn, nome in ((ensure_alert_defaults, "alertas"),
                          (ensure_segments_defaults, "segmentos"),
-                         (ensure_panels_defaults, "paineis")):
+                         (ensure_panels_defaults, "paineis"),
+                         (_semeia_listas, "listas de e-mail")):
             try:
                 fn()
             except Exception as e:
@@ -97,6 +103,8 @@ def create_app(config=Config):
     register_team_routes(app)
     register_admin_routes(app)
     register_workflow_routes(app)
+    from team.agenda_routes import register_agenda_routes
+    register_agenda_routes(app)
     scheduler.start(app)
     return app
 
@@ -128,6 +136,7 @@ _COLUNAS_NOVAS = [
     ("indicator_defs", "frequencia", "VARCHAR(10) DEFAULT 'unica'"),
     ("competencies", "deadline_consolidado", "DATE"),
     ("companies", "avisar_prazo", "BOOLEAN DEFAULT 0"),
+    ("companies", "grupo_report", "VARCHAR(20)"),
 ]
 
 
@@ -183,6 +192,14 @@ def consolidacao_ativa():
 def register_routes(app):
 
     @app.context_processor
+    def inject_membros_alterar():
+        def membros_ativos():
+            from team.models import TeamMember
+            return [{"id": m.id, "name": m.name} for m in
+                    TeamMember.query.filter_by(active=True).order_by(TeamMember.name).all()]
+        return {"membros_ativos": membros_ativos}
+
+    @app.context_processor
     def inject_globals():
         unread = 0
         topo = None
@@ -225,7 +242,7 @@ def register_routes(app):
         else:
             n_atr = 0
         return {"APP_NAME": Config.APP_NAME, "ORG": Config.ORG,
-                "unread_notifications": unread, "app_version": "1.8.0",
+                "unread_notifications": unread, "app_version": "1.9.0",
                 "consolidacao_ativa": False, "now": fuso.agora(), "topo": topo,
                 "n_atrasadas_topo": n_atr}
 

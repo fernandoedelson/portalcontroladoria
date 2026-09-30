@@ -32,10 +32,8 @@
     {{ csrf() }}
     <label class="chk mb-2"><input type="checkbox" name="ativo" value="1" {{ 'checked' if ligado }}/>
       Enviar automaticamente</label>
-    <div class="form-row"><label class="field-label">E-mail(s) de controle — recebem o comprovante de cada disparo</label>
-      <input class="input" name="aviso_emp_copia" value="{{ cfg.aviso_emp_copia }}"
-             placeholder="em branco = todos os administradores do portal" style="max-width:520px;"/>
-      <div class="help-txt">Separe por vírgula. A cada rodada sai um resumo com empresa, tipo, destinatários e falhas.</div></div>
+    <p class="text-sm mb-2">O comprovante de cada disparo (protocolo de envio) vai para a lista
+      <strong>Protocolo de envio às empresas</strong> — <a href="/comunicacao#listas">gerenciar em Comunicação</a>.</p>
     <div class="grid-2">
       <div>
         <div class="form-row"><label class="field-label">Assunto — aviso da data (1º dia útil)</label>
@@ -56,42 +54,23 @@
 
 <div class="card">
   <h2>Empresas e destinatários</h2>
-  <p class="text-muted text-sm mb-2">Marque quem recebe e cadastre os e-mails. O prazo vem do
-    segmento da empresa (Administração › Organização › Segmentos).</p>
-  <form method="post" action="/avisos-empresas/empresas">
-    {{ csrf() }}
-    <div class="barra-salvar"><span>Marque as empresas, ajuste os contatos e salve.</span>
-      <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar</button></div>
-    <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th scope="col" style="width:52px;">Avisar</th><th scope="col">Empresa</th>
-        <th scope="col">Segmento</th><th scope="col">Prazo</th>
-        <th scope="col">Destinatários</th><th scope="col">Novo destinatário</th></tr></thead>
-      <tbody>
-      {% for l in linhas %}
-      <tr>
-        <td class="text-center"><input type="checkbox" name="avisar" value="{{ l.c.id }}"
-              {{ 'checked' if l.c.avisar_prazo }} aria-label="Avisar {{ l.c.name }}"/></td>
-        <th scope="row">{{ l.c.name }}</th>
-        <td class="text-sm">{{ l.segmento or '—' }}</td>
-        <td class="text-sm">{% if l.prazo %}{{ l.prazo.strftime('%d/%m') }} · D+{{ l.du }}{% else %}—{% endif %}</td>
-        <td>
-          {% for ct in l.contatos %}
-          <div class="flex gap-1 mb-1" style="flex-wrap:wrap;">
-            <input class="input" name="ct{{ ct.id }}_nome" value="{{ ct.name or '' }}" placeholder="nome" style="width:120px;"/>
-            <input class="input" type="email" name="ct{{ ct.id }}_email" value="{{ ct.email }}" style="width:190px;"/>
-            <label class="chk chk-sm" title="Remover este destinatário">
-              <input type="checkbox" name="ct{{ ct.id }}_excluir" value="1"/> remover</label>
-          </div>
-          {% else %}<span class="text-muted text-sm">nenhum</span>{% endfor %}
-        </td>
-        <td><div class="flex gap-1" style="flex-wrap:wrap;">
-          <input class="input" name="novo{{ l.c.id }}_nome" placeholder="nome" style="width:110px;"/>
-          <input class="input" type="email" name="novo{{ l.c.id }}_email" placeholder="email@empresa.com" style="width:180px;"/>
-        </div></td>
-      </tr>
-      {% endfor %}
-      </tbody></table></div>
-  </form>
+  <p class="text-muted text-sm mb-2">Os responsáveis de cada empresa ficam no cadastro dela
+    {% if current_user.is_admin %}(<a href="/admin?tab=carteira">Administração › Entidades › Detalhes</a>){% else %}(Administração › Entidades){% endif %}.
+    O prazo vem do segmento da empresa.</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col" style="width:70px;">Avisar</th><th scope="col">Empresa</th>
+      <th scope="col">Segmento</th><th scope="col">Prazo</th><th scope="col">Destinatários</th></tr></thead>
+    <tbody>
+    {% for l in linhas %}
+    <tr>
+      <td class="text-center">{{ 'Sim' if l.c.avisar_prazo else '—' }}</td>
+      <th scope="row">{{ l.c.name }}</th>
+      <td class="text-sm">{{ l.segmento or '—' }}</td>
+      <td class="text-sm">{% if l.prazo %}{{ l.prazo.strftime('%d/%m') }} · D+{{ l.du }}{% else %}—{% endif %}</td>
+      <td class="text-sm">{% for ct in l.contatos %}{{ ct.name + ' · ' if ct.name }}{{ ct.email }}{% if not loop.last %}<br>{% endif %}{% else %}<span class="text-muted">nenhum</span>{% endfor %}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
 </div>
 
 <div class="card">

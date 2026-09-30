@@ -41,7 +41,12 @@ class User(UserMixin, db.Model):
 
     @property
     def is_controladoria(self):
-        return self.role in ("admin", "controladoria")
+        # Liderança tem as mesmas telas da controladoria; o que muda são os avisos
+        return self.role in ("admin", "controladoria", "lideranca")
+
+    @property
+    def is_lideranca(self):
+        return self.role == "lideranca"
 
     @property
     def is_profissional(self):
@@ -51,7 +56,7 @@ class User(UserMixin, db.Model):
     @property
     def is_team(self):
         # quem pode ver o modulo de Gestao da Area (com ou sem escopo)
-        return self.role in ("admin", "controladoria", "profissional")
+        return self.role in ("admin", "controladoria", "lideranca", "profissional")
 
     @property
     def is_empresa(self):
@@ -73,6 +78,8 @@ class Company(db.Model):
     rol_ltm = db.Column(db.Float, default=0.0)
     # recebe o aviso automatico do prazo de fechamento (Avisos as Empresas)
     avisar_prazo = db.Column(db.Boolean, default=False)
+    # grupo no report do fechamento: 'consolidado' | 'demais' (vazio = pela Consolidação)
+    grupo_report = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

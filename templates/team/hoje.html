@@ -16,6 +16,7 @@
       {{ a.due_date.strftime('%d/%m') if a.due_date else '—' }}
       <small>{% if a.due_date %}{% set du = du_entre(a.due_date, today) %}{% if grupo == 'atraso' %}{{ du if du and du > 0 else ((today - a.due_date).days) }} d.u. de atraso{% elif grupo == 'hoje' %}hoje{% else %}em {{ -du if du else '' }} d.u.{% endif %}{% endif %}</small>
     </div>
+    <button type="button" class="btn btn-outline btn-sm btn-alterar" title="Alterar prazo ou responsável" aria-label="Alterar prazo ou responsável de {{ a.title }}" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}" data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }}</button>
     <form method="post" action="/atividade/{{ a.id }}/status" class="fl-ok">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <input type="hidden" name="status" value="concluida"/>
@@ -24,6 +25,7 @@
   </li>
 {% endmacro %}
 {% block content %}
+{% include "team/_alterar.html" %}
 <div class="page-head">
   <div><h1>Painel do Dia</h1>
     <div class="sub">{{ today|dia_mes|capitalize }}{% if regua and regua.du_hoje %} · {{ regua.du_hoje }}º dia útil do fechamento de {{ comp.label }}{% endif %}</div></div>
