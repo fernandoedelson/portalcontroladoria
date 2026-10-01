@@ -19,8 +19,8 @@ TIPOS_LISTA = [
      "Situação do cronograma de fechamento (toda semana)."),
     ("report", "Report do fechamento (quem já enviou)",
      "Quadro de envio dos 3 documentos por empresa — do time até a diretoria."),
-    ("agenda", "Reuniões agendadas (participantes fixos)",
-     "Quem entra em todo convite de reunião marcado pelas empresas."),
+    ("agenda", "Líderes copiados nas reuniões",
+     "Líderes (com ou sem login) que recebem o convite das empresas marcadas com “Copiar líder” em Agenda de Reuniões."),
     ("sistema", "Avisos do sistema",
      "Só quando algo dá errado: e-mail do dia, report ou avisos às empresas que falharam, ou falha no ciclo diário (no máximo 1 aviso por tipo por dia)."),
 ]

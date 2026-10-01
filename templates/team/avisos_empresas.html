@@ -48,6 +48,16 @@
           <textarea class="input" name="aviso_emp_corpo_vence" rows="9">{{ cfg.aviso_emp_corpo_vence }}</textarea></div>
       </div>
     </div>
+    <div class="grid-2">
+      <div>
+        <div class="form-row"><label class="field-label">Assunto — lembrete diário de agendamento</label>
+          <input class="input" name="aviso_emp_assunto_lembrete" value="{{ cfg.aviso_emp_assunto_lembrete }}"/></div>
+        <div class="form-row"><label class="field-label">Mensagem — lembrete diário de agendamento</label>
+          <textarea class="input" name="aviso_emp_corpo_lembrete" rows="7">{{ cfg.aviso_emp_corpo_lembrete }}</textarea></div>
+      </div>
+      <div class="help-txt" style="align-self:center;">Sai todo dia útil, do dia seguinte ao aviso do 1º dia útil até o prazo de entrega, só para a empresa que ainda não marcou a reunião de resultados.
+        Marcadores: <code>{dia_reuniao}</code> e <code>{clique_aqui}</code> (link para agendar).</div>
+    </div>
     <button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar mensagens</button>
   </form>
 </div>
@@ -92,7 +102,7 @@
       <select class="input" name="company_id" aria-label="Empresa do teste">
         {% for l in linhas %}<option value="{{ l.c.id }}">{{ l.c.name }}</option>{% endfor %}</select>
       <select class="input" name="tipo" aria-label="Tipo do teste">
-        <option value="data">aviso da data</option><option value="vence">vence hoje</option></select>
+        <option value="data">aviso da data</option><option value="vence">vence hoje</option><option value="lembrete">lembrete de agendamento</option></select>
       <input class="input" type="email" name="destino" value="{{ meu_email }}" placeholder="e-mail do teste" aria-label="E-mail que recebe o teste" style="width:230px;max-width:100%;"/>
       <button class="btn btn-outline" type="submit">Enviar teste</button></form>
   </div>
@@ -111,7 +121,7 @@
     <tr>
       <td class="text-sm text-muted">{{ (h.sent_at|local).strftime('%d/%m %H:%M') }}</td>
       <td>{{ h.company.name if h.company else '—' }}</td>
-      <td><span class="kind-chip">{{ 'data' if h.kind == 'data' else 'vence hoje' }}</span></td>
+      <td><span class="kind-chip">{{ {'data':'data','lembrete':'lembrete agenda'}.get(h.kind, 'vence hoje') }}</span></td>
       <td class="text-sm">{{ h.to_addr }}</td>
       <td class="text-sm">{{ h.subject }}</td>
       <td><span class="st st-{{ 'aprovado' if h.status=='enviado' else ('validando' if h.status=='simulado' else 'reprovado') }}">{{ h.status }}</span>

@@ -268,6 +268,31 @@ def register_agenda_routes(app):
         db.session.commit()
         return _volta(_membro_arg())
 
+    @app.route("/agenda-reunioes/link/<int:cid>/lider", methods=["POST"])
+    @controladoria_required
+    def team_agenda_link_lider(cid):
+        """Liga/desliga “copiar líder” no convite desta empresa."""
+        l = agenda.link_da_empresa(cid or None)
+        l.copiar_lider = bool(request.form.get("copiar"))
+        db.session.commit()
+        flash(("Os líderes passam a receber o convite desta empresa." if l.copiar_lider
+               else "Os líderes deixam de receber cópia do convite desta empresa."), "success")
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/link/lider-todas", methods=["POST"])
+    @controladoria_required
+    def team_agenda_link_lider_todas():
+        valor = request.form.get("valor") == "1"
+        n = 0
+        for c in Company.query.filter_by(active=True).all():
+            l = agenda.link_da_empresa(c.id)
+            if bool(l.copiar_lider) != valor:
+                l.copiar_lider = valor
+                n += 1
+        db.session.commit()
+        flash(f"“Copiar líder” {'ligado' if valor else 'desligado'} em {n} empresa(s).", "success")
+        return _volta(_membro_arg())
+
     @app.route("/agenda-reunioes/link/<int:cid>/dia", methods=["POST"])
     @controladoria_required
     def team_agenda_link_dia(cid):

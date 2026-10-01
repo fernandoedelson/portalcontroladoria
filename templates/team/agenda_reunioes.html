@@ -5,7 +5,7 @@
 <div class="page-head">
   <div><h1>Agenda de reuniões</h1>
     <div class="sub">Cada responsável tem a sua agenda. A empresa marca sempre no dia útil seguinte ao prazo dela, com o responsável dela. Reuniões de pessoas diferentes podem acontecer ao mesmo tempo.</div></div>
-  {% if gestao %}<a href="/comunicacao#listas" class="btn btn-outline">{{ icone('mail') }} Participantes fixos ({{ fixos }})</a>{% endif %}
+  {% if gestao %}<a href="/comunicacao#listas" class="btn btn-outline">{{ icone('mail') }} Líderes copiados ({{ fixos }})</a>{% endif %}
 </div>
 
 <div class="card">
@@ -109,8 +109,8 @@
 <div class="card">
   <h2>Quem entra em cada convite</h2>
   <p class="text-sm" style="margin:0;">Sempre: <strong>quem marcou</strong>, os <strong>responsáveis da empresa</strong> (Administração › Entidades),
-    o <strong>responsável da Controladoria</strong> daquela empresa (é com quem a reunião acontece), os usuários de perfil <strong>Liderança</strong>,
-    o e-mail abaixo e a lista <a href="/comunicacao#listas">participantes fixos</a> (para incluir outros líderes).</p>
+    o <strong>responsável da Controladoria</strong> daquela empresa (é com quem a reunião acontece) e o e-mail abaixo.
+    Os <strong>líderes</strong> (usuários de perfil Liderança e a lista <a href="/comunicacao#listas">líderes copiados</a>) só recebem nas empresas marcadas com <strong>Copiar líder</strong>, em “Links por empresa”.</p>
 </div>
 
 <div class="card">
@@ -180,8 +180,14 @@
 <div class="card">
   <h2>Links por empresa</h2>
   <p class="text-muted text-sm mb-2">O link da empresa entra no e-mail de aviso de prazo (marcador <code>{agendar}</code>). Quem tem o link vê só os horários livres do responsável da empresa, no dia da reunião, e o nome da empresa.</p>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
-    <tr><th scope="row">Link geral (sem empresa)</th><td class="text-sm">agenda geral</td><td class="text-sm">qualquer dia das janelas</td>
+  <div class="flex gap-1 mb-1" style="flex-wrap:wrap;">
+    <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="1"/>
+      <button class="btn btn-outline btn-sm" type="submit">Copiar líder em todas</button></form>
+    <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="0"/>
+      <button class="btn btn-outline btn-sm" type="submit">Não copiar em nenhuma</button></form>
+  </div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Copiar líder</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
+    <tr><th scope="row">Link geral (sem empresa)</th><td class="text-sm">agenda geral</td><td class="text-sm">qualquer dia das janelas</td><td class="text-sm">—</td>
       <td class="text-sm">{% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:100%;min-width:240px;"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if geral %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/0/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if geral.active else 'Ativar' }}</button></form>
@@ -198,6 +204,8 @@
           <input class="input input-sm" type="date" name="dia_fixo" title="Ou uma data fixa" value="{{ e.link.dia_fixo.isoformat() if e.link and e.link.dia_fixo else '' }}" style="width:140px;"/>
           <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
         </form></td>
+      <td class="text-center"><form method="post" action="/agenda-reunioes/link/{{ c.id }}/lider">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+        <input type="checkbox" name="copiar" value="1" {{ 'checked' if l and l.copiar_lider }} onchange="this.form.submit()" aria-label="Copiar líder no convite de {{ c.name }}"/></form></td>
       <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:240px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if l %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if l.active else 'Ativar' }}</button></form>

@@ -659,6 +659,13 @@ A reunião de resultados com a controladoria será no dia {dia_reuniao}.
 Qualquer dúvida, é só responder este e-mail.
 
 Controladoria J&F"""
+AVISO_ASSUNTO_LEMBRETE = "Lembrete: agende a reunião de resultados do fechamento {competencia}"
+AVISO_CORPO_LEMBRETE = """Olá, {empresa}.
+
+A reunião de resultados com a controladoria será no dia {dia_reuniao} e o horário ainda
+não foi agendado. {clique_aqui} para agendar o melhor horário.
+
+Controladoria J&F"""
 AVISO_ASSUNTO_VENCE = "Hoje é o prazo do fechamento {competencia}"
 AVISO_CORPO_VENCE = """Olá, {empresa}.
 
@@ -732,6 +739,8 @@ class AgendaLink(db.Model):
     dia_fixo = db.Column(db.Date)
     # link de SIMULAÇÃO: todos os e-mails vão só para este endereço e a reserva não ocupa a agenda real
     teste_email = db.Column(db.String(160))
+    # copiar os líderes (perfil Liderança + lista de líderes) no convite desta empresa
+    copiar_lider = db.Column(db.Boolean, default=False)
     company = db.relationship("Company")
 
     @property

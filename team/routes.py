@@ -1970,8 +1970,23 @@ def register_team_routes(app):
         if cid:
             comp = db.session.get(Competency, cid) or comp
         q = rf.montar(comp, fuso.hoje())
+        reunioes = None
+        if current_user.is_controladoria:
+            from team import agenda
+            linhas, vistos = [], set()
+            for g, _rot in rf.GRUPOS:
+                for l in q["grupos"][g]:
+                    c = l["empresa"]
+                    vistos.add(c.id)
+                    reu = agenda.reuniao_do_ciclo(c.id, comp)
+                    linhas.append({"empresa": c, "resp": agenda.membro_da_empresa(c.id),
+                                   "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu})
+            linhas.sort(key=lambda x: (x["reuniao"] is None, x["reuniao"].inicio if x["reuniao"] else datetime.max,
+                                       x["empresa"].name))
+            reunioes = {"linhas": linhas, "agendadas": sum(1 for x in linhas if x["reuniao"]),
+                        "total": len(linhas)}
         return render_template(
-            "team/report_fechamento.html", q=q, docs=rf.DOCS, grupos=rf.GRUPOS,
+            "team/report_fechamento.html", q=q, docs=rf.DOCS, grupos=rf.GRUPOS, reunioes=reunioes,
             ligado=rf.ligado(), inicio_du=rf.config("report_inicio_du"),
             ultimo=(get_setting(f"report_enviado_{comp.id}") if comp else None),
             competencias=Competency.query.order_by(
@@ -2117,7 +2132,8 @@ def register_team_routes(app):
         from team import avisos_empresas as av
         set_setting("aviso_emp_ativo", "1" if request.form.get("ativo") else "0")
         for k in ("aviso_emp_assunto_data", "aviso_emp_corpo_data",
-                  "aviso_emp_assunto_vence", "aviso_emp_corpo_vence"):
+                  "aviso_emp_assunto_vence", "aviso_emp_corpo_vence",
+                  "aviso_emp_assunto_lembrete", "aviso_emp_corpo_lembrete"):
             set_setting(k, (request.form.get(k) or "").strip() or av.PADRAO[k])
         db.session.commit()
         log_audit(current_user.id, "avisos_empresas_config", "setting", "")
@@ -2151,7 +2167,7 @@ def register_team_routes(app):
             flash("Escolha a empresa do teste.", "warning")
             return redirect(url_for("team_avisos_empresas"))
         prazo, du = av.prazo_da_empresa(c.id, comp)
-        kind = request.form.get("tipo") if request.form.get("tipo") in ("data", "vence") else "data"
+        kind = request.form.get("tipo") if request.form.get("tipo") in ("data", "vence", "lembrete") else "data"
         assunto, corpo, corpo_html = av.montar_aviso(kind, c, comp, prazo, du)
         destino = (request.form.get("destino") or current_user.email or "").strip().lower()
         if "@" not in destino:

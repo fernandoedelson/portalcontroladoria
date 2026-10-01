@@ -194,17 +194,27 @@ def contatos_da_empresa(company_id):
     return [x.email for x in c.contatos if x.active and x.email] if c else []
 
 
-def participantes_fixos():
-    lista = [x.email for x in ListaEmail.query.filter_by(tipo="agenda", active=True).all()]
+def copiar_lider(company_id):
+    """A empresa está marcada para copiar os líderes no convite?"""
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first() if company_id else None
+    return bool(l and l.copiar_lider)
+
+
+def participantes_fixos(copia_lider=False):
+    """Sempre: o e-mail do organizador (seu). Com “copiar líder”: também a lista de líderes."""
+    lista = []
     org = cfg("ag_organizador")
-    if org and org.lower() not in [e.lower() for e in lista]:
+    if org:
         lista.append(org)
+    if copia_lider:
+        lista += [x.email for x in ListaEmail.query.filter_by(tipo="agenda", active=True).all()]
     return lista
 
 
 def participantes_da_empresa(company_id, membro=None):
-    """Quem entra em TODO convite da empresa: os responsáveis cadastrados nela, o
-    responsável da Controladoria por ela (carteira) e as lideranças."""
+    """Quem entra no convite da empresa: os responsáveis cadastrados nela e o responsável da
+    Controladoria por ela (carteira). As lideranças (perfil Liderança) só entram se a empresa
+    estiver marcada com “copiar líder”."""
     from models import User
     from team.models import CompanyAssignment
     emails = []
@@ -217,14 +227,15 @@ def participantes_da_empresa(company_id, membro=None):
             membro = a.member if a else None
     if membro and membro.user and membro.user.email:
         emails.append(membro.user.email)
-    emails += [u.email for u in User.query.filter_by(role="lideranca", active=True).all() if u.email]
+    if copiar_lider(company_id):
+        emails += [u.email for u in User.query.filter_by(role="lideranca", active=True).all() if u.email]
     return emails
 
 
 def participantes(r):
     """Todos os e-mails do convite, sem repetir (o solicitante vem primeiro)."""
     vistos, out = set(), []
-    for e in [r.email] + participantes_da_empresa(r.company_id, r.member) + participantes_fixos():
+    for e in [r.email] + participantes_da_empresa(r.company_id, r.member) + participantes_fixos(copiar_lider(r.company_id)):
         k = (e or "").strip().lower()
         if k and k not in vistos:
             vistos.add(k)
@@ -349,3 +360,19 @@ def enviar_teste(email, company_id):
              f"Link da página que a empresa usa: {url_para_empresa(company_id) or '(agendamento desligado)'}\n")
     return alerts.send_email(email, f"[TESTE] Reunião confirmada: Controladoria J&F — {quando}",
                              corpo, lista=True, calendario=convite), quando
+
+
+def reuniao_do_ciclo(company_id, comp=None):
+    """Reunião marcada (real) da empresa no ciclo atual: a primeira com início a partir do
+    1º dia útil do mês seguinte à competência. None se ainda não agendou."""
+    from models import current_competency
+    from engine.calendar_br import business_days
+    comp = comp or current_competency()
+    if not comp:
+        return None
+    y, m = (comp.year + 1, 1) if comp.month == 12 else (comp.year, comp.month + 1)
+    dias = business_days(y, m)
+    ini = datetime.combine(dias[0], time(0, 0)) if dias else datetime.combine(fuso.hoje() - timedelta(days=10), time(0, 0))
+    return (Reuniao.query.filter(Reuniao.company_id == company_id, Reuniao.status == "marcada",
+                                 db.or_(Reuniao.teste.is_(False), Reuniao.teste.is_(None)),
+                                 Reuniao.inicio >= ini).order_by(Reuniao.inicio).first())

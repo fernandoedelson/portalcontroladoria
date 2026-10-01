@@ -16,7 +16,8 @@ from datetime import datetime
 from models import db, Company, get_setting, current_competency
 from team.models_workflow import (CompanyNoticeLog, Segment,
                                   AVISO_ASSUNTO_DATA, AVISO_CORPO_DATA,
-                                  AVISO_ASSUNTO_VENCE, AVISO_CORPO_VENCE)
+                                  AVISO_ASSUNTO_VENCE, AVISO_CORPO_VENCE,
+                                  AVISO_ASSUNTO_LEMBRETE, AVISO_CORPO_LEMBRETE)
 from team.models import CompanyAssignment
 
 PADRAO = {
@@ -25,6 +26,8 @@ PADRAO = {
     "aviso_emp_corpo_data": AVISO_CORPO_DATA,
     "aviso_emp_assunto_vence": AVISO_ASSUNTO_VENCE,
     "aviso_emp_corpo_vence": AVISO_CORPO_VENCE,
+    "aviso_emp_assunto_lembrete": AVISO_ASSUNTO_LEMBRETE,
+    "aviso_emp_corpo_lembrete": AVISO_CORPO_LEMBRETE,
 }
 MESES = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
          "agosto", "setembro", "outubro", "novembro", "dezembro"]
@@ -163,7 +166,7 @@ def _ja_enviado(company_id, comp_id, kind):
             .filter(CompanyNoticeLog.status != "falhou").count() > 0)
 
 
-def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False):
+def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False, ref=None):
     """Manda um aviso e registra. Retorna (ok, detalhe)."""
     from team import alerts
     assunto, corpo, corpo_html = montar_aviso(kind, empresa, comp, prazo, du)
@@ -174,7 +177,7 @@ def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False):
         company_id=empresa.id, competency_id=(comp.id if comp else None), kind=kind,
         to_addr=", ".join(emails)[:400], subject=assunto[:240],
         status=("enviado" if ok else ("simulado" if err == "email_desligado" else "falhou")),
-        detail=(err or "")[:300], sent_at=datetime.utcnow(), sent_by=quem)
+        detail=((err or "") + (f" ref={ref.isoformat()}" if ref else ""))[:300], sent_at=datetime.utcnow(), sent_by=quem)
     db.session.add(log)
     db.session.commit()
     return ok, (err or "")
@@ -202,7 +205,7 @@ def avisa_controle(ref, comp, enviados, falhas, dry_run=False):
     linhas = [f"Avisos de prazo enviados em {ref.strftime('%d/%m/%Y')}"
               + (f" — fechamento {comp.label}" if comp else ""), ""]
     for kind, empresa, emails, prazo in enviados:
-        rot = "aviso da data" if kind == "data" else "vence hoje"
+        rot = {"data": "aviso da data", "lembrete": "lembrete de agendamento"}.get(kind, "vence hoje")
         linhas.append(f"  • {empresa} — {rot} — para {', '.join(emails)}"
                       + (f" — prazo {prazo.strftime('%d/%m/%Y')}" if prazo else ""))
     if falhas:
@@ -222,7 +225,7 @@ def rodar(ref=None, quem=None, forcar=None, dry_run=False):
     Idempotente: cada empresa recebe uma vez por competência e por tipo.
     """
     ref = ref or fuso.hoje()
-    resumo = {"data": 0, "vence": 0, "falhas": 0, "pulado": None}
+    resumo = {"data": 0, "vence": 0, "lembrete": 0, "falhas": 0, "pulado": None}
     if not ligado() and not forcar:
         resumo["pulado"] = "avisos desligados"
         return resumo
@@ -255,5 +258,42 @@ def rodar(ref=None, quem=None, forcar=None, dry_run=False):
             resumo["falhas"] += 0 if ok else 1
             (enviados if ok else falhas).append(
                 (kind, empresa.name, emails, prazo) if ok else (empresa.name, det))
+    # lembrete DIÁRIO de agendamento: do dia seguinte ao aviso do 1º dia útil até o prazo de
+    # entrega, enquanto a empresa não tiver reunião marcada
+    if not forcar or forcar == "lembrete":
+        from team import agenda
+        if agenda.ativo():
+            dias_ciclo = business_days(*_mes_seguinte(comp))
+            ini_ciclo = dias_ciclo[0] if dias_ciclo else None
+            for empresa, emails in empresas_do_aviso():
+                prazo, du = prazo_da_empresa(empresa.id, comp, prazos_seg, assigns)
+                if not prazo or not ini_ciclo:
+                    continue
+                if not forcar and not (ini_ciclo < ref <= prazo):
+                    continue
+                if agenda.reuniao_do_ciclo(empresa.id, comp):
+                    continue                                  # já agendou
+                if not forcar and _lembrete_hoje(empresa.id, ref):
+                    continue
+                if not agenda.url_para_empresa(empresa.id):
+                    continue                                  # link desativado
+                mem = agenda.membro_da_empresa(empresa.id)
+                if not agenda.horarios_livres(mem.id if mem else None, empresa.id):
+                    continue                                  # sem horário livre: lembrar não ajuda
+                ok, det = envia("lembrete", empresa, emails, comp, prazo, du,
+                                quem=quem, dry_run=dry_run, ref=ref)
+                resumo["lembrete"] += 1 if ok else 0
+                resumo["falhas"] += 0 if ok else 1
+                (enviados if ok else falhas).append(
+                    ("lembrete", empresa.name, emails, prazo) if ok else (empresa.name, det))
     resumo["controle"] = avisa_controle(ref, comp, enviados, falhas, dry_run=dry_run)
     return resumo
+
+
+def _lembrete_hoje(company_id, ref):
+    """Já mandou o lembrete de agendamento hoje para esta empresa?"""
+    for lg in (CompanyNoticeLog.query.filter_by(company_id=company_id, kind="lembrete")
+               .order_by(CompanyNoticeLog.sent_at.desc()).limit(3).all()):
+        if lg.status != "falhou" and f"ref={ref.isoformat()}" in (lg.detail or ""):
+            return True
+    return False

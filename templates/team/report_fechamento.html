@@ -75,6 +75,26 @@
 {% endif %}
 {% endif %}
 
+{% if reunioes %}
+<div class="card">
+  <h2>Reuniões de resultados <span class="text-muted text-sm">· {{ reunioes.agendadas }} de {{ reunioes.total }} agendadas</span></h2>
+  <p class="text-muted text-sm mb-1">Acompanhamento para a liderança. Agendas separadas por responsável: reuniões de clusters diferentes podem coincidir no horário.</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia previsto</th><th scope="col">Reunião agendada</th></tr></thead>
+    <tbody>
+    {% for x in reunioes.linhas %}
+    <tr>
+      <td>{{ x.empresa.name }}</td>
+      <td class="text-sm">{{ x.resp.name if x.resp else '—' }}</td>
+      <td class="text-sm">{{ ['seg','ter','qua','qui','sex','sáb','dom'][x.dia.weekday()] ~ ' ' ~ x.dia.strftime('%d/%m') if x.dia else '—' }}</td>
+      <td>{% if x.reuniao %}<span class="rf-leg rf-entregue">{{ x.reuniao.inicio.strftime('%d/%m') }} às {{ x.reuniao.inicio.strftime('%H:%M') }}</span>
+        {% else %}<span class="rf-leg rf-pendente">não agendada</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+{% endif %}
+
 {% if current_user.is_controladoria %}
 <div class="card">
   <h2>Envio do report</h2>
