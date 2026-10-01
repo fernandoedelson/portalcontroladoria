@@ -275,7 +275,7 @@ def reservar(link, inicio, email=None):
     um e-mail (`email`)."""
     contatos = contatos_da_empresa(link.company_id)
     email = (email or "").strip().lower()
-    if not contatos:
+    if not link.company_id:                 # link geral: não sabemos quem é, aí sim pede o e-mail
         if "@" not in email or "." not in email.split("@")[-1]:
             return None, "Informe um e-mail válido para receber o convite."
         contatos = [email]
@@ -289,7 +289,7 @@ def reservar(link, inicio, email=None):
     c = db.session.get(Company, link.company_id) if link.company_id else None
     r = Reuniao(link_id=link.id, company_id=link.company_id, teste=bool(link.teste_email),
                 member_id=(mem.id if mem else None),
-                nome=(c.name if c else "Reunião")[:120], email=contatos[0][:160],
+                nome=(c.name if c else "Reunião")[:120], email=(contatos[0] if contatos else "")[:160],
                 inicio=inicio, fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
                 uid=f"{uuid.uuid4()}@controladoria-jf", token_cancelar=secrets.token_urlsafe(16))
     db.session.add(r)

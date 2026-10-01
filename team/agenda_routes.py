@@ -383,7 +383,7 @@ def register_agenda_routes(app):
                                titulo=agenda.cfg("ag_titulo"), local=agenda.cfg("ag_local"),
                                duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
                                responsavel=(mem.name if mem else None), dia=dia,
-                               precisa_email=not agenda.contatos_da_empresa(l.company_id),
+                               precisa_email=(not l.company_id and not l.teste_email),
                                pre_email=request.form.get("email", ""))
 
     @app.route("/agendar/cancelar/<token>", methods=["GET", "POST"])

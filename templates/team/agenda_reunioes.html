@@ -189,7 +189,7 @@
         {% else %}<form method="post" action="/agenda-reunioes/link/0/criar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Criar</button></form>{% endif %}</td></tr>
     {% for e in empresas %}{% set c = e.c %}{% set l = e.link %}
     <tr><th scope="row">{{ c.name }}</th>
-      <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}</td>
+      <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}{% if not c.contatos|selectattr('active')|list %}<div class="text-muted">sem e-mail de responsável da empresa cadastrado</div>{% endif %}</td>
       <td class="text-sm">
         <div><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong> <span class="text-muted">({{ e.regra }})</span></div>
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
