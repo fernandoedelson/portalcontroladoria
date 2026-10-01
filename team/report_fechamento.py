@@ -94,14 +94,23 @@ def montar(comp, ref=None):
     ref = ref or fuso.hoje()
     itens = {it.id: it.macro for it in ClosingTemplateItem.query.filter(
         ClosingTemplateItem.macro.in_([m for m, _ in DOCS])).all()}
+    assigns = {x.company_id: x for x in CompanyAssignment.query.all()}
+    macros = {m for m, _ in DOCS}
+
+    def habilitados(cid):
+        """Entregas ativadas na empresa (Administração › Entidades): Painel/Consolidação/Endividamento."""
+        a = assigns.get(cid)
+        return (set(a.deliverables) & macros) if a else set()
+
     acts = {}
     if comp and itens:
         for a in (Activity.query.filter(Activity.competency_id == comp.id,
                                         Activity.template_id.in_(list(itens)),
                                         Activity.status != "cancelada").all()):
-            acts[(a.company_id, itens[a.template_id])] = a
-    assigns = {x.company_id: x for x in CompanyAssignment.query.all()}
-    ids = {cid for cid, _m in acts}
+            macro = itens[a.template_id]
+            if macro in habilitados(a.company_id):      # só o que está ativado na empresa
+                acts[(a.company_id, macro)] = a
+    ids = {cid for cid, _m in acts}                       # só empresas com pelo menos uma entrega ativada
     empresas = (Company.query.filter(Company.id.in_(ids)).order_by(Company.name).all()
                 if ids else [])
     grupos = {g: [] for g, _ in GRUPOS}
