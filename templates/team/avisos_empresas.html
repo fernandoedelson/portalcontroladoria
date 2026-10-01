@@ -93,7 +93,8 @@
         {% for l in linhas %}<option value="{{ l.c.id }}">{{ l.c.name }}</option>{% endfor %}</select>
       <select class="input" name="tipo" aria-label="Tipo do teste">
         <option value="data">aviso da data</option><option value="vence">vence hoje</option></select>
-      <button class="btn btn-outline" type="submit">Testar no meu e-mail</button></form>
+      <input class="input" type="email" name="destino" value="{{ meu_email }}" placeholder="e-mail do teste" aria-label="E-mail que recebe o teste" style="width:230px;max-width:100%;"/>
+      <button class="btn btn-outline" type="submit">Enviar teste</button></form>
   </div>
   <p class="help-txt mt-1">O envio automático roda junto com o ciclo diário, só em dia útil, e cada
     empresa recebe uma vez por competência em cada tipo. Os botões acima ignoram essa trava.</p>

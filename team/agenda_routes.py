@@ -75,9 +75,11 @@ def register_agenda_routes(app):
         membros = (TeamMember.query.filter_by(active=True).order_by(TeamMember.name).all()
                    if gestao else [m for m in [_meu_membro()] if m])
         agora = fuso.agora()
-        links = {l.company_id: l for l in AgendaLink.query.all()}
-        q_prox = Reuniao.query.filter(Reuniao.status == "marcada", Reuniao.fim >= agora)
-        q_pass = Reuniao.query.filter(Reuniao.fim < agora)
+        links = {l.company_id: l for l in AgendaLink.query.filter(AgendaLink.teste_email.is_(None)).all()}
+        simulacoes = AgendaLink.query.filter(AgendaLink.teste_email.isnot(None)).order_by(AgendaLink.id.desc()).all()
+        real = db.or_(Reuniao.teste.is_(False), Reuniao.teste.is_(None))
+        q_prox = Reuniao.query.filter(Reuniao.status == "marcada", Reuniao.fim >= agora, real)
+        q_pass = Reuniao.query.filter(Reuniao.fim < agora, real)
         if not gestao:
             q_prox = q_prox.filter(Reuniao.member_id == membro_id)
             q_pass = q_pass.filter(Reuniao.member_id == membro_id)
@@ -99,6 +101,7 @@ def register_agenda_routes(app):
                 db.or_(AgendaBloqueio.member_id == membro_id, AgendaBloqueio.member_id.is_(None)))
             .order_by(AgendaBloqueio.inicio).all(),
             empresas=empresas, geral=links.get(None), url_publica=agenda.url_publica,
+            simulacoes=simulacoes,
             proximas=q_prox.order_by(Reuniao.inicio).all(),
             passadas=q_pass.order_by(Reuniao.inicio.desc()).limit(10).all(),
             fixos=ListaEmail.query.filter_by(tipo="agenda").count())
@@ -197,7 +200,7 @@ def register_agenda_routes(app):
     def team_agenda_link(cid, acao):
         """cid = id da empresa (0 = link geral)."""
         comp = cid or None
-        l = AgendaLink.query.filter_by(company_id=comp).first()
+        l = AgendaLink.query.filter_by(company_id=comp, teste_email=None).first()
         if acao == "criar" and not l:
             agenda.link_da_empresa(comp)
         elif l and acao == "alternar":
@@ -232,13 +235,56 @@ def register_agenda_routes(app):
     def team_agenda_teste():
         """Convite de teste para o e-mail de quem clicou (ninguém mais recebe)."""
         cid = request.form.get("company_id", type=int) or None
-        if not current_user.email:
-            flash("Seu usuário não tem e-mail.", "warning")
+        destino = (request.form.get("destino") or "").strip().lower()
+        if "@" not in destino or "." not in destino.split("@")[-1]:
+            flash("Informe um e-mail válido para receber o teste.", "warning")
             return _volta(_membro_arg())
-        (ok, err), quando = agenda.enviar_teste(current_user.email, cid)
-        flash(f"Convite de teste enviado para {current_user.email} ({quando}). Abra o anexo no Outlook." if ok
+        (ok, err), quando = agenda.enviar_teste(destino, cid)
+        flash(f"Convite de teste enviado para {destino} ({quando}). Abra o anexo no Outlook." if ok
               else f"Não foi possível enviar o teste: {err}. Em Comunicação, veja se o canal de e-mail está ativo.",
               "success" if ok else "warning")
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/simular", methods=["POST"])
+    @controladoria_required
+    def team_agenda_simular():
+        """Simula a jornada: e-mail de aviso com o link de agendamento -> a empresa marca ->
+        convite -> cancelamento. TUDO chega só ao e-mail indicado; nada vai às pessoas reais
+        e a reserva não ocupa a agenda real."""
+        from team import alerts as al, avisos_empresas as av
+        from models import current_competency
+        cid = request.form.get("company_id", type=int) or None
+        destino = (request.form.get("destino") or "").strip().lower()
+        kind = request.form.get("tipo") if request.form.get("tipo") in ("data", "vence") else "data"
+        c = db.session.get(Company, cid) if cid else None
+        if not c or "@" not in destino or "." not in destino.split("@")[-1]:
+            flash("Escolha a empresa e informe o e-mail que vai receber a simulação.", "warning")
+            return _volta(_membro_arg())
+        link = agenda.criar_simulacao(c.id, destino)
+        comp = current_competency()
+        prazo, du = av.prazo_da_empresa(c.id, comp)
+        url = agenda.url_publica(link)
+        assunto = "[SIMULAÇÃO] " + av._texto(f"aviso_emp_assunto_{kind}", c, comp, prazo, du, agendar=url)
+        corpo = (f"SIMULAÇÃO da jornada — empresa {c.name}. Este e-mail só foi para você; a empresa não recebeu nada.\n"
+                 "Passo a passo: 1) leia este aviso  2) clique no link de agendamento  3) escolha um horário e confirme  "
+                 "4) você receberá o convite (com o .ics) neste mesmo endereço  5) teste o cancelamento pelo link do convite.\n\n"
+                 "----- e-mail que a empresa recebe -----\n\n"
+                 + av._texto(f"aviso_emp_corpo_{kind}", c, comp, prazo, du, agendar=url))
+        ok, err = al.send_email(destino, assunto, corpo, lista=True)
+        log_audit(current_user.id, "agenda_simulacao", "company", f"{c.id} -> {destino}")
+        if ok:
+            flash(f"Simulação iniciada: o aviso de {c.name} foi para {destino}. Abra o e-mail, clique no link e marque um horário.", "success")
+        else:
+            flash(f"O e-mail não saiu ({err}), mas o link de simulação foi criado: use “Abrir página” na tabela abaixo. "
+                  "Confira em Comunicação se o canal de e-mail está ativo.", "warning")
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/simulacao/<int:lid>/encerrar", methods=["POST"])
+    @controladoria_required
+    def team_agenda_simulacao_encerrar(lid):
+        l = AgendaLink.query.filter(AgendaLink.id == lid, AgendaLink.teste_email.isnot(None)).first() or abort(404)
+        agenda.encerrar_simulacao(l)
+        flash("Simulação encerrada: link e reservas de teste apagados.", "success")
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/<int:rid>/cancelar", methods=["POST"])

@@ -118,17 +118,42 @@
 </div>
 
 <div class="card">
-  <h2>Ver como a empresa recebe</h2>
-  <p class="text-muted text-sm mb-1">Manda o convite de teste <strong>só para o seu e-mail</strong> ({{ current_user.email }}), igual ao que a empresa recebe — com o anexo <code>.ics</code> para abrir no Outlook. Nenhuma reserva é criada.</p>
+  <h2>Simular a jornada da empresa</h2>
+  <p class="text-muted text-sm mb-1">Vê tudo como a empresa vê, <strong>sem avisar ninguém</strong>: você indica um e-mail e recebe nele o aviso de prazo com o link de agendamento,
+    abre o link, marca um horário, recebe o convite (com o <code>.ics</code> para o Outlook) e pode testar o cancelamento. Os e-mails da empresa, do responsável e da Liderança <strong>não</strong> são enviados
+    (o convite só lista quem receberia), e a reserva de teste <strong>não ocupa</strong> a agenda real.</p>
+  <form method="post" action="/agenda-reunioes/simular" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+    {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+    <select class="input" name="company_id" required aria-label="Empresa da simulação" style="width:auto;">
+      <option value="">— escolha a empresa —</option>
+      {% for e in empresas %}<option value="{{ e.c.id }}">{{ e.c.name }}</option>{% endfor %}
+    </select>
+    <select class="input" name="tipo" aria-label="Qual aviso" style="width:auto;">
+      <option value="data">aviso da data (1º dia útil)</option><option value="vence">vence hoje</option></select>
+    <input class="input" type="email" name="destino" required placeholder="e-mail que recebe a simulação" value="{{ current_user.email }}" style="width:260px;max-width:100%;" aria-label="E-mail que recebe a simulação"/>
+    <button class="btn btn-primary" type="submit">{{ icone('send') }} 1. Enviar o aviso com o link de agendamento</button>
+  </form>
+  {% if simulacoes %}
+  <div class="tbl-wrap mt-2"><table class="tbl"><thead><tr><th scope="col">Simulação</th><th scope="col">E-mail de teste</th><th scope="col">Reservas de teste</th><th scope="col"></th></tr></thead><tbody>
+    {% for sm in simulacoes %}<tr>
+      <td>{{ sm.company.name if sm.company else 'link geral' }}</td><td class="text-sm">{{ sm.teste_email }}</td>
+      <td class="text-sm">{{ sm.reunioes_n }}</td>
+      <td class="text-right"><div class="flex gap-1" style="justify-content:flex-end;">
+        <a class="btn btn-outline btn-sm" href="{{ url_publica(sm) }}" target="_blank" rel="noopener">Abrir página</a>
+        <form method="post" action="/agenda-reunioes/simulacao/{{ sm.id }}/encerrar" onsubmit="return confirm('Encerrar esta simulação e apagar as reservas de teste?');">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+          <button class="btn btn-outline btn-danger btn-sm" type="submit">Encerrar</button></form></div></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% endif %}
+  <h3 class="mt-2" style="margin-bottom:.3rem;">Só o convite (sem a jornada)</h3>
   <form method="post" action="/agenda-reunioes/teste" class="flex gap-1 items-center" style="flex-wrap:wrap;">
     {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
     <select class="input" name="company_id" aria-label="Empresa do teste" style="width:auto;">
       <option value="">— link geral —</option>
       {% for e in empresas %}<option value="{{ e.c.id }}">{{ e.c.name }}</option>{% endfor %}
     </select>
-    <button class="btn btn-primary" type="submit">{{ icone('mail') }} Enviar convite de teste para mim</button>
+    <input class="input" type="email" name="destino" required placeholder="e-mail que recebe o convite" value="{{ current_user.email }}" style="width:260px;max-width:100%;" aria-label="E-mail que recebe o convite"/>
+    <button class="btn btn-outline" type="submit">{{ icone('mail') }} Enviar convite de exemplo</button>
   </form>
-  <p class="help-txt mt-1">Para ver a página de marcação que a empresa abre (sem login), copie o link da empresa na tabela abaixo e abra numa janela anônima.</p>
 </div>
 
 <div class="card">

@@ -57,6 +57,7 @@
   </div>
 
 {% else %}
+  {% if link.teste_email %}<div class="erro" style="background:rgba(181,131,42,.14);color:var(--tinta);border-color:var(--ouro);"><strong>SIMULAÇÃO.</strong> Nada aqui avisa a empresa, o responsável ou a Liderança: os e-mails vão só para {{ link.teste_email }} e a reserva não ocupa a agenda real.</div>{% endif %}
   <h1>{{ titulo }}</h1>
   <p class="sub">{% if link.company %}{{ link.company.name }} · {% endif %}{% if responsavel %}com {{ responsavel }} · {% endif %}{{ duracao }} minutos · horário de Brasília.
     {% if dia %}<br>Dia da reunião: <strong>{{ dias[dia.weekday()] }}, {{ dia.strftime('%d/%m/%Y') }}</strong> (dia útil seguinte ao prazo de entrega).{% endif %}</p>

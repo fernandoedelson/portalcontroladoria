@@ -45,7 +45,7 @@ def ativo():
 
 # ------------------------------------------------------------------- links
 def link_da_empresa(company_id, cria=True):
-    l = AgendaLink.query.filter_by(company_id=company_id).first()
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first()
     if not l and cria:
         l = AgendaLink(company_id=company_id, token=secrets.token_urlsafe(16))
         db.session.add(l)
@@ -88,7 +88,8 @@ def dia_reuniao(company_id, comp=None):
     from models import current_competency
     from team.avisos_empresas import prazo_da_empresa
     from team.engine import add_business_days
-    l = AgendaLink.query.filter_by(company_id=company_id).first() if company_id else None
+    l = (AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first()
+         if company_id else None)
     if l and l.dia_fixo:
         return l.dia_fixo
     comp = comp or current_competency()
@@ -101,7 +102,7 @@ def dia_reuniao(company_id, comp=None):
 
 def regra_do_dia(company_id):
     """Texto curto de como o dia da empresa é definido (para a tela)."""
-    l = AgendaLink.query.filter_by(company_id=company_id).first()
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first()
     if l and l.dia_fixo:
         return "data fixa"
     if l and l.offset_du is not None:
@@ -126,7 +127,8 @@ def horarios_livres(member_id=None, company_id=None, ref=None):
     if not janelas:
         return {}
     ocupados = [(r.inicio, r.fim) for r in Reuniao.query.filter(
-        Reuniao.status == "marcada", Reuniao.fim > ref, Reuniao.member_id == member_id).all()]
+        Reuniao.status == "marcada", Reuniao.fim > ref, Reuniao.member_id == member_id,
+        db.or_(Reuniao.teste.is_(False), Reuniao.teste.is_(None))).all()]
     ocupados += [(b.inicio, b.fim) for b in AgendaBloqueio.query.filter(
         AgendaBloqueio.fim > ref,
         db.or_(AgendaBloqueio.member_id.is_(None), AgendaBloqueio.member_id == member_id)).all()]
@@ -227,6 +229,13 @@ def participantes(r):
 def _enviar(r, cancelar=False):
     from team import alerts
     todos = participantes(r)
+    simulado = None
+    if r.teste:
+        link = db.session.get(AgendaLink, r.link_id) if r.link_id else None
+        destino = (link.teste_email if link else None) or r.email
+        simulado = ("SIMULAÇÃO — nada foi enviado às pessoas abaixo; em produção este "
+                    "e-mail iria para: " + ", ".join(todos) + ".\n\n")
+        todos = [destino]
     anexo = ("convite.ics", ics(r, todos, cancelar=cancelar).encode("utf-8"),
              "text/calendar; method=" + ("CANCEL" if cancelar else "REQUEST"))
     quando = f"{r.inicio.strftime('%d/%m/%Y')} às {r.inicio.strftime('%H:%M')}"
@@ -243,6 +252,8 @@ def _enviar(r, cancelar=False):
                  + f"Solicitante: {r.nome} <{r.email}>\n\n"
                  f"Para cancelar ou remarcar: {alerts.PORTAL_URL.rstrip('/')}/agendar/cancelar/{r.token_cancelar}\n"
                  "O convite segue em anexo: abra-o no Outlook para aceitar e ver na sua agenda.\n")
+    if simulado:
+        assunto, corpo = "[SIMULAÇÃO] " + assunto, simulado + corpo
     falhas = []
     for e in todos:
         ok, err = alerts.send_email(e, assunto, corpo, lista=True, anexos=[anexo])
@@ -262,9 +273,10 @@ def reservar(link, nome, email, assunto, inicio):
         return None, "Esse horário acabou de ser ocupado. Escolha outro."
     hoje = Reuniao.query.filter(Reuniao.email == email, Reuniao.status == "marcada",
                                 Reuniao.criada_em >= datetime.utcnow() - timedelta(days=1)).count()
-    if hoje >= 3:
+    if hoje >= 3 and not link.teste_email:
         return None, "Limite de reservas por dia atingido para este e-mail."
-    r = Reuniao(link_id=link.id, company_id=link.company_id, member_id=(mem.id if mem else None),
+    r = Reuniao(link_id=link.id, company_id=link.company_id, teste=bool(link.teste_email),
+                member_id=(mem.id if mem else None),
                 nome=nome[:120], email=email[:160],
                 assunto=(assunto or "").strip()[:240] or None, inicio=inicio,
                 fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
@@ -282,6 +294,22 @@ def cancelar(r):
     r.sequencia = (r.sequencia or 0) + 1
     db.session.commit()
     _enviar(r, cancelar=True)
+
+
+def criar_simulacao(company_id, email):
+    """Link de simulação: abre a mesma página da empresa, mas tudo vai só para `email`."""
+    l = AgendaLink(company_id=company_id or None, token=secrets.token_urlsafe(16),
+                   teste_email=email.strip().lower())
+    db.session.add(l)
+    db.session.commit()
+    return l
+
+
+def encerrar_simulacao(link):
+    """Apaga o link de simulação e as reservas feitas por ele."""
+    Reuniao.query.filter_by(link_id=link.id).delete()
+    db.session.delete(link)
+    db.session.commit()
 
 
 def enviar_teste(email, company_id):

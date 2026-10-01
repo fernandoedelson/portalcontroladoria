@@ -142,6 +142,8 @@ _COLUNAS_NOVAS = [
     ("agenda_reunioes", "member_id", "INTEGER"),
     ("agenda_links", "offset_du", "INTEGER"),
     ("agenda_links", "dia_fixo", "DATE"),
+    ("agenda_links", "teste_email", "VARCHAR(160)"),
+    ("agenda_reunioes", "teste", "BOOLEAN DEFAULT 0"),
 ]
 
 

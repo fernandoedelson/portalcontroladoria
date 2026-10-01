@@ -70,16 +70,19 @@ def empresas_do_aviso():
     return out
 
 
-def _texto(chave, empresa, comp, prazo, du):
+def _texto(chave, empresa, comp, prazo, du, agendar=None):
     dados = {"empresa": empresa.name, "competencia": comp.label if comp else "",
              "prazo": prazo.strftime("%d/%m/%Y") if prazo else "",
              "du": du or "", "mes_envio": MESES[prazo.month] if prazo else "",
              "hoje": fuso.hoje().strftime("%d/%m/%Y")}
-    try:
-        from team import agenda
-        dados["agendar"] = agenda.url_para_empresa(empresa.id)
-    except Exception:
-        dados["agendar"] = ""
+    if agendar is not None:            # link de simulação
+        dados["agendar"] = agendar
+    else:
+        try:
+            from team import agenda
+            dados["agendar"] = agenda.url_para_empresa(empresa.id)
+        except Exception:
+            dados["agendar"] = ""
     base = config(chave)
     if not dados["agendar"]:          # agendamento desligado: some a linha do convite
         base = "\n".join(l for l in base.split("\n") if "{agendar}" not in l)

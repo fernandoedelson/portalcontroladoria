@@ -728,7 +728,13 @@ class AgendaLink(db.Model):
     # offset_du = dias úteis após o prazo; dia_fixo = uma data específica (vale mais)
     offset_du = db.Column(db.Integer)
     dia_fixo = db.Column(db.Date)
+    # link de SIMULAÇÃO: todos os e-mails vão só para este endereço e a reserva não ocupa a agenda real
+    teste_email = db.Column(db.String(160))
     company = db.relationship("Company")
+
+    @property
+    def reunioes_n(self):
+        return Reuniao.query.filter_by(link_id=self.id, status="marcada").count()
 
 
 class Reuniao(db.Model):
@@ -747,6 +753,7 @@ class Reuniao(db.Model):
     token_cancelar = db.Column(db.String(40), unique=True)
     sequencia = db.Column(db.Integer, default=0)
     criada_em = db.Column(db.DateTime, default=datetime.utcnow)
+    teste = db.Column(db.Boolean, default=False)       # reserva de simulação (não ocupa a agenda real)
     company = db.relationship("Company")
     member = db.relationship("TeamMember", foreign_keys=[member_id])
 
