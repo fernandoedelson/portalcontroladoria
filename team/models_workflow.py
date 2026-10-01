@@ -653,8 +653,10 @@ AVISO_CORPO_DATA = """Olá, {empresa}.
 O fechamento de {competencia} deve ser enviado à Controladoria J&F até
 {prazo} ({du}º dia útil de {mes_envio}).
 
+A reunião de resultados com a controladoria será no dia {dia_reuniao}.
+{clique_aqui} para agendar o melhor horário.
+
 Qualquer dúvida, é só responder este e-mail.
-Se preferir conversar, agende um horário: {agendar}
 
 Controladoria J&F"""
 AVISO_ASSUNTO_VENCE = "Hoje é o prazo do fechamento {competencia}"

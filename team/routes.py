@@ -2152,13 +2152,12 @@ def register_team_routes(app):
             return redirect(url_for("team_avisos_empresas"))
         prazo, du = av.prazo_da_empresa(c.id, comp)
         kind = request.form.get("tipo") if request.form.get("tipo") in ("data", "vence") else "data"
-        assunto = av._texto(f"aviso_emp_assunto_{kind}", c, comp, prazo, du)
-        corpo = av._texto(f"aviso_emp_corpo_{kind}", c, comp, prazo, du)
+        assunto, corpo, corpo_html = av.montar_aviso(kind, c, comp, prazo, du)
         destino = (request.form.get("destino") or current_user.email or "").strip().lower()
         if "@" not in destino:
             flash("Informe um e-mail válido para receber o teste.", "warning")
             return redirect(url_for("team_avisos_empresas"))
-        ok, err = team_alerts.send_email(destino, f"[TESTE] {assunto}", corpo, lista=True)
+        ok, err = team_alerts.send_email(destino, f"[TESTE] {assunto}", corpo, lista=True, html=corpo_html)
         flash(f"Teste enviado para {destino}." if ok
               else f"Não enviou: {err}.", "success" if ok else "warning")
         return redirect(url_for("team_avisos_empresas"))

@@ -19,7 +19,7 @@ PADRAO = {
     "ag_duracao": "30",          # minutos
     "ag_antecedencia_h": "24",   # antecedência mínima, em horas
     "ag_janela_dias": "30",      # até quantos dias à frente se pode marcar
-    "ag_titulo": "Reunião com a Controladoria J&F",
+    "ag_titulo": "Reunião de resultados com a Controladoria J&F",
     "ag_local": "",              # link do Teams ou sala
     "ag_organizador": "",        # e-mail que recebe os avisos (além da lista de participantes)
     "ag_offset_du": "1",         # regra geral: reunião N dias úteis após o prazo de entrega
@@ -180,12 +180,18 @@ def ics(r, participantes, cancelar=False, organizador=None):
               f"ORGANIZER;CN=Controladoria J&F:mailto:{org}"]
     if cfg("ag_local"):
         linhas.append(f"LOCATION:{_esc(cfg('ag_local'))}")
-    desc = f"Assunto: {r.assunto}" if r.assunto else ""
-    linhas.append(f"DESCRIPTION:{_esc(desc)}")
+    linhas.append(f"DESCRIPTION:{_esc('Reunião de resultados com a Controladoria J&F.')}")
+    linhas += ["TRANSP:OPAQUE", "X-MICROSOFT-CDO-BUSYSTATUS:BUSY"]
     for e in participantes:
-        linhas.append(f"ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:{e}")
+        linhas.append(f"ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{e}")
     linhas += ["END:VEVENT", "END:VCALENDAR"]
     return "\r\n".join(linhas) + "\r\n"
+
+
+def contatos_da_empresa(company_id):
+    """E-mails dos responsáveis cadastrados na empresa (Entidades › Detalhes)."""
+    c = db.session.get(Company, company_id) if company_id else None
+    return [x.email for x in c.contatos if x.active and x.email] if c else []
 
 
 def participantes_fixos():
@@ -236,50 +242,55 @@ def _enviar(r, cancelar=False):
         simulado = ("SIMULAÇÃO — nada foi enviado às pessoas abaixo; em produção este "
                     "e-mail iria para: " + ", ".join(todos) + ".\n\n")
         todos = [destino]
-    anexo = ("convite.ics", ics(r, todos, cancelar=cancelar).encode("utf-8"),
-             "text/calendar; method=" + ("CANCEL" if cancelar else "REQUEST"))
+    metodo = "CANCEL" if cancelar else "REQUEST"
+    convite = (ics(r, todos, cancelar=cancelar), metodo)
     quando = f"{r.inicio.strftime('%d/%m/%Y')} às {r.inicio.strftime('%H:%M')}"
     empresa = r.company.name if r.company else ""
+    titulo = cfg("ag_titulo")
     if cancelar:
-        assunto = f"Cancelada: reunião com a Controladoria J&F — {quando}"
+        assunto = f"Cancelada: {titulo} — {quando}"
         corpo = f"A reunião de {quando} foi cancelada.\n"
     else:
-        assunto = f"Reunião confirmada: Controladoria J&F — {quando}"
-        corpo = (f"Reunião marcada para {quando} ({cfg_int('ag_duracao', 30)} min)"
-                 + (f" — {empresa}" if empresa else "") + ".\n"
+        assunto = f"{titulo} — {quando}"
+        corpo = (f"{titulo}" + (f" — {empresa}" if empresa else "") + f".\nQuando: {quando} ({cfg_int('ag_duracao', 30)} min)\n"
+                 + (f"Com: {r.member.name}\n" if r.member else "")
                  + (f"Local: {cfg('ag_local')}\n" if cfg("ag_local") else "")
-                 + (f"Assunto: {r.assunto}\n" if r.assunto else "")
-                 + f"Solicitante: {r.nome} <{r.email}>\n\n"
-                 f"Para cancelar ou remarcar: {alerts.PORTAL_URL.rstrip('/')}/agendar/cancelar/{r.token_cancelar}\n"
-                 "O convite segue em anexo: abra-o no Outlook para aceitar e ver na sua agenda.\n")
+                 + f"\nPara cancelar ou remarcar: {alerts.PORTAL_URL.rstrip('/')}/agendar/cancelar/{r.token_cancelar}\n")
     if simulado:
         assunto, corpo = "[SIMULAÇÃO] " + assunto, simulado + corpo
     falhas = []
     for e in todos:
-        ok, err = alerts.send_email(e, assunto, corpo, lista=True, anexos=[anexo])
+        ok, err = alerts.send_email(e, assunto, corpo, lista=True, calendario=convite)
         if not ok and err != "email_desligado":
             falhas.append(f"{e}: {err}")
     return falhas
 
 
 # ---------------------------------------------------------------- reservar
-def reservar(link, nome, email, assunto, inicio):
-    """Cria a reunião se o horário continua livre. Retorna (reuniao, erro)."""
-    nome, email = (nome or "").strip(), (email or "").strip().lower()
-    if not nome or "@" not in email or "." not in email.split("@")[-1]:
-        return None, "Informe seu nome e um e-mail válido."
+def reservar(link, inicio, email=None):
+    """Cria a reunião se o horário continua livre. Retorna (reuniao, erro).
+
+    Quem marca é a própria empresa: o convite vai aos responsáveis cadastrados nela (e às
+    demais pessoas do convite). Só se a empresa não tiver ninguém cadastrado é que se pede
+    um e-mail (`email`)."""
+    contatos = contatos_da_empresa(link.company_id)
+    email = (email or "").strip().lower()
+    if not contatos:
+        if "@" not in email or "." not in email.split("@")[-1]:
+            return None, "Informe um e-mail válido para receber o convite."
+        contatos = [email]
     livres, mem = livres_do_link(link)
     if inicio not in livres.get(inicio.date(), []):
         return None, "Esse horário acabou de ser ocupado. Escolha outro."
-    hoje = Reuniao.query.filter(Reuniao.email == email, Reuniao.status == "marcada",
-                                Reuniao.criada_em >= datetime.utcnow() - timedelta(days=1)).count()
-    if hoje >= 3 and not link.teste_email:
-        return None, "Limite de reservas por dia atingido para este e-mail."
+    ontem = datetime.utcnow() - timedelta(days=1)
+    if (not link.teste_email and Reuniao.query.filter(
+            Reuniao.link_id == link.id, Reuniao.status == "marcada", Reuniao.criada_em >= ontem).count() >= 3):
+        return None, "Limite de reservas por dia atingido para esta empresa. Fale com a Controladoria."
+    c = db.session.get(Company, link.company_id) if link.company_id else None
     r = Reuniao(link_id=link.id, company_id=link.company_id, teste=bool(link.teste_email),
                 member_id=(mem.id if mem else None),
-                nome=nome[:120], email=email[:160],
-                assunto=(assunto or "").strip()[:240] or None, inicio=inicio,
-                fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
+                nome=(c.name if c else "Reunião")[:120], email=contatos[0][:160],
+                inicio=inicio, fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
                 uid=f"{uuid.uuid4()}@controladoria-jf", token_cancelar=secrets.token_urlsafe(16))
     db.session.add(r)
     db.session.commit()
@@ -323,18 +334,18 @@ def enviar_teste(email, company_id):
         inicio = livres[sorted(livres)[0]][0]
     else:
         inicio = datetime.combine(fuso.hoje() + timedelta(days=1), time(9, 0))
-    r = Reuniao(nome="Teste de agendamento", email=email, assunto="Convite de teste (nenhuma reserva foi criada)",
+    r = Reuniao(nome="Teste de agendamento", email=email,
                 inicio=inicio, fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
                 uid=f"teste-{uuid.uuid4()}@controladoria-jf", token_cancelar=secrets.token_urlsafe(8),
                 sequencia=0, company_id=company_id)
     r.company, r.member = c, mem
-    anexo = ("convite.ics", ics(r, [email]).encode("utf-8"), "text/calendar; method=REQUEST")
+    convite = (ics(r, [email]), "REQUEST")
     quando = f"{inicio.strftime('%d/%m/%Y')} às {inicio.strftime('%H:%M')}"
     corpo = (f"[TESTE] Reunião marcada para {quando} ({cfg_int('ag_duracao', 30)} min)"
              + (f" — {c.name}" if c else "") + ".\n"
              + (f"Com: {mem.name}\n" if mem else "")
              + (f"Local: {cfg('ag_local')}\n" if cfg("ag_local") else "")
-             + "\nEste é um convite de teste: nenhuma reserva foi criada. Abra o anexo no Outlook para ver como o convite aparece.\n"
+             + "\nEste é um convite de teste: nenhuma reserva foi criada. O convite aparece na própria mensagem, com os botões Aceitar/Recusar do Outlook.\n"
              f"Link da página que a empresa usa: {url_para_empresa(company_id) or '(agendamento desligado)'}\n")
     return alerts.send_email(email, f"[TESTE] Reunião confirmada: Controladoria J&F — {quando}",
-                             corpo, lista=True, anexos=[anexo]), quando
+                             corpo, lista=True, calendario=convite), quando

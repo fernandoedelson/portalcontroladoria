@@ -30,8 +30,44 @@ MESES = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho"
          "agosto", "setembro", "outubro", "novembro", "dezembro"]
 
 
+_CORPO_DATA_ANTIGOS = [
+    """Olá, {empresa}.
+
+O fechamento de {competencia} deve ser enviado à Controladoria J&F até
+{prazo} ({du}º dia útil de {mes_envio}).
+
+Qualquer dúvida, é só responder este e-mail.
+
+Controladoria J&F""",
+    """Olá, {empresa}.
+
+O fechamento de {competencia} deve ser enviado à Controladoria J&F até
+{prazo} ({du}º dia útil de {mes_envio}).
+
+Qualquer dúvida, é só responder este e-mail. Se preferir conversar,
+agende um horário: {agendar}
+
+Controladoria J&F""",
+    """Olá, {empresa}.
+
+O fechamento de {competencia} deve ser enviado à Controladoria J&F até
+{prazo} ({du}º dia útil de {mes_envio}).
+
+Qualquer dúvida, é só responder este e-mail.
+Se preferir conversar, agende um horário: {agendar}
+
+Controladoria J&F""",
+]
+
+
+def _norm(t):
+    return "\n".join(l.rstrip() for l in (t or "").replace("\r\n", "\n").strip().split("\n"))
+
+
 def config(chave):
     v = get_setting(chave)
+    if chave == "aviso_emp_corpo_data" and v and _norm(v) in {_norm(x) for x in _CORPO_DATA_ANTIGOS}:
+        v = None                     # ainda é um texto antigo de fábrica: vale o novo (com o convite da reunião)
     return v if v not in (None, "") else PADRAO.get(chave, "")
 
 
@@ -70,26 +106,55 @@ def empresas_do_aviso():
     return out
 
 
-def _texto(chave, empresa, comp, prazo, du, agendar=None):
+_DIAS_EXT = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+_CLIQUE = "\x00CLIQUE\x00"
+
+
+def _dados(empresa, comp, prazo, du, agendar=None):
     dados = {"empresa": empresa.name, "competencia": comp.label if comp else "",
              "prazo": prazo.strftime("%d/%m/%Y") if prazo else "",
              "du": du or "", "mes_envio": MESES[prazo.month] if prazo else "",
-             "hoje": fuso.hoje().strftime("%d/%m/%Y")}
-    if agendar is not None:            # link de simulação
-        dados["agendar"] = agendar
-    else:
-        try:
-            from team import agenda
-            dados["agendar"] = agenda.url_para_empresa(empresa.id)
-        except Exception:
-            dados["agendar"] = ""
-    base = config(chave)
-    if not dados["agendar"]:          # agendamento desligado: some a linha do convite
-        base = "\n".join(l for l in base.split("\n") if "{agendar}" not in l)
+             "hoje": fuso.hoje().strftime("%d/%m/%Y"), "dia_reuniao": "", "agendar": ""}
     try:
-        return base.format(**dados)
+        from team import agenda
+        d = agenda.dia_reuniao(empresa.id, comp)
+        if d:
+            dados["dia_reuniao"] = f"{_DIAS_EXT[d.weekday()]}, {d.strftime('%d/%m/%Y')}"
+        dados["agendar"] = agendar if agendar is not None else agenda.url_para_empresa(empresa.id)
+    except Exception:
+        if agendar is not None:
+            dados["agendar"] = agendar
+    return dados
+
+
+def _texto(chave, empresa, comp, prazo, du, agendar=None, html=False):
+    """Texto do aviso. `{clique_aqui}` vira link (HTML) ou 'Clique aqui (URL)' (texto puro);
+    sem agendamento, somem as linhas do convite da reunião."""
+    dados = _dados(empresa, comp, prazo, du, agendar)
+    url = dados["agendar"]
+    base = config(chave)
+    if not url:
+        base = "\n".join(l for l in base.split("\n")
+                         if not any(m in l for m in ("{agendar}", "{clique_aqui}", "{dia_reuniao}")))
+    dados["clique_aqui"] = _CLIQUE
+    try:
+        txt = base.format(**dados)
     except (KeyError, IndexError, ValueError):
-        return base          # marcador digitado errado não derruba o envio
+        txt = base          # marcador digitado errado não derruba o envio
+    if html:
+        from html import escape
+        corpo = escape(txt).replace("\n", "<br>\n")
+        ancora = f'<a href="{escape(url)}" style="color:#1F4E79;font-weight:bold;">Clique aqui</a>' if url else "Clique aqui"
+        return (f'<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1b2a3a;line-height:1.5;">'
+                + corpo.replace(_CLIQUE, ancora) + "</div>")
+    return txt.replace(_CLIQUE, f"Clique aqui ({url})" if url else "Clique aqui")
+
+
+def montar_aviso(kind, empresa, comp, prazo, du, agendar=None):
+    """(assunto, texto, html) do aviso `kind` ('data'|'vence')."""
+    return (_texto(f"aviso_emp_assunto_{kind}", empresa, comp, prazo, du, agendar),
+            _texto(f"aviso_emp_corpo_{kind}", empresa, comp, prazo, du, agendar),
+            _texto(f"aviso_emp_corpo_{kind}", empresa, comp, prazo, du, agendar, html=True))
 
 
 def _ja_enviado(company_id, comp_id, kind):
@@ -101,11 +166,10 @@ def _ja_enviado(company_id, comp_id, kind):
 def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False):
     """Manda um aviso e registra. Retorna (ok, detalhe)."""
     from team import alerts
-    assunto = _texto(f"aviso_emp_assunto_{kind}", empresa, comp, prazo, du)
-    corpo = _texto(f"aviso_emp_corpo_{kind}", empresa, comp, prazo, du)
+    assunto, corpo, corpo_html = montar_aviso(kind, empresa, comp, prazo, du)
     if dry_run:
         return True, "simulado"
-    ok, err = alerts.send_email(", ".join(emails), assunto, corpo)
+    ok, err = alerts.send_email(", ".join(emails), assunto, corpo, html=corpo_html)
     log = CompanyNoticeLog(
         company_id=empresa.id, competency_id=(comp.id if comp else None), kind=kind,
         to_addr=", ".join(emails)[:400], subject=assunto[:240],

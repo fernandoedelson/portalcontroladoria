@@ -61,7 +61,7 @@ def _sem_administradores(to_addr):
     return ", ".join(e for e in itens if e.lower() not in admins)
 
 
-def send_email(to_addr, subject, body, lista=False, teste=False, html=None, anexos=None):
+def send_email(to_addr, subject, body, lista=False, teste=False, html=None, anexos=None, calendario=None):
     """Envia e-mail pelo canal configurado. Retorna (ok, erro) sem lancar.
 
     `lista=True`: destino vem de uma lista de destinatarios (vale para qualquer
@@ -75,12 +75,13 @@ def send_email(to_addr, subject, body, lista=False, teste=False, html=None, anex
         return False, "email_desligado"
     if not to_addr:
         return False, "sem_destinatario"
+    extra = {"calendario": calendario} if calendario else {}
     if SMTP_USER:
-        return _send_email_smtp(to_addr, subject, body, html, anexos)
-    return send_email_outlook(to_addr, subject, body, html, anexos)
+        return _send_email_smtp(to_addr, subject, body, html, anexos, **extra)
+    return send_email_outlook(to_addr, subject, body, html, anexos, **extra)
 
 
-def _send_email_smtp(to_addr, subject, body, html=None, anexos=None):
+def _send_email_smtp(to_addr, subject, body, html=None, anexos=None, calendario=None):
     import smtplib
     from email.message import EmailMessage
     if not SMTP_PASSWORD:
@@ -92,6 +93,11 @@ def _send_email_smtp(to_addr, subject, body, html=None, anexos=None):
     msg.set_content(body)
     if html:
         msg.add_alternative(html, subtype="html")
+    if calendario:
+        # convite EMBUTIDO no corpo (text/calendar; method=REQUEST|CANCEL), como o Outlook/Exchange
+        # faz: o Outlook mostra Aceitar/Recusar direto na mensagem, sem abrir arquivo nenhum
+        ics_txt, metodo = calendario
+        msg.add_alternative(ics_txt, subtype="calendar", params={"method": metodo})
     for nome, dados, mime in (anexos or []):
         tipo, _, resto = mime.partition("/")
         sub_tipo, _, params = resto.partition(";")
@@ -106,7 +112,7 @@ def _send_email_smtp(to_addr, subject, body, html=None, anexos=None):
         return False, f"{type(e).__name__}: {e}"
 
 
-def send_email_outlook(to_addr, subject, body, html=None, anexos=None):
+def send_email_outlook(to_addr, subject, body, html=None, anexos=None, calendario=None):
     """Envia e-mail pela instancia local do Outlook (COM) — so em Windows.
 
     Retorna (ok, error). Se pywin32/Outlook indisponivel, retorna (False, motivo)
@@ -129,6 +135,8 @@ def send_email_outlook(to_addr, subject, body, html=None, anexos=None):
                 mail.Body = body
             import os, tempfile
             tmpdir = tempfile.mkdtemp()
+            if calendario:                 # Outlook local: o .ics vai como anexo (único jeito via COM)
+                anexos = list(anexos or []) + [("convite.ics", calendario[0].encode("utf-8"), "text/calendar")]
             for nome, dados, _mime in (anexos or []):
                 caminho = os.path.join(tmpdir, nome)
                 with open(caminho, "wb") as fh:

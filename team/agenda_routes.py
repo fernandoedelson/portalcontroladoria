@@ -75,6 +75,19 @@ def register_agenda_routes(app):
         membros = (TeamMember.query.filter_by(active=True).order_by(TeamMember.name).all()
                    if gestao else [m for m in [_meu_membro()] if m])
         agora = fuso.agora()
+        conflito = None
+        if request.args.get("conf"):
+            dias_c = [int(x) for x in request.args.getlist("dia") if x.isdigit()]
+            ini_c, fim_c = request.args.get("inicio", ""), request.args.get("fim", "")
+            try:
+                i1, f1 = agenda._hm(ini_c), agenda._hm(fim_c)
+                sob = [j for j in AgendaJanela.query.filter(AgendaJanela.member_id == membro_id,
+                                                            AgendaJanela.weekday.in_(dias_c)).all()
+                       if agenda._hm(j.inicio) < f1 and agenda._hm(j.fim) > i1]
+                if sob:
+                    conflito = {"dias": dias_c, "inicio": ini_c, "fim": fim_c, "existentes": sob}
+            except Exception:
+                conflito = None
         links = {l.company_id: l for l in AgendaLink.query.filter(AgendaLink.teste_email.is_(None)).all()}
         simulacoes = AgendaLink.query.filter(AgendaLink.teste_email.isnot(None)).order_by(AgendaLink.id.desc()).all()
         real = db.or_(Reuniao.teste.is_(False), Reuniao.teste.is_(None))
@@ -101,7 +114,9 @@ def register_agenda_routes(app):
                 db.or_(AgendaBloqueio.member_id == membro_id, AgendaBloqueio.member_id.is_(None)))
             .order_by(AgendaBloqueio.inicio).all(),
             empresas=empresas, geral=links.get(None), url_publica=agenda.url_publica,
-            simulacoes=simulacoes,
+            simulacoes=simulacoes, conflito=conflito,
+            ha_duplicadas=(lambda js: len({(j.weekday, j.inicio, j.fim) for j in js}) < len(js))(
+                AgendaJanela.query.filter(AgendaJanela.member_id == membro_id).all()),
             proximas=q_prox.order_by(Reuniao.inicio).all(),
             passadas=q_pass.order_by(Reuniao.inicio.desc()).limit(10).all(),
             fixos=ListaEmail.query.filter_by(tipo="agenda").count())
@@ -143,10 +158,51 @@ def register_agenda_routes(app):
         if not dias or not ok:
             flash("Escolha os dias e um horário inicial antes do final.", "warning")
             return _volta(mid)
+        i1, f1 = agenda._hm(ini), agenda._hm(fim)
+        existentes = AgendaJanela.query.filter(AgendaJanela.member_id == mid,
+                                               AgendaJanela.weekday.in_(dias)).all()
+        sobrepoe = [j for j in existentes if agenda._hm(j.inicio) < f1 and agenda._hm(j.fim) > i1]
+        acao = request.form.get("acao")
+        if sobrepoe and acao not in ("substituir", "somar"):
+            # não grava nada: pergunta o que fazer (substituir ou somar mesmo assim)
+            from urllib.parse import urlencode
+            qs = urlencode([("membro", mid or 0), ("conf", 1), ("inicio", ini), ("fim", fim)]
+                           + [("dia", d) for d in dias])
+            return redirect(url_for("team_agenda_reunioes") + "?" + qs + "#horarios")
+        if acao == "substituir":
+            for j in sobrepoe:
+                db.session.delete(j)
+        n = 0
         for d in dias:
-            db.session.add(AgendaJanela(member_id=mid, weekday=d, inicio=ini, fim=fim))
+            ja = any(j.weekday == d and j.inicio == ini and j.fim == fim and j not in sobrepoe_ou_vazio(acao, sobrepoe)
+                     for j in existentes)
+            if not ja:
+                db.session.add(AgendaJanela(member_id=mid, weekday=d, inicio=ini, fim=fim))
+                n += 1
         db.session.commit()
-        flash(f"{len(dias)} janela(s) incluída(s).", "success")
+        flash(f"{n} horário(s) incluído(s)." + (" Os que já existiam foram substituídos." if acao == "substituir" and sobrepoe else "")
+              + ("" if n == len(dias) else " Os idênticos já cadastrados foram ignorados."), "success")
+        return _volta(mid)
+
+    def sobrepoe_ou_vazio(acao, sobrepoe):
+        return sobrepoe if acao == "substituir" else []
+
+    @app.route("/agenda-reunioes/janela/duplicadas", methods=["POST"])
+    @team_required
+    def team_agenda_janela_dup():
+        """Apaga horários IDÊNTICOS repetidos da agenda (mantém um de cada)."""
+        mid = _membro_arg()
+        if not _pode_agenda(mid):
+            abort(403)
+        vistos, n = set(), 0
+        for j in AgendaJanela.query.filter(AgendaJanela.member_id == mid).order_by(AgendaJanela.id).all():
+            k = (j.weekday, j.inicio, j.fim)
+            if k in vistos:
+                db.session.delete(j)
+                n += 1
+            vistos.add(k)
+        db.session.commit()
+        flash(f"{n} horário(s) repetido(s) removido(s)." if n else "Não havia horários repetidos.", "success")
         return _volta(mid)
 
     @app.route("/agenda-reunioes/janela/<int:jid>/remover", methods=["POST"])
@@ -264,13 +320,18 @@ def register_agenda_routes(app):
         comp = current_competency()
         prazo, du = av.prazo_da_empresa(c.id, comp)
         url = agenda.url_publica(link)
-        assunto = "[SIMULAÇÃO] " + av._texto(f"aviso_emp_assunto_{kind}", c, comp, prazo, du, agendar=url)
-        corpo = (f"SIMULAÇÃO da jornada — empresa {c.name}. Este e-mail só foi para você; a empresa não recebeu nada.\n"
-                 "Passo a passo: 1) leia este aviso  2) clique no link de agendamento  3) escolha um horário e confirme  "
-                 "4) você receberá o convite (com o .ics) neste mesmo endereço  5) teste o cancelamento pelo link do convite.\n\n"
-                 "----- e-mail que a empresa recebe -----\n\n"
-                 + av._texto(f"aviso_emp_corpo_{kind}", c, comp, prazo, du, agendar=url))
-        ok, err = al.send_email(destino, assunto, corpo, lista=True)
+        assunto, corpo_av, html_av = av.montar_aviso(kind, c, comp, prazo, du, agendar=url)
+        assunto = "[SIMULAÇÃO] " + assunto
+        topo = (f"SIMULAÇÃO da jornada — empresa {c.name}. Este e-mail só foi para você; a empresa não recebeu nada.\n"
+                "Passo a passo: 1) leia o aviso abaixo  2) clique em “Clique aqui”  3) escolha um horário e confirme  "
+                "4) o convite chega neste mesmo endereço, direto na mensagem  5) teste o cancelamento pelo link do convite.\n\n"
+                "----- e-mail que a empresa recebe -----\n\n")
+        corpo = topo + corpo_av
+        html_sim = ('<div style="background:#FFF4D6;border:1px solid #B5832A;padding:8px 10px;margin-bottom:12px;'
+                    'font:13px Segoe UI,Arial,sans-serif;"><b>SIMULAÇÃO</b> — este e-mail só foi para você; a empresa não recebeu nada. '
+                    '1) clique em “Clique aqui” 2) escolha um horário e confirme 3) o convite chega neste endereço, direto na mensagem 4) teste o cancelamento.</div>'
+                    + html_av)
+        ok, err = al.send_email(destino, assunto, corpo, lista=True, html=html_sim)
         log_audit(current_user.id, "agenda_simulacao", "company", f"{c.id} -> {destino}")
         if ok:
             flash(f"Simulação iniciada: o aviso de {c.name} foi para {destino}. Abra o e-mail, clique no link e marque um horário.", "success")
@@ -315,15 +376,15 @@ def register_agenda_routes(app):
             if not inicio:
                 erro = "Escolha um horário."
             else:
-                feito, erro = agenda.reservar(l, request.form.get("nome"), request.form.get("email"),
-                                              request.form.get("assunto"), inicio)
+                feito, erro = agenda.reservar(l, inicio, email=request.form.get("email"))
         livres, mem = ({}, agenda.membro_da_empresa(l.company_id)) if feito else agenda.livres_do_link(l)
         dia = agenda.dia_reuniao(l.company_id) if l.company_id else None
         return render_template("agendar.html", link=l, livres=livres, erro=erro, feito=feito,
                                titulo=agenda.cfg("ag_titulo"), local=agenda.cfg("ag_local"),
                                duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
                                responsavel=(mem.name if mem else None), dia=dia,
-                               pre_email=request.form.get("email", ""), pre_nome=request.form.get("nome", ""))
+                               precisa_email=not agenda.contatos_da_empresa(l.company_id),
+                               pre_email=request.form.get("email", ""))
 
     @app.route("/agendar/cancelar/<token>", methods=["GET", "POST"])
     def agendar_cancelar(token):

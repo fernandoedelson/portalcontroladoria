@@ -52,7 +52,7 @@
   <div class="card ok">
     <p><strong>{{ feito.inicio.strftime('%d/%m/%Y') }} às {{ feito.inicio.strftime('%H:%M') }}</strong> · {{ duracao }} min
       {% if local %}<br>Local: {{ local }}{% endif %}</p>
-    <p class="muted">Enviamos o convite para <strong>{{ feito.email }}</strong>. Abra o anexo no Outlook e aceite para ver na sua agenda.
+    <p class="muted">Enviamos o convite aos responsáveis da empresa. Ele aparece no próprio e-mail, com os botões de aceitar no Outlook.
       No e-mail há também o link para cancelar, se precisar.</p>
   </div>
 
@@ -60,7 +60,7 @@
   {% if link.teste_email %}<div class="erro" style="background:rgba(181,131,42,.14);color:var(--tinta);border-color:var(--ouro);"><strong>SIMULAÇÃO.</strong> Nada aqui avisa a empresa, o responsável ou a Liderança: os e-mails vão só para {{ link.teste_email }} e a reserva não ocupa a agenda real.</div>{% endif %}
   <h1>{{ titulo }}</h1>
   <p class="sub">{% if link.company %}{{ link.company.name }} · {% endif %}{% if responsavel %}com {{ responsavel }} · {% endif %}{{ duracao }} minutos · horário de Brasília.
-    {% if dia %}<br>Dia da reunião: <strong>{{ dias[dia.weekday()] }}, {{ dia.strftime('%d/%m/%Y') }}</strong> (dia útil seguinte ao prazo de entrega).{% endif %}</p>
+    {% if dia %}<br>Dia da reunião: <strong>{{ dias[dia.weekday()] }}, {{ dia.strftime('%d/%m/%Y') }}</strong> (de acordo com o calendário).{% endif %}</p>
   {% if erro %}<div class="erro" role="alert">{{ erro }}</div>{% endif %}
   {% if livres %}
   <form method="post">
@@ -74,9 +74,11 @@
       {% endfor %}
     </div>
     <div class="card">
-      <label class="campo">Seu nome<input type="text" name="nome" value="{{ pre_nome }}" required maxlength="120"/></label>
-      <label class="campo">Seu e-mail (o convite vai para ele)<input type="email" name="email" value="{{ pre_email }}" required maxlength="160"/></label>
-      <label class="campo">Assunto (opcional)<textarea name="assunto" rows="2" maxlength="240" placeholder="Sobre o que quer conversar?"></textarea></label>
+      {% if precisa_email %}
+      <label class="campo">E-mail para receber o convite<input type="email" name="email" value="{{ pre_email }}" required maxlength="160"/></label>
+      {% else %}
+      <p class="muted" style="margin:0;">O convite será enviado aos responsáveis cadastrados da empresa.</p>
+      {% endif %}
       <button type="submit">Confirmar horário</button>
     </div>
   </form>
