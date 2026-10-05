@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Entidades do cluster{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Entidades {{ 'do meu cluster' if escopo else 'dos clusters' }}</h1>
+    <div class="sub">Marque o que cada entidade entrega à Controladoria no fechamento:
+      <strong>Painel</strong>, <strong>Endividamento</strong> e <strong>Consolidação</strong>.
+      {% if escopo %}Aparecem só as entidades dos clusters sob a sua responsabilidade.{% endif %}</div></div>
+</div>
+
+<div class="card">
+  {% if assignments %}
+  <form method="post" action="/entidades-cluster/salvar" id="form-carteira">
+    {{ csrf() }}
+    <div class="barra-salvar" id="barra-carteira">
+      <span id="cont-carteira">Nenhuma alteração pendente</span>
+      <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button>
+    </div>
+    <div class="ent-lista">
+      {% set ns = namespace(cl=-1, seg=-1) %}
+      {% for a in assignments %}
+      {% set P = 'a' ~ a.id ~ '_' %}
+      {% if a.cluster_id != ns.cl %}
+        {% if ns.cl != -1 %}</div></section>{% endif %}
+        {% set ns.cl = a.cluster_id %}{% set ns.seg = -1 %}
+        {% set qtd = assignments|selectattr('cluster_id','equalto',a.cluster_id)|list|length %}
+        <section class="ent-cluster">
+        <header class="ent-cl-tit">
+          <span class="ent-cl-nome">{{ a.cluster.name if a.cluster else 'Sem cluster' }}</span>
+          <span class="ent-cl-info">{{ qtd }} entidade(s){% if a.cluster and a.cluster.member %} · {{ a.cluster.member.name }}{% endif %}</span>
+        </header>
+        <div>
+      {% endif %}
+      {% if (a.segment or '') != ns.seg %}{% set ns.seg = a.segment or '' %}
+        <div class="ent-seg-tit"><span>{{ a.segment or 'Sem segmento' }}</span></div>
+      {% endif %}
+      <div class="ent-linha ent-linha-simples" data-linha="{{ a.id }}">
+        <span class="ent-sel"><span class="ent-nome">{{ a.company.name }}</span></span>
+        <div class="ent-resp text-sm text-muted">{{ a.member.name if a.member else 'responsável a definir' }}</div>
+        <div class="ent-entregas" role="group" aria-label="Entregas exigidas de {{ a.company.name }}">
+          <input type="hidden" name="{{ P }}presente" value="1"/>
+          {% for d in deliverables %}<label class="ent-pill" title="{{ d }}"><input type="checkbox" name="{{ P }}deliverables" value="{{ d }}" {{ 'checked' if d in a.deliverables }}/><span>{{ d }}</span></label>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      </div></section>
+    </div>
+  </form>
+  <script>
+  (function(){
+    var f=document.getElementById('form-carteira'); if(!f) return;
+    var ini={}; f.querySelectorAll('.ent-linha').forEach(function(l){ini[l.dataset.linha]=sig(l);});
+    function sig(l){return Array.prototype.map.call(l.querySelectorAll('input[type=checkbox]'),function(c){return c.checked?1:0;}).join('');}
+    function atualiza(){var n=0;f.querySelectorAll('.ent-linha').forEach(function(l){
+      var mudou=sig(l)!==ini[l.dataset.linha]; l.classList.toggle('linha-alterada',mudou); if(mudou)n++;});
+      document.getElementById('cont-carteira').textContent=n?(n+' linha(s) alterada(s) — salve para gravar'):'Nenhuma alteração pendente';
+      f.classList.toggle('tem-alteracao',n>0);}
+    f.addEventListener('change',atualiza);
+  })();
+  </script>
+  {% else %}
+  <div class="empty-box"><div class="empty-ico">{{ icone('table', 30) }}</div>
+    <p><strong>Nenhuma entidade no seu cluster.</strong></p>
+    <p class="text-muted text-sm">Quando a Controladoria colocar você como responsável por um cluster, as entidades aparecem aqui.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -912,3 +912,25 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 .pz-emp{background:var(--text);} .pz-cons{background:var(--accent);}
 .rg-col.prazo-cons{background:linear-gradient(var(--surface-hi),transparent 70%);}
 .rg-col.prazo-cons .rg-tag{color:var(--accent);border:1.5px solid var(--accent);border-radius:3px;padding:0 4px;}
+
+/* ---------- v47: leitura das tabelas (faixas, cabeçalho tingido, pílulas de situação) ---------- */
+.tbl th{background:var(--r-folha-3);color:var(--r-tinta);border-bottom:2px solid var(--r-pauta-2);}
+.tbl tbody tr:nth-child(even) td{background:var(--r-folha-2);}
+.tbl tbody tr:hover td{background:color-mix(in srgb,var(--r-verde) 9%,var(--r-folha));}
+.tbl tbody tr.rf-grupo td,.tbl tbody tr.rf-grupo:hover td{background:var(--r-tinta);color:var(--r-papel);letter-spacing:.06em;}
+.tbl td:first-child{font-weight:600;}
+.tbl td.rf-entregue,.tbl tbody tr:nth-child(even) td.rf-entregue{background:var(--success-lt);}
+.tbl td.rf-atrasada,.tbl tbody tr:nth-child(even) td.rf-atrasada{background:var(--danger-lt);}
+.tbl td.rf-postergada,.tbl tbody tr:nth-child(even) td.rf-postergada{background:var(--warning-lt);}
+.tbl td.rf-pendente,.tbl tbody tr:nth-child(even) td.rf-pendente{background:var(--info-lt);}
+.pill{display:inline-block;border-radius:999px;padding:.12rem .6rem;font-size:.74rem;font-weight:600;line-height:1.4;white-space:nowrap;}
+.pill-ok{background:var(--success-lt);color:var(--success-text);border:1px solid var(--success-border);}
+.pill-mudo{background:var(--r-folha-3);color:var(--text-muted);border:1px solid var(--border-2);}
+.pill-alerta{background:var(--warning-lt);color:var(--warning-text);border:1px solid var(--warning-border);}
+.pill-erro{background:var(--danger-lt);color:var(--danger-text);border:1px solid var(--danger-border);}
+.lista-bloco{background:var(--r-folha-2);border:1px solid var(--border);border-left:4px solid var(--r-ouro-ui);
+  border-radius:var(--radius);padding:.9rem 1rem 1rem;margin-bottom:1.1rem;}
+.lista-bloco h3{color:var(--r-tinta);font-size:1rem;}
+.lista-bloco .tbl{background:var(--r-folha);}
+.ent-cluster .ent-linha:nth-child(even){background:var(--r-folha-2);}
+.ent-cluster .ent-linha:hover{background:color-mix(in srgb,var(--r-verde) 8%,var(--r-folha));}

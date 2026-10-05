@@ -61,7 +61,7 @@
     e-mails do portal por ser administrador: para receber, o endereço precisa estar na lista.
     Qualquer pessoa pode entrar, inclusive quem não tem login no portal.</p>
   {% for l in listas %}
-  <div class="mb-3">
+  <section class="lista-bloco">
     <h3 style="margin-bottom:.15rem;">{{ l.titulo }}</h3>
     <div class="text-muted text-sm mb-1">{{ l.desc }}</div>
     {% if l.itens %}
@@ -72,7 +72,7 @@
       {% for x in l.itens %}
       <tr>
         <td>{{ x.nome or '—' }}</td><td>{{ x.email }}</td>
-        <td>{{ 'Recebe' if x.active else 'Pausado' }}</td>
+        <td><span class="pill {{ 'pill-ok' if x.active else 'pill-mudo' }}">{{ 'Recebe' if x.active else 'Pausado' }}</span></td>
         {% if pode_listas %}<td><div class="flex gap-1">
           <form method="post" action="/comunicacao/lista/{{ x.id }}/alternar">{{ csrf() }}
             <button class="btn btn-outline btn-sm" type="submit">{{ 'Pausar' if x.active else 'Reativar' }}</button></form>
@@ -94,7 +94,7 @@
       <button class="btn btn-outline" type="submit">{{ icone('mail') }} Incluir na lista</button>
     </form>
     {% endif %}
-  </div>
+  </section>
   {% endfor %}
 </div>
 {% endblock %}

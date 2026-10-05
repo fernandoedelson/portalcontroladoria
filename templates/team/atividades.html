@@ -14,6 +14,7 @@
 <div class="card">
   <form method="get" class="flex gap-1 items-center filtros-ativ" style="flex-wrap:wrap;">
     <input type="hidden" name="view" value="{{ view }}"/>
+    <input class="input" type="search" name="q" value="{{ f_q or '' }}" placeholder="Buscar atividade…" aria-label="Buscar atividade" style="width:220px;"/>
     <select class="input" name="kind" style="width:auto;" onchange="this.form.submit()">
       <option value="">Todos os tipos</option>
       {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if f_kind==k }}>{{ {'fechamento':'Fechamento','recorrente':'Recorrente','transversal':'Transversal','spot':'Spot','projeto':'Projeto','indicador':'Indicador'}[k] }}</option>{% endfor %}
@@ -33,7 +34,7 @@
     </select>
     <span style="flex:1;"></span>
     {# base de filtros preservados nos toggles #}
-    {% set filtros %}{% if f_kind %}&kind={{ f_kind }}{% endif %}{% if f_member %}&member_id={{ f_member }}{% endif %}{% if f_comp %}&competency_id={{ f_comp }}{% endif %}{% if f_status %}&status={{ f_status }}{% endif %}{% endset %}
+    {% set filtros %}{% if f_kind %}&kind={{ f_kind }}{% endif %}{% if f_member %}&member_id={{ f_member }}{% endif %}{% if f_comp %}&competency_id={{ f_comp }}{% endif %}{% if f_status %}&status={{ f_status }}{% endif %}{% if f_q %}&q={{ f_q|urlencode }}{% endif %}{% endset %}
     {% if view != 'kanban' %}
     <a href="?view=tabela{{ filtros }}{{ '&group=status' if group != 'status' }}" class="btn btn-outline btn-sm {{ 'ativo' if group=='status' }}">
       {{ icone('table') }} {{ 'Sem agrupar' if group=='status' else 'Agrupar por status' }}</a>

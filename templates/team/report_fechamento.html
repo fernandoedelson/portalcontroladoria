@@ -14,10 +14,14 @@
   </form>
 </div>
 
+{% set no_prazo = t.docs - t.entregues - t.atrasadas - t.postergadas %}
 <div class="kpi-grid">
   <div class="kpi {{ 'ok' if q.completo else 'accent' }}"><div class="kpi-label">Documentos entregues</div>
     <div class="kpi-value">{{ t.entregues }}<small style="font-size:.5em;"> / {{ t.docs }}</small></div>
     <div class="kpi-foot">Painel, Template e Endividamento</div></div>
+  <div class="kpi {{ 'ok' if not t.atrasadas else '' }}"><div class="kpi-label">Dentro do prazo</div>
+    <div class="kpi-value">{{ no_prazo }}</div>
+    <div class="kpi-foot">{{ 'a entregar, ninguém atrasado' if not t.atrasadas else 'a entregar, ainda dentro do prazo' }}</div></div>
   <div class="kpi"><div class="kpi-label">Empresas completas</div>
     <div class="kpi-value">{{ q.empresas_completas }}<small style="font-size:.5em;"> / {{ q.n_empresas }}</small></div>
     <div class="kpi-foot">com os 3 documentos</div></div>
@@ -46,10 +50,10 @@
         <td class="text-sm">{{ l.data.strftime('%d/%m') if l.data else '' }}</td>
         {% for macro, rot in docs %}{% set c = l.cels[macro] %}
         <td class="rf-cel rf-{{ c.estado }}" title="{{ c.rotulo }}{% if c.get('prazo') %} · prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% if c.get('motivo') %} · {{ c.motivo }}{% endif %}">
-          <span class="rf-ico" aria-hidden="true">{{ {'entregue':'✔','atrasada':'✖','postergada':'⏳','pendente':'•','na':'–'}[c.estado] }}</span>
+          <span class="rf-ico" aria-hidden="true">{{ {'entregue':'✔','atrasada':'✖','postergada':'⏳','pendente':'◷','na':'–'}[c.estado] }}</span>
           <span class="rf-sr">{{ c.rotulo }}</span>
           {% if c.get('postergada') and c.estado in ('postergada','atrasada') %}<span title="Entrega postergada">*</span>{% endif %}
-          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado == 'postergada' and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' %}{{ c.dias }} d.u. de atraso{% if c.get('prazo') %}<br>prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% endif %}</small>
+          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado in ('postergada','pendente') and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' %}{{ c.dias }} d.u. de atraso{% if c.get('prazo') %}<br>prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% endif %}</small>
         </td>
         {% endfor %}
         <td class="text-sm">{{ l.obs }}</td>
@@ -58,7 +62,7 @@
     {% endif %}{% endfor %}
     </tbody></table></div>
   <p class="help-txt mt-1"><span class="rf-leg rf-entregue">✔ entregue</span> <span class="rf-leg rf-atrasada">✖ atrasado (dias úteis)</span>
-    <span class="rf-leg rf-postergada">⏳ postergado (nova data)</span> <span class="rf-leg rf-pendente">• no prazo</span>
+    <span class="rf-leg rf-postergada">⏳ postergado (nova data)</span> <span class="rf-leg rf-pendente">◷ no prazo (com a data limite)</span>
     O “OK” é a conclusão da atividade de cada documento no cronograma.</p>
 </div>
 
@@ -126,15 +130,14 @@
   .rf-cel small{display:block;font-size:.7rem;color:var(--text-muted);}
   .rf-ico{font-size:1.05rem;font-weight:700;}
   .rf-sr{position:absolute;left:-9999px;}
-  .rf-entregue{background:#C6EFCE;color:#1d5c2d;}
-  .rf-atrasada{background:#FFC7CE;color:#8a1f2b;}
-  .rf-postergada{background:#FFEB9C;color:#7a5a00;}
-  .rf-pendente{background:#ECEFF1;color:#46525b;}
+  .rf-entregue{background:var(--success-lt);color:var(--success-text);}
+  .rf-atrasada{background:var(--danger-lt);color:var(--danger-text);}
+  .rf-postergada{background:var(--warning-lt);color:var(--warning-text);}
+  .rf-pendente{background:var(--info-lt);color:var(--info-text);}
   .rf-na{color:var(--text-muted);}
   .rf-leg{display:inline-block;border-radius:6px;padding:.1rem .45rem;font-size:.78rem;font-weight:600;margin-right:.3rem;}
-  [data-theme="dark"] .rf-entregue{background:rgba(116,195,160,.22);color:#9BD6BB;}
-  [data-theme="dark"] .rf-atrasada{background:rgba(232,121,109,.22);color:#F2A69D;}
-  [data-theme="dark"] .rf-postergada{background:rgba(221,174,88,.22);color:#EBCB8E;}
-  [data-theme="dark"] .rf-pendente{background:rgba(255,255,255,.08);color:#9AA6A5;}
+  .rf-tbl td.rf-cel{border-left:1px solid var(--surface);border-bottom:1px solid var(--surface);}
+  .rf-tbl tr:hover td.rf-cel{filter:brightness(.97);}
+  .rf-cel small{color:inherit;opacity:.85;}
 </style>
 {% endblock %}

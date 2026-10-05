@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Public+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"/>
-  <link rel="stylesheet" href="/static/css/razao.css?v=46"/>
+  <link rel="stylesheet" href="/static/css/razao.css?v=47"/>
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
@@ -308,7 +308,7 @@
           <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <div class="sb-group-items">
-      {% if current_user.is_controladoria %}
+      {% if current_user.is_team %}
       <a href="/cronograma" class="sb-link {{ 'active' if cur=='/cronograma' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m9 16 2 2 4-4"/></svg>
         <span class="sb-label">Cronograma</span></a>
@@ -325,6 +325,11 @@
       <a href="/feriados" class="sb-link {{ 'active' if cur=='/feriados' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m9.5 15 5 0"/></svg>
         <span class="sb-label">Feriados</span></a>
+      {% endif %}
+      {% if current_user.is_team %}
+      <a href="/entidades-cluster" class="sb-link {{ 'active' if cur=='/entidades-cluster' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span class="sb-label">Entidades do cluster</span></a>
       {% endif %}
       {% if current_user.is_team %}
       <a href="/agenda-reunioes" class="sb-link {{ 'active' if cur=='/agenda-reunioes' }}">

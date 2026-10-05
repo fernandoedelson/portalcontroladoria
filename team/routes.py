@@ -353,6 +353,16 @@ def register_team_routes(app):
             acts = [a for a in acts if a.status not in ("concluida", "cancelada")]
         elif f_status and f_status != "todos":
             acts = [a for a in acts if a.effective_status(ref) == f_status]
+        f_q = (request.args.get("q") or "").strip()
+        if f_q:                              # busca por título (sem acento, sem caixa)
+            import unicodedata
+
+            def _norm(t):
+                return "".join(c for c in unicodedata.normalize("NFD", (t or "").lower())
+                               if unicodedata.category(c) != "Mn")
+            termos = _norm(f_q).split()
+            acts = [a for a in acts
+                    if all(t in _norm(a.title) for t in termos)]
         # colunas do kanban por status efetivo
         columns = {"pendente": [], "em_andamento": [], "bloqueada": [], "concluida": []}
         for a in acts:                       # o cartão muda de coluna = muda o status
@@ -379,7 +389,7 @@ def register_team_routes(app):
                                projects=Project.query.order_by(Project.name).all(),
                                kinds=KINDS, statuses=STATUSES, mm=_member_map(),
                                f_kind=f_kind, f_member=f_member, f_status=f_status,
-                               f_comp=f_comp, f_project=f_project, f_venc=f_venc, today=ref)
+                               f_comp=f_comp, f_project=f_project, f_venc=f_venc, f_q=f_q, today=ref)
 
     @app.route("/atividade/nova", methods=["GET", "POST"])
     @team_required
@@ -780,7 +790,7 @@ def register_team_routes(app):
         db.session.delete(it)
 
     @app.route("/cronograma/salvar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_cronograma_salvar():
         """Salvar tudo: grava de uma vez as linhas alteradas, cria as duplicadas
         e remove as marcadas para exclusão."""
@@ -829,7 +839,7 @@ def register_team_routes(app):
         return redirect(url_for("team_cronograma"))
 
     @app.route("/cronograma")
-    @controladoria_required
+    @team_required
     def team_cronograma():
         items = (ClosingTemplateItem.query
                  .order_by(ClosingTemplateItem.sort_order, ClosingTemplateItem.id).all())
@@ -852,7 +862,7 @@ def register_team_routes(app):
                                n_empresas=CompanyAssignment.query.count())
 
     @app.route("/cronograma/item", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_cronograma_item_new():
         it = ClosingTemplateItem(title="Nova atividade")
         _cron_item_from_form(it, request.form, novo=True)
@@ -863,7 +873,7 @@ def register_team_routes(app):
         return redirect(url_for("team_cronograma"))
 
     @app.route("/cronograma/item/<int:iid>", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_cronograma_item_edit(iid):
         it = db.session.get(ClosingTemplateItem, iid) or abort(404)
         _cron_item_from_form(it, request.form)
@@ -872,7 +882,7 @@ def register_team_routes(app):
         return redirect(url_for("team_cronograma"))
 
     @app.route("/cronograma/item/<int:iid>/toggle", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_cronograma_item_toggle(iid):
         it = db.session.get(ClosingTemplateItem, iid) or abort(404)
         it.active = not it.active
@@ -880,7 +890,7 @@ def register_team_routes(app):
         return redirect(url_for("team_cronograma"))
 
     @app.route("/cronograma/item/<int:iid>/excluir", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_cronograma_item_delete(iid):
         it = db.session.get(ClosingTemplateItem, iid) or abort(404)
         if it.macro:
@@ -892,7 +902,7 @@ def register_team_routes(app):
         return redirect(url_for("team_cronograma"))
 
     @app.route("/cronograma/gerar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_cronograma_gerar():
         modo = request.form.get("modo") or "mes"
         ano = _int(request.form.get("ano")) or fuso.hoje().year
@@ -1754,6 +1764,52 @@ def register_team_routes(app):
     # ==================================================================
     # CARTEIRA (empresa x pessoa) — o "pilotar paineis"
     # ==================================================================
+    # ------------------------------------------------------------------
+    # Entregas por entidade, para quem responde por um cluster (profissional)
+    # ------------------------------------------------------------------
+    def _assignments_do_cluster():
+        """(lista, escopo): profissional vê só os clusters dele; gestão vê todos."""
+        from team.models import Cluster
+        q = (CompanyAssignment.query.join(Company)
+             .outerjoin(Cluster, CompanyAssignment.cluster_id == Cluster.id)
+             .filter(Company.active.is_(True)))
+        escopo = not current_user.is_controladoria
+        if escopo:
+            m = _current_member()
+            q = q.filter(Cluster.member_id == (m.id if m else -1))
+        rows = q.order_by(db.func.coalesce(Cluster.sort_order, 9999), Cluster.name,
+                          CompanyAssignment.segment, Company.name).all()
+        return rows, escopo
+
+    @app.route("/entidades-cluster")
+    @team_required
+    def team_entidades_cluster():
+        from admin_center import DELIVERABLES
+        rows, escopo = _assignments_do_cluster()
+        return render_template("team/meu_cluster.html", assignments=rows, escopo=escopo,
+                               deliverables=DELIVERABLES)
+
+    @app.route("/entidades-cluster/salvar", methods=["POST"])
+    @team_required
+    def team_entidades_cluster_salvar():
+        from admin_center import DELIVERABLES
+        rows, _escopo = _assignments_do_cluster()
+        alterados = 0
+        for a in rows:                     # só as linhas que a pessoa pode ver
+            pref = f"a{a.id}_"
+            if (pref + "presente") not in request.form:
+                continue
+            novo = [d for d in request.form.getlist(pref + "deliverables") if d in DELIVERABLES]
+            if sorted(novo) != sorted(a.deliverables):
+                a.deliverables = novo
+                alterados += 1
+        db.session.commit()
+        log_audit(current_user.id, "entregas_cluster_salvas", "assignment",
+                  f"{alterados} alteradas")
+        flash(f"{alterados} entidade(s) atualizada(s)." if alterados
+              else "Nenhuma alteração para salvar.", "success" if alterados else "info")
+        return redirect(url_for("team_entidades_cluster"))
+
     @app.route("/carteira")
     @team_required
     def team_carteira():
