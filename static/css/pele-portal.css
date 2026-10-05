@@ -53,3 +53,14 @@
 /* 3) cabeçalho de cada página em quadro, com o fio azul-marinho no topo */
 .jf-pele .page-head{background:var(--jf-card);border:1px solid var(--jf-line);border-top:3px solid var(--jf-navy);
   box-shadow:var(--jf-sombra);padding:18px 24px 16px;margin-bottom:22px;align-items:center;}
+
+/* 4) cronograma: cada atividade numa faixa, para separar as linhas (alterna branco / azul-claro, fio entre elas) */
+.jf-pele .tbl-cron tbody tr.cron-lin>td{background:var(--jf-card);border-bottom:1px solid var(--jf-line2);}
+.jf-pele .tbl-cron tbody tr.cron-lin:nth-child(even)>td{background:var(--jf-total);}
+.jf-pele .tbl-cron tbody tr.cron-lin:hover>td{background:var(--jf-hover);}
+.jf-pele .tbl-cron tbody tr.cron-macro>td,.jf-pele .tbl-cron tbody tr.cron-macro:nth-child(even)>td{background:var(--jf-paper-warn);}
+.jf-pele .tbl-cron tbody tr.cron-lin.row-inativa>td{background:var(--jf-zebra);}
+.jf-pele .tbl-cron tbody tr.cron-grupo>td{background:var(--jf-navy);color:#fff;border-bottom:0;}
+.jf-pele .tbl-cron tbody tr.cron-grupo>td strong{color:#fff;}
+.jf-pele .tbl-cron tbody tr.cron-grupo>td *{color:#d9e2ee;}
+.jf-pele .tbl-cron tbody tr.cron-grupo>td strong{color:#fff;}
