@@ -284,6 +284,24 @@
       <a href="/carteira" class="sb-link {{ 'active' if cur=='/carteira' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         <span class="sb-label">Carteira do Time</span></a>
+      {% if current_user.is_team %}
+      <a href="/cronograma" class="sb-link {{ 'active' if cur=='/cronograma' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m9 16 2 2 4-4"/></svg>
+        <span class="sb-label">Cronograma</span></a>
+      {% endif %}
+      {% if current_user.is_team %}
+      <a href="/agenda-reunioes" class="sb-link {{ 'active' if cur=='/agenda-reunioes' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+        <span class="sb-label">Agenda de Reuniões</span></a>
+      {% endif %}
+      <a href="/report-fechamento" class="sb-link {{ 'active' if cur=='/report-fechamento' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m8 12 3 3 5-6"/></svg>
+        <span class="sb-label">Report do Fechamento</span></a>
+      {% if current_user.is_team and not current_user.is_controladoria %}
+      <a href="/admin?tab=carteira" class="sb-link {{ 'active' if cur=='/admin' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span class="sb-label">Entidades</span></a>
+      {% endif %}
         </div>
       </div>
       {% endif %}
@@ -311,11 +329,6 @@
           <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <div class="sb-group-items">
-      {% if current_user.is_team %}
-      <a href="/cronograma" class="sb-link {{ 'active' if cur=='/cronograma' }}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m9 16 2 2 4-4"/></svg>
-        <span class="sb-label">Cronograma</span></a>
-      {% endif %}
       {% if current_user.is_controladoria %}
       <a href="/resumo" class="sb-link {{ 'active' if cur=='/resumo' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
@@ -329,19 +342,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m9.5 15 5 0"/></svg>
         <span class="sb-label">Feriados</span></a>
       {% endif %}
-      {% if current_user.is_team and not current_user.is_controladoria %}
-      <a href="/admin?tab=carteira" class="sb-link {{ 'active' if cur=='/admin' }}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-        <span class="sb-label">Entidades</span></a>
-      {% endif %}
-      {% if current_user.is_team %}
-      <a href="/agenda-reunioes" class="sb-link {{ 'active' if cur=='/agenda-reunioes' }}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
-        <span class="sb-label">Agenda de Reuniões</span></a>
-      {% endif %}
-      <a href="/report-fechamento" class="sb-link {{ 'active' if cur=='/report-fechamento' }}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m8 12 3 3 5-6"/></svg>
-        <span class="sb-label">Report do Fechamento</span></a>
       <a href="/comunicacao" class="sb-link {{ 'active' if cur=='/comunicacao' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         <span class="sb-label">Comunicação</span></a>
