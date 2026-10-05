@@ -68,18 +68,44 @@ def register_admin_routes(app):
             return f(*a, **k)
         return wrap
 
+    def entidades_required(f):
+        """Entidades: controladoria/admin (tudo) e profissional (só os clusters dele)."""
+        @wraps(f)
+        @login_required
+        def wrap(*a, **k):
+            if not current_user.is_team:
+                abort(403)
+            return f(*a, **k)
+        return wrap
+
+    def _restrito():
+        return not current_user.is_controladoria
+
+    def _ids_permitidos():
+        """None = sem limite; senão, ids das entidades dos clusters da pessoa."""
+        if not _restrito():
+            return None
+        m = TeamMember.query.filter_by(user_id=current_user.id).first()
+        if not m:
+            return set()
+        return {a.id for a in CompanyAssignment.query.join(
+            Cluster, CompanyAssignment.cluster_id == Cluster.id)
+            .filter(Cluster.member_id == m.id).all()}
+
     # ==================================================================
     # PAGINA PRINCIPAL
     # ==================================================================
     @app.route("/admin")
-    @admin_required
+    @entidades_required
     def admin():
         companies = Company.query.order_by(Company.name).all()
         users = User.query.order_by(User.role, User.display_name).all()
         members = TeamMember.query.order_by(db.func.lower(TeamMember.name)).all()
         clusters = Cluster.query.order_by(Cluster.sort_order, Cluster.name).all()
         ordem_cl = {c.id: i for i, c in enumerate(clusters)}
-        assignments = sorted(CompanyAssignment.query.join(Company).all(),
+        permitidos = _ids_permitidos()
+        assignments = sorted((a for a in CompanyAssignment.query.join(Company).all()
+                              if permitidos is None or a.id in permitidos),
                              key=lambda a: (ordem_cl.get(a.cluster_id, 10**6), (a.segment or "~").lower(),
                                             a.company.name.lower()))
         comps = Competency.query.order_by(Competency.year.desc(),
@@ -104,7 +130,8 @@ def register_admin_routes(app):
             role_labels=ROLE_LABELS, deliverables=DELIVERABLES, flows=FLOWS,
             responsibilities=RESPONSIBILITIES, segments=segments, seg_objs=seg_objs,
             panels=panels,
-            default_password=DEFAULT_PASSWORD, tab=request.args.get("tab", "time"),
+            default_password=DEFAULT_PASSWORD, restrito=_restrito(),
+            tab=("carteira" if _restrito() else request.args.get("tab", "time")),
             mod_consolidacao=str(get_setting("mod_consolidacao", "0")) == "1",
             competencia_atual_id=(int(get_setting("competencia_atual_id"))
                                   if get_setting("competencia_atual_id") else None),
@@ -254,7 +281,7 @@ def register_admin_routes(app):
         return _back("carteira")
 
     @app.route("/admin/carteira/salvar", methods=["POST"])
-    @admin_required
+    @entidades_required
     def admin_carteira_salvar():
         """Salva a tabela inteira de uma vez.
 
@@ -262,7 +289,10 @@ def register_admin_routes(app):
         clicava em 'Salvar' numa delas perdia as outras sem aviso.
         """
         alterados = 0
+        permitidos = _ids_permitidos()
         for a in CompanyAssignment.query.all():
+            if permitidos is not None and a.id not in permitidos:
+                continue
             pref = f"a{a.id}_"
             if not any(k.startswith(pref) for k in request.form):
                 continue
@@ -552,14 +582,16 @@ def register_admin_routes(app):
         return _fecha_lote(n, erros, "segmento", "org")
 
     @app.route("/admin/entidades/pdf")
-    @admin_required
+    @entidades_required
     def admin_entidades_pdf():
         """Relatório de impressão (A4) da distribuição: cluster > segmento > entidade.
         Abre a janela de impressão do navegador — 'Salvar como PDF'."""
         import fuso
         clusters = Cluster.query.order_by(Cluster.sort_order, Cluster.name).all()
         ordem = {c.id: i for i, c in enumerate(clusters)}
-        linhas = sorted(CompanyAssignment.query.join(Company).all(),
+        permitidos = _ids_permitidos()
+        linhas = sorted((a for a in CompanyAssignment.query.join(Company).all()
+                         if permitidos is None or a.id in permitidos),
                         key=lambda a: (ordem.get(a.cluster_id, 10**6),
                                        (a.segment or "~").lower(), a.company.name.lower()))
         grupos = []                          # [(cluster|None, [(segmento, [linhas])])]
@@ -580,11 +612,14 @@ def register_admin_routes(app):
                                gerado=fuso.agora(), autor=current_user.display_name)
 
     @app.route("/admin/carteira/mover", methods=["POST"])
-    @admin_required
+    @entidades_required
     def admin_carteira_mover():
         """Move as entidades marcadas para um cluster ("0" = sem cluster)."""
         destino = request.form.get("destino")
         ids = [i for i in (_int(x) for x in request.form.getlist("sel")) if i]
+        permitidos = _ids_permitidos()
+        if permitidos is not None:
+            ids = [i for i in ids if i in permitidos]
         if not ids or destino in (None, ""):
             flash("Marque as entidades e escolha o cluster de destino.", "warning")
             return _back("carteira")
@@ -606,9 +641,12 @@ def register_admin_routes(app):
         return _back("carteira")
 
     @app.route("/admin/assignment/<int:aid>/excluir", methods=["POST"])
-    @admin_required
+    @entidades_required
     def admin_assignment_delete(aid):
         a = db.session.get(CompanyAssignment, aid) or abort(404)
+        permitidos = _ids_permitidos()
+        if permitidos is not None and a.id not in permitidos:
+            abort(403)
         nome = a.company.name
         db.session.delete(a)
         db.session.commit()

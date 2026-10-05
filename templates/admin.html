@@ -5,21 +5,22 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Administração</h1>
-    <div class="sub">Cadastro dos dados-mestre: time, carteira, empresas, usuários e template.</div></div>
+    <div class="sub">{% if restrito %}Entidades dos clusters sob a sua responsabilidade: responsável, entregas, aviso de prazo e contatos.{% else %}Cadastro dos dados-mestre: time, carteira, empresas, usuários e template.{% endif %}</div></div>
 </div>
 
 <div class="adm-tabs" id="adm-tabs">
-  <button class="adm-tab" data-tab="time">Time <span class="cnt">{{ members|length }}</span></button>
+  {% if not restrito %}<button class="adm-tab" data-tab="time">Time <span class="cnt">{{ members|length }}</span></button>{% endif %}
   <button class="adm-tab" data-tab="carteira">Entidades <span class="cnt">{{ assignments|length }}</span></button>
-  <button class="adm-tab" data-tab="org">Organização <span class="cnt">{{ companies|length }}</span></button>
+  {% if not restrito %}<button class="adm-tab" data-tab="org">Organização <span class="cnt">{{ companies|length }}</span></button>
   <button class="adm-tab" data-tab="sistema">Sistema</button>
   <a class="adm-tab" href="/alertas">Alertas</a>
-  <a class="adm-tab" href="/avisos-empresas">Avisos às empresas</a>
+  <a class="adm-tab" href="/avisos-empresas">Avisos às empresas</a>{% endif %}
 </div>
 
 <!-- Formularios das linhas editaveis (HTML nao permite <form> dentro de <tr>;
      usamos o atributo form= dos campos apontando para estes) -->
 <div hidden>
+  {% if not restrito %}
   {% for m in members %}
     <form id="memdel-{{ m.id }}" method="post" action="/admin/member/{{ m.id }}/excluir"
           onsubmit="return confirm('Remover {{ m.name }}? Se tiver empresas na carteira, será apenas inativado.');">{{ csrf() }}</form>
@@ -29,23 +30,29 @@
     <form id="cldel-{{ cl.id }}" method="post" action="/admin/cluster/{{ cl.id }}/excluir"
           onsubmit="return confirm('Excluir o cluster {{ cl.name }}?');">{{ csrf() }}</form>
   {% endfor %}
+  {% endif %}
   <form id="form-mover" method="post" action="/admin/carteira/mover">{{ csrf() }}</form>
   {% for a in assignments %}
     <form id="asgdel-{{ a.id }}" method="post" action="/admin/assignment/{{ a.id }}/excluir"
           onsubmit="return confirm('Remover {{ a.company.name }} da carteira?');">{{ csrf() }}</form>
   {% endfor %}
+  {% if not restrito %}
   {% for c in companies %}
     <form id="empdel-{{ c.id }}" method="post" action="/admin/company/{{ c.id }}/excluir"
           onsubmit="return confirm('Excluir {{ c.name }}? Se houver envios, será apenas inativada.');">{{ csrf() }}</form>
   {% endfor %}
+  {% endif %}
+  {% if not restrito %}
   {% for u in users %}
     <form id="usrpw-{{ u.id }}" method="post" action="/admin/user/{{ u.id }}/senha"
           onsubmit="return confirm('Redefinir a senha de {{ u.email }} para {{ default_password }}?');">
       {{ csrf() }}<input type="hidden" name="password" value="{{ default_password }}"/></form>
   {% endfor %}
+  {% endif %}
 </div>
 
 <!-- =================== TIME =================== -->
+{% if not restrito %}
 <section class="adm-pane" data-pane="time">
   <div class="card">
     <h2>Novo membro do time</h2>
@@ -224,9 +231,11 @@
     </script>
   </div>
 </section>
+{% endif %}
 
 <!-- =================== CARTEIRA =================== -->
 <section class="adm-pane" data-pane="carteira">
+{% if not restrito %}
   {% if orphan_companies %}
   <div class="alert alert-warning">
     <strong>{{ orphan_companies|length }} empresa(s) fora do grupo:</strong>
@@ -322,6 +331,7 @@
     </form>
   </div>
 
+{% endif %}
   <div class="card">
     <div class="flex items-center gap-1" style="justify-content:space-between;flex-wrap:wrap;">
       <h2 style="margin:0;">Entidades ({{ assignments|length }})</h2>
@@ -428,11 +438,12 @@
     {% else %}
       <div class="empty-box"><div class="empty-ico">{{ icone('table', 30) }}</div>
         <p><strong>Nenhuma entidade cadastrada.</strong></p>
-        <p class="text-muted text-sm">Inclua as empresas acima para distribuir os painéis entre o time.</p></div>
+        <p class="text-muted text-sm">{% if restrito %}Quando a Controladoria indicar você como responsável por um cluster, as entidades dele aparecem aqui.{% else %}Inclua as empresas acima para distribuir os painéis entre o time.{% endif %}</p></div>
     {% endif %}
   </div>
 </section>
 
+{% if not restrito %}
 <!-- =================== ORGANIZAÇÃO =================== -->
 <section class="adm-pane" data-pane="org">
   <div class="grid-2">
@@ -573,8 +584,10 @@
     {% else %}<p class="text-muted text-sm">Nenhum segmento cadastrado.</p>{% endif %}
   </div>
 </section>
+{% endif %}
 
 <!-- =================== SISTEMA =================== -->
+{% if not restrito %}
 <section class="adm-pane" data-pane="sistema">
   <div class="card">
     <h2>Competência atual (mês vigente)</h2>
@@ -674,6 +687,7 @@
       dia acontecem quando voltar a subir.</p>
   </div>
 </section>
+{% endif %}
 
 <script>
 // ==== Tabelas com "Salvar alterações" único (membros, empresas, usuários) ====

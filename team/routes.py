@@ -1764,52 +1764,6 @@ def register_team_routes(app):
     # ==================================================================
     # CARTEIRA (empresa x pessoa) — o "pilotar paineis"
     # ==================================================================
-    # ------------------------------------------------------------------
-    # Entregas por entidade, para quem responde por um cluster (profissional)
-    # ------------------------------------------------------------------
-    def _assignments_do_cluster():
-        """(lista, escopo): profissional vê só os clusters dele; gestão vê todos."""
-        from team.models import Cluster
-        q = (CompanyAssignment.query.join(Company)
-             .outerjoin(Cluster, CompanyAssignment.cluster_id == Cluster.id)
-             .filter(Company.active.is_(True)))
-        escopo = not current_user.is_controladoria
-        if escopo:
-            m = _current_member()
-            q = q.filter(Cluster.member_id == (m.id if m else -1))
-        rows = q.order_by(db.func.coalesce(Cluster.sort_order, 9999), Cluster.name,
-                          CompanyAssignment.segment, Company.name).all()
-        return rows, escopo
-
-    @app.route("/entidades-cluster")
-    @team_required
-    def team_entidades_cluster():
-        from admin_center import DELIVERABLES
-        rows, escopo = _assignments_do_cluster()
-        return render_template("team/meu_cluster.html", assignments=rows, escopo=escopo,
-                               deliverables=DELIVERABLES)
-
-    @app.route("/entidades-cluster/salvar", methods=["POST"])
-    @team_required
-    def team_entidades_cluster_salvar():
-        from admin_center import DELIVERABLES
-        rows, _escopo = _assignments_do_cluster()
-        alterados = 0
-        for a in rows:                     # só as linhas que a pessoa pode ver
-            pref = f"a{a.id}_"
-            if (pref + "presente") not in request.form:
-                continue
-            novo = [d for d in request.form.getlist(pref + "deliverables") if d in DELIVERABLES]
-            if sorted(novo) != sorted(a.deliverables):
-                a.deliverables = novo
-                alterados += 1
-        db.session.commit()
-        log_audit(current_user.id, "entregas_cluster_salvas", "assignment",
-                  f"{alterados} alteradas")
-        flash(f"{alterados} entidade(s) atualizada(s)." if alterados
-              else "Nenhuma alteração para salvar.", "success" if alterados else "info")
-        return redirect(url_for("team_entidades_cluster"))
-
     @app.route("/carteira")
     @team_required
     def team_carteira():
