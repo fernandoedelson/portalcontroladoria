@@ -9,7 +9,7 @@
 .jf-pele{
   --primary:var(--jf-navy); --primary-2:var(--jf-navy2); --primary-lt:var(--jf-navy); --primary-lt-2:var(--jf-navy2);
   --accent:var(--jf-gold); --accent-2:var(--jf-gold);
-  --bg:var(--jf-bg); --bg-2:var(--jf-paper); --surface:var(--jf-card); --surface-2:var(--jf-zebra); --surface-hi:var(--jf-total);
+  --bg:var(--jf-bg); --bg-2:var(--jf-paper); --surface:var(--jf-card); --surface-2:var(--jf-paper-warn); --surface-hi:var(--jf-total);
   --border:var(--jf-line); --border-2:var(--jf-line2);
   --text:var(--jf-ink); --text-muted:var(--jf-muted); --text-soft:var(--jf-muted);
   --success:var(--jf-good); --danger:var(--jf-bad); --warning:var(--jf-gold); --info:var(--jf-accent);
@@ -17,7 +17,7 @@
   --danger-lt:#fbeeee; --danger-text:var(--jf-bad); --danger-border:#e9c5c7;
   --warning-lt:var(--jf-paper-warn); --warning-text:#74592f; --warning-border:#e5d6b8;
   --info-lt:var(--jf-paper); --info-text:var(--jf-navy); --info-border:#c9d6e6;
-  --r-papel:var(--jf-bg); --r-folha:var(--jf-card); --r-folha-2:var(--jf-zebra); --r-folha-3:var(--jf-total);
+  --r-papel:var(--jf-bg); --r-folha:var(--jf-card); --r-folha-2:var(--jf-paper-warn); --r-folha-3:var(--jf-total);
   --r-pauta:var(--jf-line); --r-pauta-2:var(--jf-line2);
   --r-tinta:var(--jf-navy); --r-grafite:var(--jf-muted); --r-grafite-2:var(--jf-muted);
   --r-verde:var(--jf-good); --r-ouro:#74592f; --r-ouro-ui:var(--jf-gold); --r-ouro-marca:var(--jf-gold); --r-carimbo:var(--jf-bad);
@@ -56,11 +56,25 @@
 
 /* 4) cronograma: cada atividade numa faixa, para separar as linhas (alterna branco / azul-claro, fio entre elas) */
 .jf-pele .tbl-cron tbody tr.cron-lin>td{background:var(--jf-card);border-bottom:1px solid var(--jf-line2);}
-.jf-pele .tbl-cron tbody tr.cron-lin:nth-child(even)>td{background:var(--jf-total);}
-.jf-pele .tbl-cron tbody tr.cron-lin:hover>td{background:var(--jf-hover);}
+.jf-pele .tbl-cron tbody tr.cron-lin:nth-child(even)>td{background:var(--jf-paper-warn);}
+.jf-pele .tbl-cron tbody tr.cron-lin:hover>td{background:#f1e8d6;}
 .jf-pele .tbl-cron tbody tr.cron-macro>td,.jf-pele .tbl-cron tbody tr.cron-macro:nth-child(even)>td{background:var(--jf-paper-warn);}
-.jf-pele .tbl-cron tbody tr.cron-lin.row-inativa>td{background:var(--jf-zebra);}
+.jf-pele .tbl-cron tbody tr.cron-lin.row-inativa>td{background:var(--jf-card);}
 .jf-pele .tbl-cron tbody tr.cron-grupo>td{background:var(--jf-navy);color:#fff;border-bottom:0;}
 .jf-pele .tbl-cron tbody tr.cron-grupo>td strong{color:#fff;}
 .jf-pele .tbl-cron tbody tr.cron-grupo>td *{color:#d9e2ee;}
 .jf-pele .tbl-cron tbody tr.cron-grupo>td strong{color:#fff;}
+
+/* 5) listas e tabelas em geral: faixas branco / creme (nada de cinza), destaque ao passar o mouse em creme mais forte */
+.jf-pele .tbl tbody tr>td{background:var(--jf-card);}
+.jf-pele .tbl tbody tr:nth-child(even)>td{background:var(--jf-paper-warn);}
+.jf-pele .tbl tbody tr:hover>td{background:#f1e8d6;}
+.jf-pele .ent-cluster .ent-linha:nth-child(even){background:var(--jf-paper-warn);}
+.jf-pele .ent-cluster .ent-linha:hover{background:#f1e8d6;}
+.jf-pele .tbl td.rf-entregue,.jf-pele .tbl tbody tr:nth-child(even)>td.rf-entregue{background:var(--success-lt);}
+.jf-pele .tbl td.rf-atrasada,.jf-pele .tbl tbody tr:nth-child(even)>td.rf-atrasada{background:var(--danger-lt);}
+.jf-pele .tbl td.rf-postergada,.jf-pele .tbl tbody tr:nth-child(even)>td.rf-postergada{background:#f6e7c8;}
+.jf-pele .tbl td.rf-pendente,.jf-pele .tbl tbody tr:nth-child(even)>td.rf-pendente{background:var(--info-lt);}
+.jf-pele .tbl tbody tr.cron-grupo>td,.jf-pele .tbl tbody tr.cron-grupo:hover>td{background:var(--jf-navy);}
+.jf-pele .tbl tbody tr.rf-grupo>td,.jf-pele .tbl tbody tr.rf-grupo:hover>td{background:var(--jf-navy);color:#fff;}
+.jf-pele .tbl-cron tbody tr.cron-macro>td,.jf-pele .tbl-cron tbody tr.cron-macro:hover>td{background:var(--jf-paper-warn);}
