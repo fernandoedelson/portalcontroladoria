@@ -1,0 +1,54 @@
+/* =====================================================================
+   Pele J&F no Portal Controladoria (system design, modo Pele).
+   Carrega DEPOIS do razao.css e do design-system-pele.css. Só vale com <html class="jf-pele">,
+   que o base.html liga no tema claro (o system design não tem tema escuro) e que a variável
+   de ambiente PORTAL_PELE=0 desliga. Mexe em cor, fonte e acabamento; o quadro do cabeçalho
+   das páginas é a única exceção (precisa de espaço interno).
+   ===================================================================== */
+/* 1) variáveis do portal religadas aos tokens --jf-* */
+.jf-pele{
+  --primary:var(--jf-navy); --primary-2:var(--jf-navy2); --primary-lt:var(--jf-navy); --primary-lt-2:var(--jf-navy2);
+  --accent:var(--jf-gold); --accent-2:var(--jf-gold);
+  --bg:var(--jf-bg); --bg-2:var(--jf-paper); --surface:var(--jf-card); --surface-2:var(--jf-zebra); --surface-hi:var(--jf-total);
+  --border:var(--jf-line); --border-2:var(--jf-line2);
+  --text:var(--jf-ink); --text-muted:var(--jf-muted); --text-soft:var(--jf-muted);
+  --success:var(--jf-good); --danger:var(--jf-bad); --warning:var(--jf-gold); --info:var(--jf-accent);
+  --success-lt:#edf6f0; --success-text:var(--jf-good); --success-border:#c4dfcf;
+  --danger-lt:#fbeeee; --danger-text:var(--jf-bad); --danger-border:#e9c5c7;
+  --warning-lt:var(--jf-paper-warn); --warning-text:#74592f; --warning-border:#e5d6b8;
+  --info-lt:var(--jf-paper); --info-text:var(--jf-navy); --info-border:#c9d6e6;
+  --r-papel:var(--jf-bg); --r-folha:var(--jf-card); --r-folha-2:var(--jf-zebra); --r-folha-3:var(--jf-total);
+  --r-pauta:var(--jf-line); --r-pauta-2:var(--jf-line2);
+  --r-tinta:var(--jf-navy); --r-grafite:var(--jf-muted); --r-grafite-2:var(--jf-muted);
+  --r-verde:var(--jf-good); --r-ouro:#74592f; --r-ouro-ui:var(--jf-gold); --r-ouro-marca:var(--jf-gold); --r-carimbo:var(--jf-bad);
+  --r-btn:var(--jf-navy); --r-btn-hover:var(--jf-navy2);
+  --r-display:var(--jf-serif); --r-texto:var(--jf-sans); --r-mono:var(--jf-mono);
+  --sb-bg:var(--jf-bg); --sb-bg-2:var(--jf-bg); --sb-border:var(--jf-line);
+  --sb-fg:var(--jf-muted); --sb-fg-hi:var(--jf-navy); --sb-active:transparent;
+  --ring:0 0 0 3px rgba(155,124,75,.35);
+  --grad-primary:linear-gradient(var(--jf-navy),var(--jf-navy)); --grad-accent:linear-gradient(var(--jf-gold),var(--jf-gold));
+  --grad-nav:linear-gradient(var(--jf-navy),var(--jf-navy));
+}
+.jf-pele h1,.jf-pele h2,.jf-pele h3,.jf-pele .page-head h1,.jf-pele .card h2{font-stretch:100%;}
+.jf-pele .tbl th{font-family:var(--jf-sans);}
+.jf-pele .btn-primary,.jf-pele .btn.btn-primary{background:var(--jf-navy);border-color:var(--jf-navy);color:#fff;}
+
+/* 2) menu lateral creme: aberto = rente à página; recolhido = faixa flutuante com sombra */
+.jf-pele .sidebar{background:var(--jf-bg);border-right:0;box-shadow:none;}
+.jf-pele .app-shell.sb-mini .sidebar{box-shadow:6px 0 22px rgba(20,38,75,.16);border-right:1px solid var(--jf-line);position:relative;z-index:30;}
+.jf-pele .sidebar button,.jf-pele .sb-group-head,.jf-pele .sb-collapse{background:transparent;border:0;color:var(--jf-muted);border-radius:0;font-family:var(--jf-sans);}
+.jf-pele .sidebar button:hover{background:var(--jf-hover);color:var(--jf-navy);}
+.jf-pele .sidebar nav a,.jf-pele .sidebar .sb-link{color:var(--jf-muted);background:transparent;border-radius:0;border-left:0;}
+.jf-pele .sidebar nav a:hover,.jf-pele .sidebar .sb-link:hover{color:var(--jf-navy);background:transparent;}
+.jf-pele .sidebar .sb-link.active{color:var(--jf-navy);font-weight:700;background:transparent;box-shadow:inset -3px 0 0 var(--jf-gold);}
+.jf-pele .sidebar .sb-brand{border-bottom:0;}
+.jf-pele .sidebar .sb-title b{color:var(--jf-navy);font-stretch:100%;font-weight:400;}
+.jf-pele .sidebar .sb-title small,.jf-pele .sidebar .sb-version{color:var(--jf-muted);}
+.jf-pele .sidebar .sb-logo{background:#fff;border:1px solid var(--jf-line);}
+.jf-pele .sidebar .sb-group-head,.jf-pele .sidebar .sb-group-head .sb-label,.jf-pele .sidebar .sb-group-head .sb-chev{color:var(--jf-muted) !important;background:transparent !important;letter-spacing:.14em;}
+.jf-pele .sidebar .sb-collapse,.jf-pele .sidebar .sb-foot button{border:1px solid var(--jf-line2);background:transparent;}
+.jf-pele .sidebar hr,.jf-pele .sidebar .sb-sep{border-color:var(--jf-line);}
+
+/* 3) cabeçalho de cada página em quadro, com o fio azul-marinho no topo */
+.jf-pele .page-head{background:var(--jf-card);border:1px solid var(--jf-line);border-top:3px solid var(--jf-navy);
+  box-shadow:var(--jf-sombra);padding:18px 24px 16px;margin-bottom:22px;align-items:center;}

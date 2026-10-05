@@ -5,6 +5,7 @@ Somente o modulo de Gestao do Time (atividades, projetos, indicadores,
 capacidade, ferias, carteira, alertas, atas, tarefas e notas). O modulo de
 Consolidacao foi removido desta versao.
 """
+import os
 import fuso
 fuso.ativa()                 # antes de tudo: o servidor roda em UTC
 from datetime import datetime
@@ -252,7 +253,8 @@ def register_routes(app):
         return {"APP_NAME": Config.APP_NAME, "ORG": Config.ORG,
                 "unread_notifications": unread, "app_version": "1.9.0",
                 "consolidacao_ativa": False, "now": fuso.agora(), "topo": topo,
-                "n_atrasadas_topo": n_atr}
+                "n_atrasadas_topo": n_atr,
+                "pele": os.environ.get("PORTAL_PELE", "1") != "0"}
 
     # ---------------- Auth ----------------
     @app.route("/login", methods=["GET", "POST"])

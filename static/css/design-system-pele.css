@@ -1,0 +1,100 @@
+/* =====================================================================
+   PELE (identidade visual apenas) do system design J&F, 02/10/2026.
+   Para aplicações que já existem e que só vão ganhar a cara J&F: cor, fonte e acabamento. NÃO mexe na estrutura.
+
+   Garantias (conferidas por validar_pele.py):
+     * nenhuma propriedade de layout: sem display, position, grid/flex, width/height, margin, padding, gap, overflow, z-index;
+     * tudo prefixado: tokens --jf-*; regras só dentro de .jf-pele (nada vaza para o resto da página);
+     * sem tema escuro: o system design não tem. Aplique a classe só no tema claro.
+
+   Como usar, do mais leve ao mais completo:
+     A) só os tokens: carregue este arquivo e use var(--jf-navy), var(--jf-serif)... no CSS da própria aplicação;
+     B) tokens + pele automática: <body class="jf-pele">; ela recolore texto, títulos, links, botões, campos, tabelas e avisos
+        pelos seletores comuns (button, input, table, h1..h3, a). A aplicação mantém suas classes e sua estrutura;
+     C) mapa para as variáveis da aplicação: no fim do arquivo (seção "mapa") há o padrão para religar --primary, --bg etc.
+   Para desligar: tirar a classe jf-pele (ou o <link>).
+   ===================================================================== */
+
+:root{
+  /* cor (mesmos valores do design-system.css) */
+  --jf-navy:#14264b; --jf-navy2:#1c3260; --jf-accent:#2E5FA3; --jf-accent-l:#6f9bd6;
+  --jf-ink:#253347; --jf-muted:#596473; --jf-line:#dfe3e7; --jf-line2:#bac4ce;
+  --jf-good:#166640; --jf-bad:#a52d35; --jf-gold:#9b7c4b;
+  --jf-bg:#f5f4f0; --jf-card:#ffffff; --jf-paper:#f3f6f9; --jf-paper-warn:#faf6ee;
+  --jf-zebra:#f5f7f9; --jf-total:#eaf0f5; --jf-hover:#e7ebef;
+  /* fonte */
+  --jf-serif:Georgia,"Times New Roman",serif;
+  --jf-sans:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --jf-mono:Consolas,Menlo,monospace;
+  /* acabamento */
+  --jf-sombra:0 1px 4px rgba(20,38,75,.08);
+  --jf-foco:2px solid var(--jf-gold);
+}
+
+/* ---- base: cor de fundo, texto e família (o tamanho de letra da aplicação não é alterado) ---- */
+.jf-pele{background:var(--jf-bg);color:var(--jf-ink);font-family:var(--jf-sans);-webkit-font-smoothing:antialiased}
+.jf-pele h1,.jf-pele h2{font-family:var(--jf-serif);font-weight:400;color:var(--jf-navy);letter-spacing:-.4px}
+.jf-pele h3,.jf-pele h4,.jf-pele h5{font-family:var(--jf-sans);font-weight:700;color:var(--jf-navy)}
+.jf-pele a{color:var(--jf-accent)}
+.jf-pele a:hover{color:var(--jf-navy)}
+.jf-pele small,.jf-pele .muted,.jf-pele .texto-suave{color:var(--jf-muted)}
+.jf-pele hr{border-color:var(--jf-line2)}
+.jf-pele code,.jf-pele kbd,.jf-pele pre{font-family:var(--jf-mono)}
+.jf-pele :focus-visible{outline:var(--jf-foco);outline-offset:3px}
+.jf-pele ::selection{background:var(--jf-accent-l);color:#fff}
+
+/* ---- superfícies: cartões, painéis, modais (só cor, borda e sombra) ---- */
+.jf-pele .card,.jf-pele .cartao,.jf-pele .panel,.jf-pele .painel,.jf-pele .modal,.jf-pele .modal-content,.jf-pele dialog{
+  background:var(--jf-card);border-color:var(--jf-line);box-shadow:var(--jf-sombra);color:var(--jf-ink)}
+
+/* ---- botões: primário navy, secundário contornado, perigo na cor do sistema ---- */
+.jf-pele button,.jf-pele .btn,.jf-pele input[type=button],.jf-pele input[type=submit]{
+  font-family:var(--jf-sans);font-weight:600;background:#fff;color:var(--jf-navy);border:1px solid var(--jf-line2);border-radius:2px}
+.jf-pele button:hover,.jf-pele .btn:hover{background:var(--jf-hover);border-color:var(--jf-navy)}
+.jf-pele button.primario,.jf-pele .btn-primary,.jf-pele .btn.primary,.jf-pele .primary,.jf-pele button[type=submit],.jf-pele input[type=submit]{
+  background:var(--jf-navy);color:#fff;border-color:var(--jf-navy)}
+.jf-pele button.primario:hover,.jf-pele .btn-primary:hover,.jf-pele .btn.primary:hover,.jf-pele .primary:hover,.jf-pele button[type=submit]:hover{
+  background:var(--jf-navy2);border-color:var(--jf-navy2)}
+.jf-pele .perigo,.jf-pele .btn-danger,.jf-pele .danger{background:var(--jf-bad);color:#fff;border-color:var(--jf-bad)}
+.jf-pele button:disabled,.jf-pele .btn:disabled{opacity:.55}
+
+/* ---- campos de formulário ---- */
+.jf-pele input,.jf-pele select,.jf-pele textarea{font-family:var(--jf-sans);color:var(--jf-ink);background:#fff;border:1px solid var(--jf-line2);border-radius:2px}
+.jf-pele input:focus,.jf-pele select:focus,.jf-pele textarea:focus{border-color:var(--jf-accent);outline:var(--jf-foco)}
+.jf-pele input::placeholder,.jf-pele textarea::placeholder{color:var(--jf-muted)}
+.jf-pele input[type=checkbox],.jf-pele input[type=radio],.jf-pele input[type=range]{accent-color:var(--jf-navy)}
+.jf-pele label{color:var(--jf-ink)}
+
+/* ---- tabelas: cabeçalho navy, zebra suave, total em destaque ---- */
+.jf-pele table{border-color:var(--jf-line);font-variant-numeric:tabular-nums}
+.jf-pele thead th{background:var(--jf-navy);color:#fff;font-weight:600;border-color:var(--jf-navy)}
+.jf-pele td,.jf-pele tbody th{border-color:var(--jf-line)}
+.jf-pele tbody tr:nth-child(even){background:var(--jf-zebra)}
+.jf-pele tbody tr:hover{background:var(--jf-hover)}
+.jf-pele tr.total td,.jf-pele tfoot td,.jf-pele tfoot th{background:var(--jf-total);color:var(--jf-navy);font-weight:700;border-top:2px solid var(--jf-navy)}
+
+/* ---- avisos, selos e valores ---- */
+.jf-pele .note,.jf-pele .aviso,.jf-pele .alert-info,.jf-pele .info{background:var(--jf-paper);border-left:3px solid var(--jf-accent);color:var(--jf-ink)}
+.jf-pele .warn,.jf-pele .alerta,.jf-pele .alert-warning,.jf-pele .atencao{background:var(--jf-paper-warn);border-left:3px solid var(--jf-gold);color:var(--jf-ink)}
+.jf-pele .erro,.jf-pele .alert-danger,.jf-pele .error{background:#fbeeee;border-left:3px solid var(--jf-bad);color:var(--jf-bad)}
+.jf-pele .ok,.jf-pele .alert-success,.jf-pele .sucesso{background:#edf6f0;border-left:3px solid var(--jf-good);color:var(--jf-good)}
+.jf-pele .pos,.jf-pele .positivo{color:var(--jf-good)}
+.jf-pele .neg,.jf-pele .negativo{color:var(--jf-bad)}
+.jf-pele .badge,.jf-pele .selo,.jf-pele .tag{background:var(--jf-paper);color:var(--jf-navy);border:1px solid var(--jf-line2)}
+
+/* ---- navegação: só cor (abas, menus, itens ativos) ---- */
+.jf-pele nav a,.jf-pele .menu a,.jf-pele .tab,.jf-pele .abas a{color:var(--jf-muted)}
+.jf-pele nav a:hover,.jf-pele .menu a:hover,.jf-pele .tab:hover,.jf-pele .abas a:hover{color:var(--jf-navy)}
+.jf-pele nav a.ativo,.jf-pele nav a.active,.jf-pele .menu a.ativo,.jf-pele .tab.ativo,.jf-pele .tab.active,.jf-pele [aria-current=page]{
+  color:var(--jf-navy);font-weight:700;border-color:var(--jf-gold)}
+
+/* ---- mapa para as variáveis da aplicação (copie e ajuste os nomes do lado esquerdo) ----
+   .jf-pele{
+     --primary:var(--jf-navy);   --primary-hover:var(--jf-navy2);   --accent:var(--jf-accent);
+     --bg:var(--jf-bg);          --surface:var(--jf-card);           --text:var(--jf-ink);
+     --text-muted:var(--jf-muted); --border:var(--jf-line);          --success:var(--jf-good);
+     --danger:var(--jf-bad);     --warning:var(--jf-gold);           --font-body:var(--jf-sans);
+     --font-heading:var(--jf-serif);
+   }
+   Gráficos da aplicação: série principal --jf-navy, apoio --jf-accent e --jf-accent-l, referência #71829b,
+   positivo --jf-good, negativo --jf-bad. Números em pt-BR sem casa decimal quando a aplicação permitir. */

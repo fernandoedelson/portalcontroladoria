@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR"{% if pele %} class="jf-pele"{% endif %}>
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -22,10 +22,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Public+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"/>
   <link rel="stylesheet" href="/static/css/razao.css?v=49"/>
+  {% if pele %}<link rel="stylesheet" href="/static/css/design-system-pele.css?v=1"/>
+  <link rel="stylesheet" href="/static/css/pele-portal.css?v=1"/>{% endif %}
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
-   document.documentElement.setAttribute('data-theme',t);})();
+   document.documentElement.setAttribute('data-theme',t);
+   document.documentElement.classList.toggle('jf-pele',t!=='dark'&&{{ 'true' if pele else 'false' }});})();
   (function(){var M=document.querySelector('meta[name=csrf-token]').content;var _f=window.fetch;
    window.fetch=function(i,o){o=o||{};var m=(o.method||'GET').toUpperCase();
    if(m!=='GET'&&m!=='HEAD'){o.headers=Object.assign({'X-CSRFToken':M},o.headers||{});}return _f.call(this,i,o);};})();
@@ -433,7 +436,7 @@
   <a href="/logout" class="danger">{{ icone('logout') }}<span>Sair</span></a>
 </div>
 <script>
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('cp-theme',t);}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);document.documentElement.classList.toggle('jf-pele',t!=='dark'&&{{ 'true' if pele else 'false' }});localStorage.setItem('cp-theme',t);}
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
 function toggleSbMini(){var s=document.getElementById('app-shell');s.classList.toggle('sb-mini');localStorage.setItem('cp-sb-mini',s.classList.contains('sb-mini')?'1':'0');}
 // Menu lateral em telas pequenas. O deslocamento e' aplicado por JS com
