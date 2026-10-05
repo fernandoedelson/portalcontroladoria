@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Public+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"/>
   <link rel="stylesheet" href="/static/css/razao.css?v=49"/>
   {% if pele %}<link rel="stylesheet" href="/static/css/design-system-pele.css?v=1"/>
-  <link rel="stylesheet" href="/static/css/pele-portal.css?v=1"/>{% endif %}
+  <link rel="stylesheet" href="/static/css/pele-portal.css?v=2"/>{% endif %}
   <script>
   (function(){var s=localStorage.getItem('cp-theme');
    var t=s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
@@ -305,8 +305,8 @@
         </div>
       </div>
 
-      <div class="sb-group" data-g="sistema">
-        <button type="button" class="sb-group-head" onclick="toggleGrupo(this)" aria-expanded="true">
+      <div class="sb-group fechado" data-g="sistema">
+        <button type="button" class="sb-group-head" onclick="toggleGrupo(this)" aria-expanded="false">
           <span class="sb-label">Sistema</span>
           <svg class="sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
@@ -460,7 +460,7 @@ window.addEventListener('resize', function(){
 });
 
 // ===== Grupos recolhiveis do menu =====
-// Abertos por padrao (poucos itens no menu agora). Clicar no titulo recolhe/expande.
+// Gestão e Pessoal abertos; Sistema nasce fechado (evita rolagem no menu) e abre sozinho se a página atual for dele.
 function toggleGrupo(btn){
   var g=btn.closest('.sb-group');
   var fechado=g.classList.toggle('fechado');

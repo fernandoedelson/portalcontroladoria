@@ -41,6 +41,7 @@
 .jf-pele .sidebar nav a,.jf-pele .sidebar .sb-link{color:var(--jf-muted);background:transparent;border-radius:0;border-left:0;}
 .jf-pele .sidebar nav a:hover,.jf-pele .sidebar .sb-link:hover{color:var(--jf-navy);background:transparent;}
 .jf-pele .sidebar .sb-link.active{color:var(--jf-navy);font-weight:700;background:transparent;box-shadow:inset -3px 0 0 var(--jf-gold);}
+.jf-pele .sidebar .sb-link.active::before{display:none;}
 .jf-pele .sidebar .sb-brand{border-bottom:0;}
 .jf-pele .sidebar .sb-title b{color:var(--jf-navy);font-stretch:100%;font-weight:400;}
 .jf-pele .sidebar .sb-title small,.jf-pele .sidebar .sb-version{color:var(--jf-muted);}
