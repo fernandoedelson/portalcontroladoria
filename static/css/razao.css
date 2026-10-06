@@ -983,3 +983,6 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 .carga-h a.rot{text-decoration:none;}
 .painel-lado .card{margin-bottom:0;}
 .ferias-card .carga-h h2{font-size:1.05rem;white-space:nowrap;}
+
+/* lupa da busca do topo: tamanho garantido aqui também (se o portal.css vier de cache antigo, o ícone não vira um bloco gigante) */
+.search-box svg{width:14px !important;height:14px !important;max-width:14px;}

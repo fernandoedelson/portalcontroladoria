@@ -2012,7 +2012,10 @@ def register_team_routes(app):
                     c = l["empresa"]
                     vistos.add(c.id)
                     reu = agenda.reuniao_do_ciclo(c.id, comp)
-                    linhas.append({"empresa": c, "resp": agenda.membro_da_empresa(c.id),
+                    resp = agenda.membro_da_empresa(c.id)
+                    pode = current_user.is_controladoria or bool(
+                        resp and resp.user_id and resp.user_id == current_user.id)
+                    linhas.append({"empresa": c, "resp": resp, "pode": pode,
                                    "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu})
             linhas.sort(key=lambda x: (x["reuniao"] is None, x["reuniao"].inicio if x["reuniao"] else datetime.max,
                                        x["empresa"].name))
@@ -2069,7 +2072,7 @@ def register_team_routes(app):
                            "itens": ListaEmail.query.filter_by(tipo=tipo)
                            .order_by(ListaEmail.id).all()})
         return render_template(
-            "team/comunicacao.html", listas=listas, etapas=com.ETAPAS,
+            "team/comunicacao.html", listas=listas, etapas=com.ETAPAS, envios=com.envios_automaticos(),
             desligadas=com.etapas_desligadas(current_user.id),
             hora=com.hora_envio_txt(),
             email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),

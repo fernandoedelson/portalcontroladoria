@@ -80,11 +80,11 @@
 {% endif %}
 
 {% if reunioes %}
-<div class="card">
+<div class="card" id="reunioes">
   <h2>Reuniões de resultados <span class="text-muted text-sm">· {{ reunioes.agendadas }} de {{ reunioes.total }} agendadas</span></h2>
-  <p class="text-muted text-sm mb-1">Acompanhamento para a liderança. Agendas separadas por responsável: reuniões de clusters diferentes podem coincidir no horário.</p>
+  <p class="text-muted text-sm mb-1">Acompanhamento para a liderança. Agendas separadas por responsável: reuniões de clusters diferentes podem coincidir no horário. O líder ou o responsável da empresa pode marcar a reunião à mão (não envia convite).</p>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia previsto</th><th scope="col">Reunião agendada</th></tr></thead>
+    <thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia previsto</th><th scope="col">Reunião agendada</th><th scope="col">Marcar à mão</th></tr></thead>
     <tbody>
     {% for x in reunioes.linhas %}
     <tr>
@@ -93,6 +93,18 @@
       <td class="text-sm">{{ ['seg','ter','qua','qui','sex','sáb','dom'][x.dia.weekday()] ~ ' ' ~ x.dia.strftime('%d/%m') if x.dia else '—' }}</td>
       <td>{% if x.reuniao %}<span class="rf-leg rf-entregue">{{ x.reuniao.inicio.strftime('%d/%m') }} às {{ x.reuniao.inicio.strftime('%H:%M') }}</span>
         {% else %}<span class="rf-leg rf-pendente">não agendada</span>{% endif %}</td>
+      <td>{% if x.reuniao and not x.reuniao.link_id %}
+          <span class="text-sm text-muted">marcada à mão</span>
+          {% if x.pode %}<form method="post" action="/agenda/manual/{{ x.reuniao.id }}/remover" style="display:inline;"
+                onsubmit="return confirm('Remover a reunião de {{ x.empresa.name }}?');">{{ csrf() }}
+            <button class="btn btn-outline btn-sm btn-danger" type="submit" aria-label="Remover reunião de {{ x.empresa.name }}">{{ icone('trash') }}</button></form>{% endif %}
+        {% elif x.reuniao %}<span class="text-sm text-muted">pela empresa</span>
+        {% elif x.pode %}<form method="post" action="/agenda/manual" class="flex gap-1 items-center" style="flex-wrap:nowrap;">{{ csrf() }}
+          <input type="hidden" name="company_id" value="{{ x.empresa.id }}"/>
+          <input class="input" type="date" name="data" required aria-label="Data da reunião de {{ x.empresa.name }}" style="width:150px;"/>
+          <input class="input" type="time" name="hora" required aria-label="Hora" style="width:104px;"/>
+          <button class="btn btn-outline btn-sm" type="submit">Marcar</button></form>
+        {% else %}<span class="text-sm text-muted">—</span>{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody></table></div>

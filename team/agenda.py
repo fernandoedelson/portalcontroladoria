@@ -315,7 +315,51 @@ def cancelar(r):
     r.status = "cancelada"
     r.sequencia = (r.sequencia or 0) + 1
     db.session.commit()
-    _enviar(r, cancelar=True)
+    if r.link_id is not None:           # reunião marcada à mão não gerou convite: não há o que cancelar por e-mail
+        _enviar(r, cancelar=True)
+
+
+def inicio_do_ciclo(comp=None):
+    """Primeiro dia (data) em que uma reunião do ciclo atual é contada: 1º dia útil do mês seguinte à competência."""
+    from models import current_competency
+    from engine.calendar_br import business_days
+    comp = comp or current_competency()
+    if not comp:
+        return fuso.hoje()
+    y, m = (comp.year + 1, 1) if comp.month == 12 else (comp.year, comp.month + 1)
+    dias = business_days(y, m)
+    return dias[0] if dias else fuso.hoje()
+
+
+def registrar_manual(company_id, inicio, comp=None):
+    """O líder marca a reunião à mão (sem convite por e-mail). Retorna (reuniao, erro).
+
+    Vale para o fluxo automático ainda em validação: a reunião entra no acompanhamento do report
+    como qualquer outra. Não envia convite; o responsável é o da carteira da empresa."""
+    c = db.session.get(Company, company_id) if company_id else None
+    if not c:
+        return None, "Empresa não encontrada."
+    if inicio.date() < inicio_do_ciclo(comp):
+        return None, (f"Essa data é anterior ao ciclo atual (começa em "
+                      f"{inicio_do_ciclo(comp).strftime('%d/%m')}). Escolha uma data a partir dele.")
+    mem = membro_da_empresa(company_id)
+    fim = inicio + timedelta(minutes=cfg_int("ag_duracao", 30))
+    if mem:                              # a agenda é do responsável: não sobrepõe outra reunião dele
+        choque = Reuniao.query.filter(
+            Reuniao.member_id == mem.id, Reuniao.status == "marcada",
+            db.or_(Reuniao.teste.is_(False), Reuniao.teste.is_(None)),
+            Reuniao.inicio < fim, Reuniao.fim > inicio).first()
+        if choque:
+            return None, (f"{mem.name} já tem a reunião de {choque.nome} às "
+                          f"{choque.inicio.strftime('%H:%M')} nesse dia.")
+    contatos = contatos_da_empresa(company_id)
+    r = Reuniao(link_id=None, company_id=company_id, member_id=(mem.id if mem else None), teste=False,
+                nome=c.name[:120], email=(contatos[0] if contatos else "")[:160],
+                inicio=inicio, fim=fim, uid=f"{uuid.uuid4()}@controladoria-jf",
+                token_cancelar=secrets.token_urlsafe(16))
+    db.session.add(r)
+    db.session.commit()
+    return r, None
 
 
 def criar_simulacao(company_id, email):

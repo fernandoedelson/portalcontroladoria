@@ -55,6 +55,25 @@
   <p class="help-txt mt-1">Fim de semana e feriado nacional: nada sai. O que venceria nesses dias é avisado no dia útil anterior.</p>
 </div>
 
+<div class="card" id="envios">
+  <h2>Envios automáticos</h2>
+  <p class="text-muted text-sm mb-2">O que o portal manda sozinho: quando, para quem e se está valendo.
+    “Sem destinatário” quer dizer que o envio está ligado, mas ninguém está na lista, então nada sai.</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Envio</th><th scope="col">Regra</th><th scope="col">Destinatários</th><th scope="col">Situação</th></tr></thead>
+    <tbody>
+    {% for e in envios %}
+    <tr>
+      <td><strong>{{ e.nome }}</strong></td>
+      <td class="text-sm">{{ e.regra }}</td>
+      <td class="text-sm">{{ e.dest }}</td>
+      <td><span class="pill {{ {'ok':'pill-ok','sem_dest':'pill-alerta','off':'pill-mudo'}[e.sit] }}">{{ {'ok':'Ativo','sem_dest':'Sem destinatário','off':'Desligado'}[e.sit] }}</span>
+        {% if e.ultimo %}<div class="text-sm text-muted">último: {{ e.ultimo[8:10] }}/{{ e.ultimo[5:7] }}</div>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+</div>
+
 <div class="card" id="listas">
   <h2>Listas de destinatários</h2>
   <p class="text-muted text-sm mb-2">Cada tipo de e-mail tem a sua lista. O administrador <strong>não recebe</strong>

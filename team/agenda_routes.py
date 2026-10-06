@@ -60,6 +60,48 @@ def register_agenda_routes(app):
         return redirect(url_for("team_agenda_reunioes", membro=(membro_id or 0)))
 
     # ==================================================================
+    # MARCAR À MÃO (acompanhamento no Report do Fechamento)
+    # ==================================================================
+    def _pode_marcar(company_id):
+        """Gestão marca para qualquer empresa; o responsável da carteira, só para as dele."""
+        if current_user.is_controladoria:
+            return True
+        m = _meu_membro()
+        resp = agenda.membro_da_empresa(company_id)
+        return bool(m and resp and resp.id == m.id)
+
+    @app.route("/agenda/manual", methods=["POST"])
+    @team_required
+    def team_agenda_manual():
+        volta = redirect(url_for("team_report_fechamento") + "#reunioes")
+        cid = request.form.get("company_id", type=int)
+        if not cid or not _pode_marcar(cid):
+            abort(403)
+        try:
+            ini = datetime.strptime(f"{request.form.get('data', '')} {request.form.get('hora', '')}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            flash("Informe a data e a hora da reunião.", "warning")
+            return volta
+        r, erro = agenda.registrar_manual(cid, ini)
+        if erro:
+            flash(erro, "warning")
+            return volta
+        log_audit(current_user.id, "reuniao_manual", "reuniao", f"{r.id} {r.nome} {ini:%d/%m %H:%M}")
+        flash(f"Reunião de {r.nome} marcada em {ini:%d/%m às %H:%M}. Nenhum convite foi enviado.", "success")
+        return volta
+
+    @app.route("/agenda/manual/<int:rid>/remover", methods=["POST"])
+    @team_required
+    def team_agenda_manual_remover(rid):
+        r = db.session.get(Reuniao, rid) or abort(404)
+        if r.link_id is not None or not _pode_marcar(r.company_id):
+            abort(403)                   # só as marcadas à mão; as da empresa seguem o fluxo próprio
+        agenda.cancelar(r)
+        log_audit(current_user.id, "reuniao_manual_removida", "reuniao", str(rid))
+        flash(f"Reunião de {r.nome} removida.", "success")
+        return redirect(url_for("team_report_fechamento") + "#reunioes")
+
+    # ==================================================================
     # TELA INTERNA
     # ==================================================================
     @app.route("/agenda-reunioes")

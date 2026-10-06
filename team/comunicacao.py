@@ -223,3 +223,69 @@ def avisa_sistema(tipo, assunto, detalhe):
         return True
     except Exception:
         return False
+
+
+# ------------------------------------------------------------- painel das rotinas automáticas
+def envios_automaticos():
+    """Resumo de cada envio automático do portal: regra, destinatários e situação.
+
+    É só leitura: serve para a pessoa enxergar em Comunicação o que sai sozinho, para quem e quando.
+    Situação: 'ok' (ligado e com destinatário), 'sem_dest' (ligado, mas ninguém recebe),
+    'off' (desligado)."""
+    from models import get_setting, User
+    from team import avisos_empresas as ae, report_fechamento as rf
+    from team.models_workflow import ListaEmail
+    from team import agenda
+
+    def n_lista(tipo):
+        return len(emails_da_lista(tipo))
+
+    def situacao(ligado, n):
+        if not ligado:
+            return "off"
+        return "ok" if n else "sem_dest"
+
+    dias = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+    hora = hora_envio_txt()
+    ligado_geral = str(get_setting("scheduler_enabled") or "1") == "1"
+    try:
+        dia_resumo = dias[int(get_setting("digest_weekday") or 0)]
+    except (TypeError, ValueError, IndexError):
+        dia_resumo = dias[0]
+    n_lid = User.query.filter_by(role="lideranca", active=True).count()
+    n_usuarios = User.query.filter(User.active.is_(True),
+                                   User.role.in_(["admin", "controladoria", "lideranca", "profissional"])).count()
+    ult_resumo = get_setting("last_resumo")
+
+    linhas = [
+        {"nome": "E-mail diário de cada pessoa",
+         "regra": f"Todo dia útil, às {hora}: atividades que vencem, atrasadas e tarefas pessoais, num só e-mail. "
+                  "Cada pessoa escolhe as etapas em “Minha régua de avisos”.",
+         "dest": f"{n_usuarios} usuário(s) do time", "sit": situacao(ligado_geral, n_usuarios), "ultimo": get_setting("last_alertas")},
+        {"nome": "Resumo semanal do andamento do fechamento",
+         "regra": f"Toda {dia_resumo}, às {hora} (se cair em fim de semana ou feriado, sai no dia útil seguinte): "
+                  "situação do cronograma de fechamento.",
+         "dest": f"{n_lista('resumo')} e-mail(s) na lista “Resumo semanal”", "sit": situacao(ligado_geral, n_lista("resumo")),
+         "ultimo": ult_resumo},
+        {"nome": "Report do fechamento (quem já enviou os 3 documentos)",
+         "regra": f"Começa {rf.config('report_inicio_du')} dia(s) útil(eis) depois do prazo, repete só enquanto houver documento "
+                  "em atraso e termina com o aviso de fechamento completo. Ajustes na tela Report do Fechamento.",
+         "dest": f"{n_lista('report')} e-mail(s) na lista “Report do fechamento”",
+         "sit": situacao(rf.ligado(), n_lista("report")), "ultimo": None},
+        {"nome": "Aviso de prazo às empresas",
+         "regra": "No 1º dia útil (avisa a data) e no dia do prazo de cada empresa; um e-mail por empresa e tipo, a cada competência.",
+         "dest": f"contatos de {len(ae.empresas_do_aviso())} empresa(s) marcada(s); comprovante para "
+                 f"{n_lista('protocolo')} e-mail(s)",
+         "sit": situacao(ae.ligado(), len(ae.empresas_do_aviso())), "ultimo": get_setting("last_avisos_empresas")},
+        {"nome": "Convite e lembrete de reunião de resultados",
+         "regra": "O convite sai quando a empresa marca o horário pelo link; o lembrete diário cobra empresas sem reunião.",
+         "dest": f"{n_lista('agenda')} líder(es) copiado(s)", "sit": "ok" if agenda.ativo() else "off", "ultimo": None},
+        {"nome": "Férias à vista (Liderança)",
+         "regra": "15 dias antes do início de férias aprovadas, a Liderança recebe uma notificação no portal.",
+         "dest": f"{n_lid} pessoa(s) com perfil Liderança", "sit": situacao(True, n_lid), "ultimo": None},
+        {"nome": "Avisos do sistema (falhas)",
+         "regra": "Só quando algo dá errado, no máximo um aviso por tipo por dia.",
+         "dest": f"{n_lista('sistema')} e-mail(s) na lista “Avisos do sistema”", "sit": situacao(True, n_lista("sistema")),
+         "ultimo": None},
+    ]
+    return linhas
