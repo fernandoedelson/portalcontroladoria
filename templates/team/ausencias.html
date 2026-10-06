@@ -30,11 +30,13 @@
     {% if eu_gestor %}
     <div class="form-row"><label class="field-label">Pessoa</label>
       <select class="input" name="member_id" required>
+        <option value="" selected disabled>— escolher a pessoa —</option>
         {% for m in membros %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
       </select></div>
     {% endif %}
     <div class="form-row"><label class="field-label">Tipo</label>
-      <select class="input" name="kind">
+      <select class="input" name="kind" required>
+        <option value="" selected disabled>— escolher o tipo —</option>
         <option value="ferias">Férias</option><option value="licenca">Licença</option>
         <option value="treinamento">Treinamento</option><option value="outro">Outro</option>
       </select></div>
