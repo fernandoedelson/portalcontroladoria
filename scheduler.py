@@ -118,6 +118,15 @@ def run_daily_tasks(app, force=False):
     except Exception:
         _log(app, "falha no e-mail diário:\n" + traceback.format_exc())
 
+    # 1d) Liderança: férias que começam em até 15 dias
+    try:
+        from team import ferias_aviso
+        resultado["ferias_aviso"] = ferias_aviso.avisa_ferias_proximas(hoje)
+        if resultado["ferias_aviso"]:
+            _log(app, f"avisos de férias à Liderança: {resultado['ferias_aviso']}")
+    except Exception:
+        _log(app, "falha no aviso de férias:\n" + traceback.format_exc())
+
     # 2) aviso de prazo às EMPRESAS (1º dia útil e no dia do prazo de cada uma)
     if force or not _already_ran(app, "avisos_empresas", hoje):
         try:

@@ -88,6 +88,8 @@ class Absence(db.Model):
     # quem APROVA e quem toca o ANDAMENTO da área no lugar da pessoa
     aprova_delegado_id = db.Column(db.Integer, db.ForeignKey("team_members.id"))
     andamento_delegado_id = db.Column(db.Integer, db.ForeignKey("team_members.id"))
+    # quando a Liderança foi avisada (15 dias antes das férias); None = ainda não
+    aviso_lideranca_em = db.Column(db.DateTime)
 
     member = db.relationship("TeamMember", foreign_keys=[member_id], backref=db.backref(
         "absences", cascade="all, delete-orphan"))

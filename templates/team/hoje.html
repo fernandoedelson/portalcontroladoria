@@ -238,6 +238,7 @@
     {% endif %}
   </section>
 
+  <div class="painel-lado">
   <section class="card carga">
     <div class="carga-h"><h2>Carga por pessoa</h2><span class="rot">em aberto</span></div>
     <ul class="carga-lista">
@@ -255,5 +256,26 @@
       {% else %}<li class="text-muted" style="padding:14px 18px;">Nenhum membro cadastrado ainda.</li>{% endfor %}
     </ul>
   </section>
+  <section class="card ferias-card" aria-label="Programação de férias">
+    <div class="carga-h"><h2>Programação de férias</h2><a class="rot" href="/ausencias">ver todas</a></div>
+    {% if ferias %}
+    <ul class="carga-lista">
+      {% for f in ferias[:8] %}
+      <li>
+        <a href="/ausencias" class="carga-lin fer-lin">
+          <span class="mini-av" style="background:{{ f.m.color }}">{{ f.m.initials }}</span>
+          <span class="cg-nome">{{ f.m.name }}
+            <span class="fer-datas">{{ f.ini.strftime('%d/%m') }} a {{ f.fim.strftime('%d/%m') }} · {{ f.dias }} dia{{ 's' if f.dias != 1 }}</span></span>
+          <span class="fer-sel {{ 'fer-agora' if f.agora else '' }}">{% if f.agora %}fora agora{% elif f.faltam == 1 %}amanhã{% else %}em {{ f.faltam }} d{% endif %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if ferias|length > 8 %}<div class="fer-mais"><a href="/ausencias">+ {{ ferias|length - 8 }} período(s) nos próximos 90 dias</a></div>{% endif %}
+    {% else %}
+    <p class="text-muted" style="padding:14px 18px;margin:0;">Nenhuma férias marcada para os próximos 90 dias.</p>
+    {% endif %}
+  </section>
+  </div>
 </div>
 {% endblock %}

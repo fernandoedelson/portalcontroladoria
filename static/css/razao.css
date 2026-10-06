@@ -972,3 +972,14 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
   table.tbl-metas.tbl-empilha tfoot td::before{display:none;}
   table.tbl-metas.tbl-empilha tfoot td:empty{display:none !important;}
 }
+
+/* ---------- v53: tela inicial — coluna lateral com Carga por pessoa e Programação de férias ---------- */
+.painel-lado{display:flex;flex-direction:column;gap:18px;min-width:0;}
+.fer-datas{display:block;font-weight:400;font-size:12px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums;}
+.fer-sel{font-family:var(--r-mono);font-size:11px;font-weight:600;letter-spacing:.04em;white-space:nowrap;
+  color:var(--text-muted);border:1px solid var(--border-2);border-radius:999px;padding:.12rem .55rem;}
+.fer-sel.fer-agora{color:var(--r-ouro);border-color:var(--warning-border);background:var(--warning-lt);}
+.fer-mais{padding:10px 18px 14px;font-size:12.5px;border-top:1px solid var(--border);}
+.carga-h a.rot{text-decoration:none;}
+.painel-lado .card{margin-bottom:0;}
+.ferias-card .carga-h h2{font-size:1.05rem;white-space:nowrap;}

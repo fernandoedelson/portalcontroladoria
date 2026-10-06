@@ -271,7 +271,18 @@ def register_team_routes(app):
         metas = engine.metas_painel(comp, member_id=_scoped_member_id() or sel)
         # barra de cada pessoa proporcional à maior carga do time
         maior = max([b["f"]["aberta"] for b in board] + [1])
-        return render_template("team/hoje.html", panel=panel, members=members,
+        # programação de férias: quem está fora e quem sai nos próximos 90 dias (só férias aprovadas;
+        # licença e outras ausências não aparecem no painel do dia)
+        from team.models_workflow import Absence
+        ferias = []
+        for a in (Absence.query.filter(Absence.status == "aprovada", Absence.kind == "ferias",
+                                       Absence.end_date >= ref,
+                                       Absence.start_date <= ref + timedelta(days=90))
+                  .order_by(Absence.start_date, Absence.id).all()):
+            if a.member and a.member.active:
+                ferias.append({"m": a.member, "ini": a.start_date, "fim": a.end_date, "dias": a.dias,
+                               "agora": a.start_date <= ref, "faltam": (a.start_date - ref).days})
+        return render_template("team/hoje.html", ferias=ferias, panel=panel, members=members,
                                sel=sel, tipo=tipo, comp=comp, farol=fr, board=board,
                                mm=mm, today=ref, regua=rg, pessoas=pessoas, metas=metas,
                                vis=vis, eu_sozinho=eu_sozinho,

@@ -115,6 +115,7 @@ def create_app(config=Config):
 # COLUMN, nunca apaga nada (seguro para bancos com dados reais).
 _COLUNAS_NOVAS = [
     ("team_members", "whatsapp", "VARCHAR(30)"),
+    ("absences", "aviso_lideranca_em", "DATETIME"),
     ("user_notes", "ink_json", "TEXT"),
     ("user_notes", "ink_thumb", "TEXT"),
     ("personal_tasks", "remind_days", "INTEGER DEFAULT 0"),
