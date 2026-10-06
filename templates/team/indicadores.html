@@ -30,7 +30,7 @@
       <span class="badge-soft">{{ p.kind_pt }}</span>
     {% else %}Sem painel{% endif %}
   </h2>
-  <div class="tbl-wrap"><table class="tbl">
+  <div class="tbl-wrap"><table class="tbl tbl-metas">
     <thead><tr><th scope="col" style="width:32px;">#</th><th scope="col">Meta</th><th scope="col" class="col-dim">Dimensão</th><th scope="col">Indicador</th><th scope="col" class="col-peso">Peso</th><th scope="col" class="col-escala" title="Mínimo aceitável (80%) · objetivo (100%) · superado (120%)">Escala</th><th scope="col">Últ. resultado</th><th scope="col"></th></tr></thead>
     {% set total_peso = totais.get(panel_id, 0) %}
     <tbody data-painel="{{ panel_id }}">

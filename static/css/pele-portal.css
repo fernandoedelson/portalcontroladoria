@@ -78,3 +78,6 @@
 .jf-pele .tbl tbody tr.cron-grupo>td,.jf-pele .tbl tbody tr.cron-grupo:hover>td{background:var(--jf-navy);}
 .jf-pele .tbl tbody tr.rf-grupo>td,.jf-pele .tbl tbody tr.rf-grupo:hover>td{background:var(--jf-navy);color:#fff;}
 .jf-pele .tbl-cron tbody tr.cron-macro>td,.jf-pele .tbl-cron tbody tr.cron-macro:hover>td{background:var(--jf-paper-warn);}
+/* faixas pares também no <tr> (cartões do celular usam a linha, não as células): creme, nunca cinza */
+.jf-pele tbody tr:nth-child(even){background:var(--jf-paper-warn);}
+.jf-pele tbody tr:hover{background:#f1e8d6;}
