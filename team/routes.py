@@ -2073,10 +2073,22 @@ def register_team_routes(app):
                            .order_by(ListaEmail.id).all()})
         return render_template(
             "team/comunicacao.html", listas=listas, etapas=com.ETAPAS, envios=com.envios_automaticos(),
+            ferias_dias=__import__("team.ferias_aviso", fromlist=["x"]).antecedencia_dias(),
             desligadas=com.etapas_desligadas(current_user.id),
             hora=com.hora_envio_txt(),
             email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),
             pode_listas=current_user.is_controladoria)
+
+    @app.route("/comunicacao/ferias-dias", methods=["POST"])
+    @controladoria_required
+    def team_comunicacao_ferias_dias():
+        from team import ferias_aviso
+        n = ferias_aviso.salva_antecedencia(request.form.get("dias"))
+        if n:
+            flash(f"O aviso de férias à Liderança passa a sair {n} dia{'s' if n != 1 else ''} antes do início.", "success")
+        else:
+            flash(f"Informe um número de {ferias_aviso.ANTECEDENCIA_MIN} a {ferias_aviso.ANTECEDENCIA_MAX} dias.", "warning")
+        return redirect(url_for("team_comunicacao") + "#envios")
 
     @app.route("/comunicacao/horario", methods=["POST"])
     @controladoria_required

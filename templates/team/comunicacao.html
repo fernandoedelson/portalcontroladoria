@@ -72,6 +72,15 @@
     </tr>
     {% endfor %}
     </tbody></table></div>
+  {% if pode_listas %}
+  <form method="post" action="/comunicacao/ferias-dias" class="flex gap-1 items-center mt-2" style="flex-wrap:wrap;">
+    {{ csrf() }}
+    <label class="field-label" for="ferias-dias" style="margin:0;">Aviso de férias à Liderança: avisar</label>
+    <input class="input" id="ferias-dias" type="number" name="dias" min="1" max="90" value="{{ ferias_dias }}" style="width:84px;" required/>
+    <span class="text-sm">dias antes do início (de 1 a 90)</span>
+    <button class="btn btn-outline" type="submit">Salvar</button>
+  </form>
+  {% endif %}
 </div>
 
 <div class="card" id="listas">

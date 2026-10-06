@@ -281,7 +281,8 @@ def envios_automaticos():
          "regra": "O convite sai quando a empresa marca o horário pelo link; o lembrete diário cobra empresas sem reunião.",
          "dest": f"{n_lista('agenda')} líder(es) copiado(s)", "sit": "ok" if agenda.ativo() else "off", "ultimo": None},
         {"nome": "Férias à vista (Liderança)",
-         "regra": "15 dias antes do início de férias aprovadas, a Liderança recebe uma notificação no portal.",
+         "regra": f"{__import__('team.ferias_aviso', fromlist=['x']).antecedencia_dias()} dias antes do início de férias "
+                  "aprovadas, a Liderança recebe notificação no portal (e push no celular) e e-mail.",
          "dest": f"{n_lid} pessoa(s) com perfil Liderança", "sit": situacao(True, n_lid), "ultimo": None},
         {"nome": "Avisos do sistema (falhas)",
          "regra": "Só quando algo dá errado, no máximo um aviso por tipo por dia.",
