@@ -934,3 +934,8 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 .lista-bloco .tbl{background:var(--r-folha);}
 .ent-cluster .ent-linha:nth-child(even){background:var(--r-folha-2);}
 .ent-cluster .ent-linha:hover{background:color-mix(in srgb,var(--r-verde) 8%,var(--r-folha));}
+
+/* ---------- v50: monitores grandes — a área útil acompanha a tela (antes parava em 1260px e sobrava margem) ---------- */
+@media (min-width:1500px){ .main-content{max-width:1560px;} }
+@media (min-width:1800px){ .main-content{max-width:1800px;} }
+@media (min-width:2300px){ .main-content{max-width:2100px;} }
