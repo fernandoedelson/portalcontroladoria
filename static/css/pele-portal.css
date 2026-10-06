@@ -81,3 +81,8 @@
 /* faixas pares também no <tr> (cartões do celular usam a linha, não as células): creme, nunca cinza */
 .jf-pele tbody tr:nth-child(even){background:var(--jf-paper-warn);}
 .jf-pele tbody tr:hover{background:#f1e8d6;}
+
+/* 6) link "Sair" do menu do usuário: a regra genérica .danger da pele pintava o link inteiro de vermelho (texto vermelho
+   sobre fundo vermelho). Aqui continua um item de menu, só com o texto na cor de perigo. */
+.jf-pele a.danger,.jf-pele .user-menu a.danger{background:transparent;color:var(--jf-bad);border:0;border-top:1px solid var(--jf-line);}
+.jf-pele .user-menu a.danger:hover{background:var(--jf-paper-warn);color:var(--jf-bad);}

@@ -173,13 +173,22 @@ def register_workflow_routes(app):
         except (TypeError, ValueError):
             return None
 
+    def _minha_ou_gestao(a):
+        """Profissional só mexe nas atividades dele; gestão (controladoria/liderança/admin) em todas."""
+        if current_user.is_controladoria:
+            return True
+        m = _member_of_current_user()
+        return bool(m and a is not None and a.member_id == m.id)
+
     # ------------------------------------------------------------------
     # ATIVIDADES — concluir em 1 clique, em lote e reatribuir
     # ------------------------------------------------------------------
     @app.route("/atividade/<int:aid>/concluir", methods=["POST"])
-    @team_required
+    @any_team_required
     def wf_concluir(aid):
         a = db.session.get(Activity, aid) or abort(404)
+        if not _minha_ou_gestao(a):
+            abort(403)
         a.status = "concluida"
         a.done_at = datetime.utcnow()
         a.done_by = current_user.id
@@ -194,13 +203,13 @@ def register_workflow_routes(app):
         return redirect(request.referrer or url_for("team_atividades"))
 
     @app.route("/atividades/concluir-lote", methods=["POST"])
-    @team_required
+    @any_team_required
     def wf_concluir_lote():
         ids = request.form.getlist("ids")
         n = 0
         for aid in ids:
             a = db.session.get(Activity, int(aid))
-            if a and a.status in ABERTAS:
+            if a and a.status in ABERTAS and _minha_ou_gestao(a):
                 a.status = "concluida"
                 a.done_at = datetime.utcnow()
                 a.done_by = current_user.id
@@ -250,9 +259,11 @@ def register_workflow_routes(app):
     # NOTAS (andamento / bloqueio)
     # ------------------------------------------------------------------
     @app.route("/atividade/<int:aid>/nota", methods=["POST"])
-    @team_required
+    @any_team_required
     def wf_nota(aid):
         a = db.session.get(Activity, aid) or abort(404)
+        if not _minha_ou_gestao(a):
+            abort(403)
         body = (request.form.get("body") or "").strip()
         kind = request.form.get("kind") or "comentario"
         if not body:
@@ -282,9 +293,11 @@ def register_workflow_routes(app):
     # ANEXOS
     # ------------------------------------------------------------------
     @app.route("/atividade/<int:aid>/anexo", methods=["POST"])
-    @team_required
+    @any_team_required
     def wf_anexo(aid):
-        db.session.get(Activity, aid) or abort(404)
+        a = db.session.get(Activity, aid) or abort(404)
+        if not _minha_ou_gestao(a):
+            abort(403)
         f = request.files.get("arquivo")
         if not f or not f.filename:
             flash("Selecione um arquivo.", "danger")
@@ -307,18 +320,22 @@ def register_workflow_routes(app):
         return redirect(url_for("team_atividade", aid=aid))
 
     @app.route("/anexo/<int:fid>")
-    @team_required
+    @any_team_required
     def wf_anexo_download(fid):
         af = db.session.get(ActivityFile, fid) or abort(404)
+        if not _minha_ou_gestao(db.session.get(Activity, af.activity_id)):
+            abort(403)
         if not os.path.exists(af.stored_path):
             abort(404)
         return send_file(af.stored_path, as_attachment=True,
                          download_name=af.filename)
 
     @app.route("/anexo/<int:fid>/excluir", methods=["POST"])
-    @team_required
+    @any_team_required
     def wf_anexo_delete(fid):
         af = db.session.get(ActivityFile, fid) or abort(404)
+        if not _minha_ou_gestao(db.session.get(Activity, af.activity_id)):
+            abort(403)
         aid = af.activity_id
         try:
             os.remove(af.stored_path)
