@@ -1647,9 +1647,15 @@ def register_team_routes(app):
         from team.models_workflow import DeadlineRevision
         from models import notify
         rev = db.session.get(DeadlineRevision, rid) or abort(404)
-        if rev.status != "solicitada" or not _pode_aprovar_revisao(
-                rev.entity_type, rev.entity_id):
-            abort(403)
+        volta = request.referrer or url_for("team_projetos")
+        if rev.status != "solicitada":
+            flash("Este realinhamento já foi decidido (por você em outra aba ou por outra pessoa). "
+                  "Atualize a página.", "info")
+            return redirect(volta)
+        if not _pode_aprovar_revisao(rev.entity_type, rev.entity_id):
+            flash("Só o líder ou o gestor do projeto (ou quem recebeu a delegação) decide este "
+                  "realinhamento.", "warning")
+            return redirect(volta)
         rev.status = "aplicada"
         rev.approved_by = current_user.id
         rev.approved_at = datetime.utcnow()
@@ -1668,9 +1674,15 @@ def register_team_routes(app):
         from team.models_workflow import DeadlineRevision
         from models import notify
         rev = db.session.get(DeadlineRevision, rid) or abort(404)
-        if rev.status != "solicitada" or not _pode_aprovar_revisao(
-                rev.entity_type, rev.entity_id):
-            abort(403)
+        volta = request.referrer or url_for("team_projetos")
+        if rev.status != "solicitada":
+            flash("Este realinhamento já foi decidido (por você em outra aba ou por outra pessoa). "
+                  "Atualize a página.", "info")
+            return redirect(volta)
+        if not _pode_aprovar_revisao(rev.entity_type, rev.entity_id):
+            flash("Só o líder ou o gestor do projeto (ou quem recebeu a delegação) decide este "
+                  "realinhamento.", "warning")
+            return redirect(volta)
         rev.status = "recusada"
         rev.approved_by = current_user.id
         rev.approved_at = datetime.utcnow()
