@@ -111,7 +111,7 @@
 
 /* status de atividade (efetivo) */
 .st-atrasada{background:var(--danger-lt);color:var(--danger-text);}
-.st-vence_hoje{background:var(--badge-orange-bg);color:var(--warning-text);}
+.st-vence_hoje,.st-aguardando_envio{background:var(--badge-orange-bg);color:var(--warning-text);}
 .st-em_andamento{background:var(--info-lt);color:var(--info-text);}
 .st-aguardando{background:var(--badge-gray-bg);color:var(--gray-text);}
 .st-concluida{background:var(--success-lt);color:var(--success-text);}

@@ -50,10 +50,10 @@
         <td class="text-sm">{{ l.data.strftime('%d/%m') if l.data else '' }}</td>
         {% for macro, rot in docs %}{% set c = l.cels[macro] %}
         <td class="rf-cel rf-{{ c.estado }}" title="{{ c.rotulo }}{% if c.get('prazo') %} · prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% if c.get('motivo') %} · {{ c.motivo }}{% endif %}">
-          <span class="rf-ico" aria-hidden="true">{{ {'entregue':'✔','atrasada':'✖','postergada':'⏳','pendente':'◷','na':'–'}[c.estado] }}</span>
+          <span class="rf-ico" aria-hidden="true">{{ {'entregue':'✔','atrasada':'✖','postergada':'⏳','pendente':'◷','aguardando':'⏳','na':'–'}[c.estado] }}</span>
           <span class="rf-sr">{{ c.rotulo }}</span>
           {% if c.get('postergada') and c.estado in ('postergada','atrasada') %}<span title="Entrega postergada">*</span>{% endif %}
-          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado in ('postergada','pendente') and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' %}{{ c.dias }} d.u. de atraso{% if c.get('prazo') %}<br>prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% endif %}</small>
+          <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado in ('postergada','pendente','aguardando') and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' %}{{ c.dias }} d.u. de atraso{% if c.get('prazo') %}<br>prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% endif %}</small>
         </td>
         {% endfor %}
         <td class="text-sm">{{ l.obs }}</td>
@@ -144,7 +144,7 @@
   .rf-sr{position:absolute;left:-9999px;}
   .rf-entregue{background:var(--success-lt);color:var(--success-text);}
   .rf-atrasada{background:var(--danger-lt);color:var(--danger-text);}
-  .rf-postergada{background:var(--warning-lt);color:var(--warning-text);}
+  .rf-postergada,.rf-aguardando{background:var(--warning-lt);color:var(--warning-text);}
   .rf-pendente{background:var(--info-lt);color:var(--info-text);}
   .rf-na{color:var(--text-muted);}
   .rf-leg{display:inline-block;border-radius:6px;padding:.1rem .45rem;font-size:.78rem;font-weight:600;margin-right:.3rem;}

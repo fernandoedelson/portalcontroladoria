@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Atividades{% endblock %}
-{% set stlabels = {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'A fazer','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'} %}
+{% set stlabels = {'atrasada':'Atrasada','aguardando_envio':'Aguardando envio','vence_hoje':'Vence hoje','pendente':'A fazer','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'} %}
 {% block content %}
 <div class="page-head">
   <div><h1>Atividades</h1>
@@ -61,7 +61,7 @@
         <span class="kind-chip">{{ a.kind_pt() }}</span>
         {% if a.member %}<span class="mini-av" style="width:20px;height:20px;font-size:.6rem;background:{{ a.member.color }}">{{ a.member.initials }}</span>{% endif %}
         {% if a.due_date %}<span>{{ a.due_date.strftime('%d/%m') }}</span>{% endif %}
-        {% if est == 'atrasada' %}<span class="st st-atrasada">atrasada</span>{% elif est == 'vence_hoje' %}<span class="st st-vence_hoje">vence hoje</span>{% endif %}
+        {% if est == 'atrasada' %}<span class="st st-atrasada">atrasada</span>{% elif est == 'vence_hoje' %}<span class="st st-vence_hoje">vence hoje</span>{% elif est == 'aguardando_envio' %}<span class="st st-aguardando_envio">aguardando envio</span>{% endif %}
         <button type="button" class="btn btn-outline btn-sm btn-alterar" title="Alterar prazo ou responsável" aria-label="Alterar prazo ou responsável de {{ a.title }}" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}" data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }}</button>
       </div>
     </div>

@@ -6,7 +6,7 @@
   <div><h1>{{ a.title }}</h1>
     <div class="sub"><span class="kind-chip">{{ a.kind_pt() }}</span>
       <span class="prio prio-{{ a.priority }}">{{ a.priority|capitalize }}</span>
-      <span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'}.get(a.effective_status(today), a.effective_status(today)) }}</span></div></div>
+      <span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','aguardando_envio':'Aguardando envio','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada','concluida':'Concluída','cancelada':'Cancelada'}.get(a.effective_status(today), a.effective_status(today)) }}</span></div></div>
   <div class="flex gap-1">
     <button type="button" class="btn btn-outline" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}"
             data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }} Alterar prazo / responsável</button>

@@ -2074,6 +2074,7 @@ def register_team_routes(app):
         return render_template(
             "team/comunicacao.html", listas=listas, etapas=com.ETAPAS, envios=com.envios_automaticos(),
             ferias_dias=__import__("team.ferias_aviso", fromlist=["x"]).antecedencia_dias(),
+            tolerancia=__import__("team.models", fromlist=["x"]).tolerancia_entrega_du(),
             desligadas=com.etapas_desligadas(current_user.id),
             hora=com.hora_envio_txt(),
             email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),
@@ -2088,6 +2089,20 @@ def register_team_routes(app):
             flash(f"O aviso de férias à Liderança passa a sair {n} dia{'s' if n != 1 else ''} antes do início.", "success")
         else:
             flash(f"Informe um número de {ferias_aviso.ANTECEDENCIA_MIN} a {ferias_aviso.ANTECEDENCIA_MAX} dias.", "warning")
+        return redirect(url_for("team_comunicacao") + "#envios")
+
+    @app.route("/comunicacao/tolerancia", methods=["POST"])
+    @controladoria_required
+    def team_comunicacao_tolerancia():
+        from team.models import salva_tolerancia_entrega
+        n = salva_tolerancia_entrega(request.form.get("dias"))
+        if n is None:
+            flash("Informe um número de 0 a 5 dias úteis.", "warning")
+        elif n == 0:
+            flash("Tolerância desligada: as entregas das empresas viram atrasadas no dia seguinte ao prazo.", "success")
+        else:
+            flash(f"As entregas das empresas só viram atrasadas {n} dia{'s' if n != 1 else ''} útil{'eis' if n != 1 else ''} "
+                  "depois do prazo; até lá ficam “aguardando envio”.", "success")
         return redirect(url_for("team_comunicacao") + "#envios")
 
     @app.route("/comunicacao/horario", methods=["POST"])

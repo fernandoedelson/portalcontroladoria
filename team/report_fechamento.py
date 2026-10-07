@@ -79,6 +79,8 @@ def _celula(a, ref):
     base = {"prazo": efetivo, "motivo": motivo, "activity_id": a.id,
             "responsavel": a.member.name if a.member else None,
             "postergada": postergada, "original": original, "nova": nova}
+    if efetivo and efetivo < ref and not a.nova_data and not postergada and a.em_tolerancia(ref):
+        return dict(base, estado="aguardando", rotulo="Aguardando envio")   # tolerância: ainda não é atraso
     if efetivo and efetivo < ref:
         from team.engine import business_days_between
         dias = max(business_days_between(efetivo, ref) or 0, 1)       # dias úteis de atraso
@@ -156,9 +158,9 @@ def montar(comp, ref=None):
 
 
 # ------------------------------------------------------------------ e-mail
-_COR = {"entregue": "#C6EFCE", "atrasada": "#FFC7CE", "postergada": "#FFEB9C",
+_COR = {"aguardando": "#FFEB9C", "entregue": "#C6EFCE", "atrasada": "#FFC7CE", "postergada": "#FFEB9C",
         "pendente": "#EDEDED", "na": "#FFFFFF"}
-_SIM = {"entregue": "&#10004;", "atrasada": "&#10008;", "postergada": "&#9203;",
+_SIM = {"aguardando": "&#9203;", "entregue": "&#10004;", "atrasada": "&#10008;", "postergada": "&#9203;",
         "pendente": "&#8226;", "na": "&ndash;"}
 
 

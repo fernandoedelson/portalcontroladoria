@@ -172,6 +172,36 @@ STATUSES = ("pendente", "em_andamento", "concluida", "bloqueada", "cancelada")
 PRIORITIES = ("baixa", "media", "alta", "critica")
 
 
+_TOL_CACHE = {"t": 0.0, "v": 1}
+
+
+def tolerancia_entrega_du():
+    """Tolerância (dias úteis) de atraso das entregas das empresas. Padrão 1; 0 desliga. Cache de 20 s."""
+    import time
+    if time.time() - _TOL_CACHE["t"] > 20:
+        from models import get_setting
+        try:
+            v = int(get_setting("tolerancia_entrega_du") if get_setting("tolerancia_entrega_du") not in (None, "") else 1)
+        except (TypeError, ValueError):
+            v = 1
+        _TOL_CACHE.update(t=time.time(), v=max(0, min(5, v)))
+    return _TOL_CACHE["v"]
+
+
+def salva_tolerancia_entrega(valor):
+    """Grava a tolerância (0 a 5). Retorna o valor ou None se inválido."""
+    from models import set_setting
+    try:
+        n = int(str(valor).strip())
+    except (TypeError, ValueError):
+        return None
+    if not 0 <= n <= 5:
+        return None
+    set_setting("tolerancia_entrega_du", str(n))
+    _TOL_CACHE["t"] = 0.0
+    return n
+
+
 class Activity(db.Model):
     __tablename__ = "activities"
     id = db.Column(db.Integer, primary_key=True)
@@ -216,6 +246,7 @@ class Activity(db.Model):
     company = db.relationship("Company")
     project = db.relationship("Project", backref="activities")
     competency = db.relationship("Competency")
+    template = db.relationship("ClosingTemplateItem", foreign_keys=[template_id])
 
     @property
     def due_rule(self):
@@ -236,10 +267,41 @@ class Activity(db.Model):
     def is_open(self):
         return self.status in ("pendente", "em_andamento", "bloqueada")
 
+    # ---- tolerância de atraso nas entregas das empresas -----------------------------------------
+    # A empresa pode entregar até 23h59 do dia do prazo e o time só vê no dia útil seguinte. Por isso
+    # Painel, Consolidação e Endividamento (as entregas que dependem de empresa) só viram "atrasadas"
+    # depois de N dias úteis (padrão 1) do vencimento; antes disso ficam "aguardando envio".
+    # É calculado pela data: ninguém precisa mexer na atividade.
+    def tolerancia_du(self):
+        if self.kind != "fechamento" or not self.template_id:
+            return 0
+        t = self.template
+        if not t or not t.macro:
+            return 0
+        return tolerancia_entrega_du()
+
+    def du_apos_vencimento(self, ref=None):
+        """Dias úteis desde o vencimento (0 no dia; 1 no dia útil seguinte...)."""
+        from team.engine import business_days_between
+        ref = ref or fuso.hoje()
+        if not self.due_date or self.due_date >= ref:
+            return 0
+        return max(business_days_between(self.due_date, ref) or 0, 1)
+
+    def em_tolerancia(self, ref=None):
+        """Venceu, mas ainda está dentro da tolerância das entregas das empresas."""
+        ref = ref or fuso.hoje()
+        if not (self.due_date and self.is_open and not self.due_provisional and self.due_date < ref):
+            return False
+        tol = self.tolerancia_du()
+        if not tol or (ref - self.due_date).days > 20:     # muito antigo: nem calcula
+            return False
+        return self.du_apos_vencimento(ref) <= tol
+
     def is_overdue(self, ref=None):
         ref = ref or fuso.hoje()
         return bool(self.due_date and self.is_open and not self.due_provisional
-                    and self.due_date < ref)
+                    and self.due_date < ref and not self.em_tolerancia(ref))
 
     def is_due_today(self, ref=None):
         ref = ref or fuso.hoje()
@@ -251,6 +313,8 @@ class Activity(db.Model):
             return self.status
         if self.due_provisional:
             return "aguardando"
+        if self.em_tolerancia(ref):
+            return "aguardando_envio"
         if self.is_overdue(ref):
             return "atrasada"
         if self.is_due_today(ref):

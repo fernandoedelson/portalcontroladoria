@@ -385,7 +385,7 @@ def regua(comp, ref=None, member_id=None, kind_filter=None, n_fixo=None, kinds=N
         if a.status == "concluida":
             return "f"
         if a.due_date and a.due_date < ref:
-            return "a"
+            return "h" if a.em_tolerancia(ref) else "a"       # em tolerância: âmbar, como "vence hoje"
         if a.due_date == ref:
             return "h"
         return ""
@@ -541,11 +541,13 @@ def day_panel(ref=None, member_id=None, kind_filter=None):
     elif kind_filter == "fechamento":
         q = q.filter(Activity.kind != "projeto")
     acts = q.all()
-    overdue, today, soon = [], [], []
+    overdue, today, soon, waiting = [], [], [], []
     for a in acts:
         if a.due_provisional:
             continue
-        if a.is_overdue(ref):
+        if a.em_tolerancia(ref):
+            waiting.append(a)
+        elif a.is_overdue(ref):
             overdue.append(a)
         elif a.is_due_today(ref):
             today.append(a)
@@ -556,8 +558,10 @@ def day_panel(ref=None, member_id=None, kind_filter=None):
     overdue.sort(key=key)
     today.sort(key=lambda a: prio.get(a.priority, 2))
     soon.sort(key=key)
-    return {"overdue": overdue, "today": today, "soon": soon,
-            "n_overdue": len(overdue), "n_today": len(today), "n_soon": len(soon)}
+    waiting.sort(key=key)
+    return {"overdue": overdue, "today": today, "soon": soon, "waiting": waiting,
+            "n_overdue": len(overdue), "n_today": len(today), "n_soon": len(soon),
+            "n_waiting": len(waiting)}
 
 
 def metas_painel(comp, member_id=None):

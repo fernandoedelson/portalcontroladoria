@@ -454,7 +454,7 @@ def run_alert_cycle(ref=None, dry_run=False, coletor=None):
 
         # --- atraso (com escalada ao gestor) ---
         s = settings.get("atraso")
-        if s and a.due_date < ref:
+        if s and a.due_date < ref and a.is_overdue(ref):      # em tolerância ainda não cobra
             atraso_du = abs(a.days_to_due(ref) or 0)
             subject = f"ATRASO: “{a.title}” (venceu {a.due_date.strftime('%d/%m')})"
             body = _body(a)

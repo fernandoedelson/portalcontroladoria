@@ -221,7 +221,7 @@
         <td><a href="/atividade/{{ a.id }}" style="text-decoration:none;color:var(--text);font-weight:500;">{{ a.title }}</a></td>
         <td>{{ a.member.name.split()[0] if a.member else '—' }}</td>
         <td>{{ a.due_date.strftime('%d/%m') if a.due_date else '—' }}</td>
-        <td><span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','concluida':'Concluída','bloqueada':'Bloqueada','cancelada':'Cancelada','aguardando':'Aguardando'}.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
+        <td><span class="st st-{{ a.effective_status(today) }}">{{ {'atrasada':'Atrasada','aguardando_envio':'Aguardando envio','vence_hoje':'Vence hoje','pendente':'Pendente','em_andamento':'Em andamento','concluida':'Concluída','bloqueada':'Bloqueada','cancelada':'Cancelada','aguardando':'Aguardando'}.get(a.effective_status(today), a.effective_status(today)) }}</span></td>
         <td class="text-right" onclick="event.stopPropagation()"><button type="button" class="btn btn-outline btn-sm btn-alterar" title="Alterar prazo ou responsável" aria-label="Alterar prazo ou responsável de {{ a.title }}" data-alt-id="{{ a.id }}" data-alt-titulo="{{ a.title }}" data-alt-prazo="{{ a.due_date.isoformat() if a.due_date else '' }}" onclick="abrirAlterar(this)">{{ icone('edit') }}</button></td>
       </tr>
       {% else %}<tr><td colspan="5" class="text-muted" style="text-align:center;padding:1rem;">Nenhuma atividade vinculada.</td></tr>{% endfor %}

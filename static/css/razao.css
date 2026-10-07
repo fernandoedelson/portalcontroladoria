@@ -177,7 +177,7 @@ input[type="checkbox"],input[type="radio"]{accent-color:var(--r-verde);}
   font-family:var(--r-mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;gap:0;}
 .st::before{display:none;}
 .st-atrasada,.st-reprovado,.st-nao_atingido,.st-recusada,.st-bloqueada{color:var(--r-carimbo) !important;}
-.st-vence_hoje,.st-parcial,.st-aprovado_com_excecao,.st-solicitada{color:var(--r-ouro) !important;}
+.st-vence_hoje,.st-aguardando_envio,.st-parcial,.st-aprovado_com_excecao,.st-solicitada{color:var(--r-ouro) !important;}
 .st-concluida,.st-aprovado,.st-atingido,.st-aberta,.st-aprovada,.st-ativo{color:var(--r-verde) !important;}
 .st-em_andamento,.st-validando,.st-planejada{color:var(--info) !important;}
 .st-pendente,.st-aguardando,.st-fechada,.st-na,.st-cancelada{color:var(--text-soft) !important;}

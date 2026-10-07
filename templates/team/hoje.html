@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Painel do Dia{% endblock %}
-{% set SELO = {'atrasada':('atraso','atrasada'),'vence_hoje':('hoje','hoje'),'pendente':('nada','a fazer'),
+{% set SELO = {'atrasada':('atraso','atrasada'),'aguardando_envio':('hoje','aguardando envio'),'vence_hoje':('hoje','hoje'),'pendente':('nada','a fazer'),
                'em_andamento':('and','em andamento'),'bloqueada':('atraso','bloqueada'),'aguardando':('nada','aguardando')} %}
 {% macro linha(a, grupo) %}
   {% set est = a.effective_status(today) %}
@@ -221,6 +221,10 @@
     <div class="fila-sec sec-atraso">Atrasadas <b>{{ panel.n_overdue }}</b></div>
     <ul class="fila-lista">{% for a in panel.overdue %}{{ linha(a, 'atraso') }}{% endfor %}</ul>
     {% endif %}
+    {% if panel.waiting %}
+    <div class="fila-sec sec-hoje" title="Entregas das empresas: vencidas ontem, ainda dentro da tolerância. Viram atraso sozinhas.">Aguardando envio <b>{{ panel.n_waiting }}</b></div>
+    <ul class="fila-lista">{% for a in panel.waiting %}{{ linha(a, 'hoje') }}{% endfor %}</ul>
+    {% endif %}
     {% if panel.today %}
     <div class="fila-sec sec-hoje">Vencem hoje <b>{{ panel.n_today }}</b></div>
     <ul class="fila-lista">{% for a in panel.today %}{{ linha(a, 'hoje') }}{% endfor %}</ul>
@@ -229,7 +233,7 @@
     <div class="fila-sec">Próximos 3 dias úteis <b>{{ panel.n_soon }}</b></div>
     <ul class="fila-lista">{% for a in panel.soon %}{{ linha(a, 'prox') }}{% endfor %}</ul>
     {% endif %}
-    {% if not panel.overdue and not panel.today and not panel.soon %}
+    {% if not panel.overdue and not panel.today and not panel.soon and not panel.waiting %}
     <div class="fila-vazia">
       <span class="selo selo-ok">em dia</span>
       <div><b>Nada pendente para hoje.</b>

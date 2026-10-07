@@ -80,6 +80,13 @@
     <span class="text-sm">dias antes do início (de 1 a 90)</span>
     <button class="btn btn-outline" type="submit">Salvar</button>
   </form>
+  <form method="post" action="/comunicacao/tolerancia" class="flex gap-1 items-center mt-2" style="flex-wrap:wrap;">
+    {{ csrf() }}
+    <label class="field-label" for="tol-dias" style="margin:0;">Entregas das empresas (Painel, Consolidação, Endividamento): só contam como atrasadas</label>
+    <input class="input" id="tol-dias" type="number" name="dias" min="0" max="5" value="{{ tolerancia }}" style="width:72px;" required/>
+    <span class="text-sm">dia(s) útil(eis) depois do prazo (0 = no dia seguinte)</span>
+    <button class="btn btn-outline" type="submit">Salvar</button>
+  </form>
   {% endif %}
 </div>
 

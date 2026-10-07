@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Fechamento de {{ dia.strftime('%d/%m') }}{% endblock %}
-{% set ROT = {'atrasada':'Atrasada','vence_hoje':'Vence hoje','pendente':'A fazer',
+{% set ROT = {'atrasada':'Atrasada','aguardando_envio':'Aguardando envio','vence_hoje':'Vence hoje','pendente':'A fazer',
               'em_andamento':'Em andamento','aguardando':'Aguardando insumo','bloqueada':'Bloqueada',
               'concluida':'Concluída','cancelada':'Cancelada'} %}
 {% block content %}
