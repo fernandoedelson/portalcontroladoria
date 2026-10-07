@@ -114,7 +114,7 @@
 
   {% if revisoes %}
   <div class="tbl-wrap mt-2"><table class="tbl">
-    <thead><tr><th scope="col">Quando</th><th scope="col">De</th><th scope="col">Para</th><th scope="col">Movimento</th><th scope="col">Justificativa</th><th scope="col">Por</th></tr></thead>
+    <thead><tr><th scope="col">Quando</th><th scope="col">De</th><th scope="col">Para</th><th scope="col">Movimento</th><th scope="col">Justificativa</th><th scope="col">Por</th><th scope="col"></th></tr></thead>
     <tbody>{% for r in revisoes %}
       <tr>
         <td class="text-sm">{{ (r.created_at|local).strftime('%d/%m/%Y %H:%M') }}</td>
@@ -123,6 +123,7 @@
         <td><span class="badge-soft">{{ r.sentido }}{% if r.dias %} {{ r.dias }}d{% endif %}</span></td>
         <td class="text-sm">{{ r.reason }}</td>
         <td class="text-sm text-muted">{{ users[r.created_by].display_name if r.created_by and users.get(r.created_by) else '—' }}</td>
+        <td class="text-right"><a class="btn btn-outline btn-sm" href="/prazo/{{ r.id }}">Resumo</a></td>
       </tr>
     {% endfor %}</tbody></table></div>
   {% else %}<p class="help-txt mt-1">Nenhuma revisão ainda. A primeira mudança já cria o histórico.</p>{% endif %}

@@ -986,3 +986,18 @@ a.met-medir{text-decoration:none;border:1px dashed var(--accent);}
 
 /* lupa da busca do topo: tamanho garantido aqui também (se o portal.css vier de cache antigo, o ícone não vira um bloco gigante) */
 .search-box svg{width:14px !important;height:14px !important;max-width:14px;}
+
+/* ---------- v59: tela simples do aviso de mudança de prazo ---------- */
+.prazo-aviso{max-width:640px;display:flex;flex-direction:column;gap:20px;}
+.pz-datas{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.pz-data{display:flex;flex-direction:column;gap:4px;padding:12px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface-2);min-width:150px;}
+.pz-data b{font-size:1.5rem;font-variant-numeric:tabular-nums;color:var(--text);}
+.pz-nova{border-color:var(--r-ouro-ui);background:var(--warning-lt);}
+.pz-rot{font-family:var(--r-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}
+.pz-seta{font-size:1.4rem;color:var(--text-muted);}
+.pz-lista{margin:0;display:flex;flex-direction:column;gap:10px;}
+.pz-lista div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px;}
+.pz-lista dt{font-size:.8rem;color:var(--text-muted);}
+.pz-lista dd{margin:0;}
+@media(max-width:560px){.pz-lista div{grid-template-columns:1fr;gap:2px;}.pz-seta{display:none;}}

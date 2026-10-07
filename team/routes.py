@@ -202,7 +202,7 @@ def register_team_routes(app):
             if entity_type == "activity":
                 from team import movimentos
                 movimentos.prazo_alterado(db.session.get(Activity, entity_id), old_date, nova,
-                                          motivo, current_user.display_name, current_user.id)
+                                          motivo, current_user.display_name, current_user.id, rev=rev)
             flash("Prazo realinhado e registrado no histórico.", "success")
         else:
             rev = DeadlineRevision(
@@ -487,6 +487,52 @@ def register_team_routes(app):
                                users={u.id: u for u in User.query.all()},
                                today=fuso.hoje())
 
+    def _pode_ver_prazo(a):
+        """Gestão, o responsável pela atividade e os líderes do projeto."""
+        if current_user.is_controladoria:
+            return True
+        from team import movimentos
+        m = _current_member()
+        return bool((m and a.member_id == m.id) or current_user.id in movimentos.lideres_projeto_uids(a))
+
+    @app.route("/prazo/<int:rid>")
+    @team_required
+    def team_prazo_aviso(rid):
+        """Tela simples do aviso de mudança de prazo: data atual, nova data, movimento e justificativa."""
+        from team.models_workflow import DeadlineRevision
+        from team import movimentos
+        rev = db.session.get(DeadlineRevision, rid) or abort(404)
+        if rev.entity_type != "activity":
+            abort(404)
+        a = db.session.get(Activity, rev.entity_id) or abort(404)
+        if not _pode_ver_prazo(a):
+            abort(403)
+        return render_template("team/prazo_aviso.html", rev=rev, a=a,
+                               movimento=movimentos.movimento_do_prazo(rev.old_date, rev.new_date),
+                               quem=(rev.user.display_name if rev.user else "—"),
+                               pode_reenviar=current_user.is_controladoria)
+
+    @app.route("/prazo/<int:rid>/reenviar", methods=["POST"])
+    @controladoria_required
+    def team_prazo_reenviar(rid):
+        """Reenvia o e-mail da mudança de prazo à Liderança, aos líderes do projeto e a quem pediu o reenvio."""
+        from team.models_workflow import DeadlineRevision
+        from team import movimentos
+        rev = db.session.get(DeadlineRevision, rid) or abort(404)
+        if rev.entity_type != "activity":
+            abort(404)
+        a = db.session.get(Activity, rev.entity_id) or abort(404)
+        uids = movimentos.liderancas_uids() | movimentos.lideres_projeto_uids(a)
+        n = movimentos.envia_email_prazo(
+            a, rev.old_date, rev.new_date, rev.reason, (rev.user.display_name if rev.user else "—"), rev,
+            uids, extras=[current_user.email])
+        log_audit(current_user.id, "prazo_email_reenviado", "revision", f"{rid} -> {n} e-mail(s)")
+        if n:
+            flash(f"E-mail reenviado ({n} destinatário{'s' if n != 1 else ''}, incluindo você).", "success")
+        else:
+            flash("Nenhum e-mail saiu: o canal de e-mail do portal está desligado ou sem destinatário.", "warning")
+        return redirect(url_for("team_prazo_aviso", rid=rid))
+
     @app.route("/atividade/<int:aid>/editar", methods=["GET", "POST"])
     @team_required
     def team_atividade_edit(aid):
@@ -497,8 +543,15 @@ def register_team_routes(app):
             db.session.commit()
             from team import movimentos
             if a.due_date != antigo:
+                from team.models_workflow import DeadlineRevision
+                rev = DeadlineRevision(
+                    entity_type="activity", entity_id=a.id, old_date=antigo, new_date=a.due_date,
+                    reason="alterado na edição da atividade", created_by=current_user.id,
+                    status="aplicada", approved_by=current_user.id, approved_at=datetime.utcnow())
+                db.session.add(rev)
+                db.session.commit()
                 movimentos.prazo_alterado(a, antigo, a.due_date, "alterado na edição da atividade",
-                                          current_user.display_name, current_user.id)
+                                          current_user.display_name, current_user.id, rev=rev)
             if a.member_id != resp_antes:
                 movimentos.movimento_projeto(
                     a, f"{current_user.display_name} trocou o responsável de “{a.title[:90]}”.",
@@ -575,12 +628,14 @@ def register_team_routes(app):
             flash("A justificativa é obrigatória para alterar prazo ou responsável.", "danger")
             return redirect(back)
         autor = current_user.display_name
+        rev = None
         if mudou_prazo:
             antigo = a.due_date
-            db.session.add(DeadlineRevision(
+            rev = DeadlineRevision(
                 entity_type="activity", entity_id=a.id, old_date=antigo, new_date=nova,
                 reason=motivo, created_by=current_user.id, status="aplicada",
-                approved_by=current_user.id, approved_at=datetime.utcnow()))
+                approved_by=current_user.id, approved_at=datetime.utcnow())
+            db.session.add(rev)
             a.due_date, a.due_provisional = nova, False
         if mudou_resp:
             antes = a.member
@@ -592,7 +647,7 @@ def register_team_routes(app):
                       f"{depois.name}. Motivo: {motivo}")))
         db.session.commit()
         if mudou_prazo:
-            movimentos.prazo_alterado(a, antigo, nova, motivo, autor, current_user.id)
+            movimentos.prazo_alterado(a, antigo, nova, motivo, autor, current_user.id, rev=rev)
         if mudou_resp:
             if depois.user_id and depois.user_id != current_user.id:
                 notify(depois.user_id, "Atividade atribuída a você",

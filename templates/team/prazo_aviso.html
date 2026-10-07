@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Prazo alterado{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Prazo alterado</h1>
+    <div class="sub"><a href="/atividade/{{ a.id }}">{{ a.title }}</a>{% if a.company %} · {{ a.company.name }}{% endif %}{% if a.competency %} · {{ a.competency.label }}{% endif %}</div></div>
+</div>
+
+<div class="card prazo-aviso">
+  <div class="pz-datas">
+    <div class="pz-data"><span class="pz-rot">Data atual</span>
+      <b>{{ rev.old_date.strftime('%d/%m/%Y') if rev.old_date else 'sem prazo' }}</b></div>
+    <span class="pz-seta" aria-hidden="true">→</span>
+    <div class="pz-data pz-nova"><span class="pz-rot">Nova data</span>
+      <b>{{ rev.new_date.strftime('%d/%m/%Y') if rev.new_date else 'sem prazo' }}</b></div>
+  </div>
+  <dl class="pz-lista">
+    <div><dt>Movimento</dt><dd>{{ movimento }}</dd></div>
+    <div><dt>Alterado por</dt><dd>{{ quem }}, em {{ (rev.created_at|local).strftime('%d/%m às %H:%M') }}</dd></div>
+    {% if a.member %}<div><dt>Responsável</dt><dd>{{ a.member.name }}</dd></div>{% endif %}
+    <div><dt>Justificativa</dt><dd>{{ rev.reason }}</dd></div>
+  </dl>
+  <div class="flex gap-1" style="flex-wrap:wrap;">
+    <a class="btn btn-primary" href="/atividade/{{ a.id }}">Abrir a atividade</a>
+    {% if pode_reenviar %}
+    <form method="post" action="/prazo/{{ rev.id }}/reenviar">{{ csrf() }}
+      <button class="btn btn-outline" type="submit">{{ icone('mail') }} Reenviar por e-mail</button></form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
