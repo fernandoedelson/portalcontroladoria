@@ -37,10 +37,10 @@
 {% else %}
 <div class="card">
   <h2>Status Fechamento</h2>
-  <div class="tbl-wrap"><table class="tbl rf-tbl">
+  <div class="tbl-wrap rf-wrap"><table class="tbl rf-tbl">
     <thead><tr><th scope="col">Empresa</th><th scope="col">Data</th>
       {% for macro, rot in docs %}<th scope="col" class="text-center">{{ rot }}</th>{% endfor %}
-      <th scope="col">Obs</th></tr></thead>
+      <th scope="col" class="rf-obs-col">Observações</th></tr></thead>
     <tbody>
     {% for g, rotg in grupos %}{% if q.grupos[g] %}
       <tr class="rf-grupo"><td colspan="6">{{ rotg }}</td></tr>
@@ -56,7 +56,16 @@
           <small>{% if c.estado == 'entregue' and c.get('data') %}{{ c.data.strftime('%d/%m') }}{% elif c.estado in ('postergada','pendente','aguardando') and c.get('prazo') %}até {{ c.prazo.strftime('%d/%m') }}{% elif c.estado == 'atrasada' %}{{ c.dias }} d.u. de atraso{% if c.get('prazo') %}<br>prazo {{ c.prazo.strftime('%d/%m') }}{% endif %}{% endif %}</small>
         </td>
         {% endfor %}
-        <td class="text-sm">{{ l.obs }}</td>
+        <td class="rf-obs-col">{% if l.obs %}
+          <span class="rf-obs" tabindex="0" aria-describedby="obs-{{ l.empresa.id }}">Ver observações
+            <span class="rf-obs-pop" role="tooltip" id="obs-{{ l.empresa.id }}">
+              <b class="rf-obs-tit">{{ l.empresa.name }}</b>
+              {% for macro, rot in docs %}{% set c = l.cels[macro] %}{% if c.get('motivo') and c.estado in ('postergada','atrasada','aguardando') %}
+              <span class="rf-obs-lin"><strong>{{ rot }}</strong>
+                {% if c.get('original') and c.get('nova') %}<em>{{ c.original.strftime('%d/%m') }} → {{ c.nova.strftime('%d/%m') }}</em>{% endif %}
+                <span>{{ c.motivo }}</span></span>
+              {% endif %}{% endfor %}
+            </span></span>{% endif %}</td>
       </tr>
       {% endfor %}
     {% endif %}{% endfor %}
@@ -151,5 +160,26 @@
   .rf-tbl td.rf-cel{border-left:1px solid var(--surface);border-bottom:1px solid var(--surface);}
   .rf-tbl tr:hover td.rf-cel{filter:brightness(.97);}
   .rf-cel small{color:inherit;opacity:.85;}
+  /* cabeçalho congelado: a tabela deixa de rolar por dentro, então o cabeçalho acompanha a página, logo abaixo da barra do topo */
+  .rf-wrap{overflow:visible;}
+  .rf-tbl{overflow:visible;}
+  .rf-tbl thead th{position:sticky;top:56px;z-index:6;}
+  @media (min-width:761px){
+    .rf-tbl{table-layout:fixed;width:100%;}
+    .rf-tbl th:nth-child(1){width:26%;} .rf-tbl th:nth-child(2){width:7%;}
+    .rf-tbl th:nth-child(3),.rf-tbl th:nth-child(4),.rf-tbl th:nth-child(5){width:17%;}
+    .rf-tbl th.rf-obs-col{width:15%;}
+  }
+  .rf-obs-col{position:relative;}
+  .rf-obs{display:inline-block;font-size:.8rem;font-weight:600;color:var(--accent);border-bottom:1px dashed currentColor;cursor:help;position:relative;}
+  .rf-obs:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  .rf-obs-pop{display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:min(380px,80vw);
+    background:var(--surface);color:var(--text);border:1px solid var(--border-2);border-radius:var(--radius-sm);
+    box-shadow:var(--shadow-md);padding:12px 14px;text-align:left;font-weight:400;cursor:default;}
+  .rf-obs:hover .rf-obs-pop,.rf-obs:focus .rf-obs-pop,.rf-obs:focus-within .rf-obs-pop{display:block;}
+  .rf-obs-tit{display:block;font-size:.82rem;margin-bottom:6px;color:var(--text);}
+  .rf-obs-lin{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:.8rem;line-height:1.35;padding:6px 0;border-top:1px solid var(--border);}
+  .rf-obs-lin strong{grid-column:1;} .rf-obs-lin em{grid-column:2;font-style:normal;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+  .rf-obs-lin span{grid-column:1/-1;color:var(--text);}
 </style>
 {% endblock %}
