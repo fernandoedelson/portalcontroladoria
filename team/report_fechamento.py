@@ -173,7 +173,7 @@ def _linhas_cel(cel):
         n = cel.get("dias") or 1
         return [f"{n} d.u. de atraso", "prazo " + cel["prazo"].strftime("%d/%m")] if cel.get("prazo") \
             else [f"{n} d.u. de atraso"]
-    if e == "postergada" and cel.get("prazo"):
+    if e in ("postergada", "aguardando") and cel.get("prazo"):
         return ["até " + cel["prazo"].strftime("%d/%m")]
     if e == "pendente" and cel.get("prazo"):
         return ["prazo " + cel["prazo"].strftime("%d/%m")]
@@ -198,7 +198,7 @@ def html(q, link):
     for g, rot in GRUPOS:
         if not q["grupos"][g]:
             continue
-        linhas.append(f'<tr><td colspan="6" style="{td}background:#F0F3F6;font-weight:bold;">{escape(rot)}</td></tr>')
+        linhas.append(f'<tr><td colspan="5" style="{td}background:#F0F3F6;font-weight:bold;">{escape(rot)}</td></tr>')
         for l in q["grupos"][g]:
             cs = ""
             for macro, _r in DOCS:
@@ -210,8 +210,7 @@ def html(q, link):
                        f'<div style="font-size:11px;color:#333;line-height:1.3;">{pequeno}</div></td>')
             data = l["data"].strftime("%d/%m") if l["data"] else ""
             linhas.append(f'<tr><td style="{td}">{escape(l["empresa"].name)}</td>'
-                          f'<td style="{td}text-align:center;">{data}</td>{cs}'
-                          f'<td style="{td}font-size:12px;">{escape(l["obs"])}</td></tr>')
+                          f'<td style="{td}text-align:center;">{data}</td>{cs}</tr>')
     rodape = ""
     if q.get("postergacoes"):
         li = "".join(
@@ -219,7 +218,7 @@ def html(q, link):
             f'<b>{p["original"].strftime("%d/%m")}</b>, nova data combinada <b>{p["nova"].strftime("%d/%m")}</b>'
             + (f' ({escape(p["motivo"])})' if p.get("motivo") else "") + "</li>"
             for p in q["postergacoes"])
-        rodape = (f'<p style="margin:14px 0 4px;font-size:12px;"><b>Entregas postergadas</b></p>'
+        rodape = (f'<p style="margin:14px 0 4px;font-size:12px;"><b>Observações · entregas postergadas</b></p>'
                   f'<ul style="margin:0;padding-left:16px;font-size:12px;list-style:none;">{li}</ul>')
     resumo = ("Todos os documentos foram entregues." if q["completo"] else
               f'{t["entregues"]} de {t["docs"]} documentos entregues · {q["empresas_completas"]} de {q["n_empresas"]} empresas completas'
@@ -231,10 +230,10 @@ def html(q, link):
 <div style="font-size:14px;margin-bottom:12px;"><b>{escape(resumo)}</b></div>
 <table style="border-collapse:collapse;width:100%;">
 <tr><th style="{th}text-align:left;">Empresa</th><th style="{th}">Data</th><th style="{th}">Painel</th>
-<th style="{th}">Template</th><th style="{th}">Endividamento</th><th style="{th}">Obs</th></tr>
+<th style="{th}">Template</th><th style="{th}">Endividamento</th></tr>
 {''.join(linhas)}
 </table>{rodape}
-<p style="font-size:12px;color:#556;margin-top:14px;">&#10004; entregue &nbsp; &#10008; atrasado (dias úteis) &nbsp; &#9203; postergado (nova data combinada) &nbsp; &#8226; no prazo.
+<p style="font-size:12px;color:#556;margin-top:14px;">&#10004; entregue &nbsp; &#10008; atrasado (dias úteis) &nbsp; &#9203; aguardando envio (dentro da tolerância) ou postergado (* = nova data combinada) &nbsp; &#8226; no prazo.
 Quadro ao vivo: <a href="{escape(link)}">{escape(link)}</a></p></div>"""
 
 
