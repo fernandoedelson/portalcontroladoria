@@ -64,7 +64,7 @@ def weekly_digest_text():
             f"  Atrasadas: {len(atrasadas)}",
         ]
         if aguardando:
-            linhas.append(f"  Aguardando envio (dentro da tolerância, ainda sem cobrança): {len(aguardando)}")
+            linhas.append(f"  Aguardando envio: {len(aguardando)}")
         pausadas = [a for a in acts if a.cobranca_pausada(hoje)]
         if pausadas:
             linhas.append(f"  Com nova data combinada (sem cobrança): {len(pausadas)}")
@@ -578,26 +578,35 @@ def register_workflow_routes(app):
         return render_template("team/resumo.html", texto=weekly_digest_text(),
                                snap=None, enviados=enviados, html=previa)
 
-    @app.route("/resumo/previa-email", methods=["POST"])
+    @app.route("/resumo/enviar-lideranca", methods=["POST"])
     @team_required
-    def wf_resumo_previa_email():
-        """Manda o resumo (com a tabela) SÓ para quem clicou, para ver como o e-mail fica. Não grava foto
-        nem avisa mais ninguém."""
+    def wf_resumo_enviar_lideranca():
+        """Manda o resumo do fechamento (com a tabela) só para as pessoas com perfil Liderança.
+        Não grava foto nem avisa a lista do resumo semanal."""
         from team import alerts
-        email = (current_user.email or "").strip()
-        if not email:
-            flash("Seu usuário não tem e-mail cadastrado.", "warning")
+        alvo = [u for u in User.query.filter_by(role="lideranca", active=True).all() if (u.email or "").strip()]
+        if not alvo:
+            flash("Nenhuma pessoa com perfil Liderança e e-mail cadastrado.", "warning")
             return redirect(url_for("wf_resumo"))
         base = request.url_root.rstrip("/")
         texto = weekly_digest_text()
         corpo = resumo_html(texto, base + "/resumo", base + "/report-fechamento")
-        ok, erro = alerts.send_email(email, "[Prévia] Resumo do fechamento — Controladoria J&F",
-                                     f"{texto}\n\nAbrir no portal: {base}/resumo\n", teste=True, html=corpo)
-        log_audit(current_user.id, "resumo_previa_email", "digest", f"{email} ok={ok}")
-        if ok:
-            flash(f"Prévia enviada somente para {email}.", "success")
+        ok_n, falhas = 0, []
+        for u in alvo:
+            certo, erro = alerts.send_email(
+                u.email.strip(), "Resumo do fechamento — Controladoria J&F",
+                f"{texto}\n\nAbrir no portal: {base}/resumo\n", lista=True, html=corpo)
+            if certo:
+                ok_n += 1
+            else:
+                falhas.append(f"{u.display_name}: {_MOTIVO_EMAIL.get(erro, erro)}")
+        log_audit(current_user.id, "resumo_enviado_lideranca", "digest", f"{ok_n}/{len(alvo)}")
+        if ok_n:
+            flash(f"Resumo enviado para {ok_n} pessoa(s) da Liderança."
+                  + (f" Falhou para: {'; '.join(falhas)}." if falhas else ""),
+                  "success" if not falhas else "warning")
         else:
-            flash(f"Não consegui enviar para {email}: {_MOTIVO_EMAIL.get(erro, erro)}.", "warning")
+            flash("Não consegui enviar: " + "; ".join(falhas) + ".", "warning")
         return redirect(url_for("wf_resumo"))
 
     @app.route("/resumo/<int:sid>")

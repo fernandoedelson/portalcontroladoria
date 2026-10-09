@@ -16,7 +16,7 @@
   <h2>Situação agora</h2>
   {% endif %}
   {% if html %}
-  <p class="help-txt">{{ 'Este é o corpo do e-mail enviado.' if snap else 'Prévia do que vai por e-mail: números do cronograma e a tabela do Report do Fechamento.' }}</p>
+  <p class="help-txt">{{ 'Este é o corpo do e-mail enviado.' if snap else 'Como vai por e-mail: números do cronograma e a tabela do Report do Fechamento.' }}</p>
   <div class="resumo-html">{{ html|safe }}</div>
   {% else %}
   <pre class="resumo-box">{{ texto }}</pre>
@@ -32,10 +32,10 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <button class="btn btn-primary" type="submit">{{ icone("send") }} Enviar para a controladoria</button>
   </form>
-  <form method="post" action="/resumo/previa-email" class="mt-1">
+  <form method="post" action="/resumo/enviar-lideranca" class="mt-1">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <button class="btn btn-outline" type="submit">{{ icone("mail") }} Enviar prévia só para o meu e-mail</button>
-    <span class="help-txt">Chega só para {{ current_user.email }}, no formato novo, sem avisar mais ninguém.</span>
+    <button class="btn btn-outline" type="submit">{{ icone("mail") }} Enviar para a Liderança</button>
+    <span class="help-txt">Só para as pessoas com perfil Liderança, no mesmo formato do resumo.</span>
   </form>
   <p class="help-txt mt-1">Vai pelo painel, push e e-mail. O envio automático (semanal) é feito pelo agendador —
     configure o dia e o horário em <a href="/admin?tab=sistema">Administração › Sistema</a>.</p>
