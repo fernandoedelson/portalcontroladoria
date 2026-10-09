@@ -137,11 +137,11 @@ def envia_resumo(enviado_por=None, base_url=None, com_tabela=None):
     """Gera o resumo, guarda a foto e manda para a controladoria por
     painel/push (abrindo a foto) e por e-mail. Retorna o DigestSnapshot.
 
-    `com_tabela`: o envio feito à mão (botão "Enviar para a controladoria") leva também a tabela do
-    Report do Fechamento, em HTML. O resumo semanal automático segue só em texto."""
+    `com_tabela`: todo envio (à mão ou pelo agendador) leva também a tabela do Report do Fechamento,
+    em HTML. Só se passa False para desligar a tabela."""
     from team import alerts
     if com_tabela is None:
-        com_tabela = enviado_por is not None
+        com_tabela = True
     texto = weekly_digest_text()
     snap = DigestSnapshot(texto=texto, sent_by=enviado_por)
     db.session.add(snap)

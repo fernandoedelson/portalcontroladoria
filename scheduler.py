@@ -156,7 +156,7 @@ def run_daily_tasks(app, force=False):
             force or not _already_ran(app, "resumo", hoje)):
         try:
             from workflow_routes import envia_resumo
-            snap = envia_resumo(com_tabela=pendente)      # pedido manual adiado leva a tabela; o semanal, não
+            snap = envia_resumo()
             _mark(app, "resumo", hoje)
             if pendente:
                 from models import set_setting
