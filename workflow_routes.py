@@ -108,10 +108,40 @@ _MOTIVO_EMAIL = {
 }
 
 
-def envia_resumo(enviado_por=None, base_url=None):
+def resumo_html(texto, link, link_report):
+    """Corpo em HTML do resumo enviado à mão: os números do cronograma no alto e, abaixo, a mesma
+    tabela do Report do Fechamento (quem já mandou cada documento). Sem tabela se não houver
+    competência ou empresa com entrega ativada."""
+    from html import escape
+    from models import current_competency
+    from team import report_fechamento as rf
+    linhas = [l for l in texto.splitlines() if l.strip()]
+    if not linhas:
+        return None
+    itens = "".join(f"<li style=\"margin:2px 0;\">{escape(l.strip())}</li>" for l in linhas[1:])
+    topo = (f'<div style="font-family:Segoe UI,Arial,sans-serif;color:#1b2a3a;max-width:760px;">'
+            f'<h2 style="margin:0 0 6px;color:#1F4E79;">Resumo do fechamento</h2>'
+            f'<div style="font-size:14px;font-weight:bold;margin-bottom:4px;">{escape(linhas[0])}</div>'
+            f'<ul style="margin:0 0 10px;padding-left:18px;font-size:13px;">{itens}</ul>'
+            f'<p style="font-size:13px;margin:0 0 16px;"><a href="{escape(link)}">Abrir no portal</a></p>')
+    tabela = ""
+    comp = current_competency()
+    if comp:
+        q = rf.montar(comp, fuso.hoje())
+        if q["n_empresas"]:
+            tabela = "<hr style=\"border:0;border-top:1px solid #BFD3E6;margin:0 0 16px;\">" + rf.html(q, link_report)
+    return topo + tabela + "</div>"
+
+
+def envia_resumo(enviado_por=None, base_url=None, com_tabela=None):
     """Gera o resumo, guarda a foto e manda para a controladoria por
-    painel/push (abrindo a foto) e por e-mail. Retorna o DigestSnapshot."""
+    painel/push (abrindo a foto) e por e-mail. Retorna o DigestSnapshot.
+
+    `com_tabela`: o envio feito à mão (botão "Enviar para a controladoria") leva também a tabela do
+    Report do Fechamento, em HTML. O resumo semanal automático segue só em texto."""
     from team import alerts
+    if com_tabela is None:
+        com_tabela = enviado_por is not None
     texto = weekly_digest_text()
     snap = DigestSnapshot(texto=texto, sent_by=enviado_por)
     db.session.add(snap)
@@ -120,6 +150,14 @@ def envia_resumo(enviado_por=None, base_url=None):
     base = (base_url or os.environ.get("TEAM_PORTAL_URL")
             or os.environ.get("RENDER_EXTERNAL_URL") or alerts.PORTAL_URL)
     link = base.rstrip("/") + caminho
+    corpo_html = None
+    if com_tabela:
+        try:
+            corpo_html = resumo_html(texto, link, base.rstrip("/") + "/report-fechamento")
+        except Exception:                    # a tabela é um extra: nunca derruba o resumo
+            corpo_html = None
+        snap.html = corpo_html
+        db.session.commit()
     alvo = User.query.filter(User.role.in_(["controladoria", "lideranca", "admin"]),
                              User.active.is_(True)).all()
     for u in alvo:                                   # painel/push: como antes
@@ -131,7 +169,7 @@ def envia_resumo(enviado_por=None, base_url=None):
     for email in destinos:
         certo, erro = alerts.send_email(
             email, "Resumo do fechamento — Controladoria J&F",
-            f"{texto}\n\nAbrir no portal: {link}\n", lista=True)
+            f"{texto}\n\nAbrir no portal: {link}\n", lista=True, html=corpo_html)
         if certo:
             ok += 1
         else:
@@ -531,8 +569,14 @@ def register_workflow_routes(app):
             return redirect(url_for("wf_resumo_ver", sid=snap.id))
         enviados = (DigestSnapshot.query.order_by(DigestSnapshot.created_at.desc())
                     .limit(12).all())
+        previa = None
+        try:
+            previa = resumo_html(weekly_digest_text(), request.url_root.rstrip("/") + "/resumo",
+                                 request.url_root.rstrip("/") + "/report-fechamento")
+        except Exception:
+            previa = None
         return render_template("team/resumo.html", texto=weekly_digest_text(),
-                               snap=None, enviados=enviados)
+                               snap=None, enviados=enviados, html=previa)
 
     @app.route("/resumo/<int:sid>")
     @team_required
@@ -541,7 +585,7 @@ def register_workflow_routes(app):
         enviados = (DigestSnapshot.query.order_by(DigestSnapshot.created_at.desc())
                     .limit(12).all())
         return render_template("team/resumo.html", texto=snap.texto,
-                               snap=snap, enviados=enviados)
+                               snap=snap, enviados=enviados, html=snap.html)
 
     # ------------------------------------------------------------------
     # BLOCO DE NOTAS PESSOAL — privado, so o dono ve

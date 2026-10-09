@@ -15,7 +15,12 @@
   {% else %}
   <h2>Situação agora</h2>
   {% endif %}
+  {% if html %}
+  <p class="help-txt">{{ 'Este é o corpo do e-mail enviado.' if snap else 'Prévia do que vai por e-mail: números do cronograma e a tabela do Report do Fechamento.' }}</p>
+  <div class="resumo-html">{{ html|safe }}</div>
+  {% else %}
   <pre class="resumo-box">{{ texto }}</pre>
+  {% endif %}
   {% if snap and snap.email_falhas %}
   <div class="resumo-falha">
     <strong>E-mail não entregue:</strong>
@@ -47,6 +52,7 @@
 </div>
 {% endif %}
 <style>
+  .resumo-html{background:#fff;color:#1b2a3a;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;overflow-x:auto;}
   .resumo-falha{margin-top:.8rem;padding:.7rem .9rem;border-radius:10px;background:var(--warning-lt);
     border:1px solid var(--warning-border);font-size:.88rem;}
   .resumo-falha ul{margin:.3rem 0 0 1.1rem;padding:0;}

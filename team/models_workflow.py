@@ -212,6 +212,7 @@ class DigestSnapshot(db.Model):
     __tablename__ = "digest_snapshots"
     id = db.Column(db.Integer, primary_key=True)
     texto = db.Column(db.Text, nullable=False)
+    html = db.Column(db.Text)            # corpo em HTML (resumo + tabela do Report do Fechamento); None = só texto
     sent_by = db.Column(db.Integer, db.ForeignKey("users.id"))   # None = agendador
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     destinos = db.Column(db.Integer, default=0)
