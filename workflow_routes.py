@@ -578,6 +578,28 @@ def register_workflow_routes(app):
         return render_template("team/resumo.html", texto=weekly_digest_text(),
                                snap=None, enviados=enviados, html=previa)
 
+    @app.route("/resumo/previa-email", methods=["POST"])
+    @team_required
+    def wf_resumo_previa_email():
+        """Manda o resumo (com a tabela) SÓ para quem clicou, para ver como o e-mail fica. Não grava foto
+        nem avisa mais ninguém."""
+        from team import alerts
+        email = (current_user.email or "").strip()
+        if not email:
+            flash("Seu usuário não tem e-mail cadastrado.", "warning")
+            return redirect(url_for("wf_resumo"))
+        base = request.url_root.rstrip("/")
+        texto = weekly_digest_text()
+        corpo = resumo_html(texto, base + "/resumo", base + "/report-fechamento")
+        ok, erro = alerts.send_email(email, "[Prévia] Resumo do fechamento — Controladoria J&F",
+                                     f"{texto}\n\nAbrir no portal: {base}/resumo\n", teste=True, html=corpo)
+        log_audit(current_user.id, "resumo_previa_email", "digest", f"{email} ok={ok}")
+        if ok:
+            flash(f"Prévia enviada somente para {email}.", "success")
+        else:
+            flash(f"Não consegui enviar para {email}: {_MOTIVO_EMAIL.get(erro, erro)}.", "warning")
+        return redirect(url_for("wf_resumo"))
+
     @app.route("/resumo/<int:sid>")
     @team_required
     def wf_resumo_ver(sid):
