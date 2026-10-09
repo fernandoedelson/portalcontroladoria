@@ -50,8 +50,9 @@ def weekly_digest_text():
     total = len(acts)
     concluidas = sum(1 for a in acts if a.status == "concluida")
     andamento = sum(1 for a in acts if a.status == "em_andamento")
-    atrasadas = [a for a in acts if a.status in ABERTAS
-                 and a.due_date and a.due_date < hoje]
+    # mesma regra do portal: entrega de empresa dentro da tolerância é "aguardando envio", não atraso
+    atrasadas = [a for a in acts if a.status in ABERTAS and a.is_overdue(hoje)]
+    aguardando = [a for a in acts if a.status in ABERTAS and a.em_tolerancia(hoje)]
     linhas = [f"Fechamento {comp.label}"]
     if total == 0:
         linhas.append("  Nenhuma atividade gerada ainda — use o Cronograma para gerar.")
@@ -62,6 +63,8 @@ def weekly_digest_text():
             f"  Em andamento: {andamento}",
             f"  Atrasadas: {len(atrasadas)}",
         ]
+        if aguardando:
+            linhas.append(f"  Aguardando envio (dentro da tolerância, ainda sem cobrança): {len(aguardando)}")
         pausadas = [a for a in acts if a.cobranca_pausada(hoje)]
         if pausadas:
             linhas.append(f"  Com nova data combinada (sem cobrança): {len(pausadas)}")
