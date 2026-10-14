@@ -47,8 +47,25 @@ def create_app(config=Config):
     app.config.from_object(config)
     db.init_app(app)
     login_manager.init_app(app)
+    # O token do formulário vale enquanto a sessão valer. O padrão era 1 hora: quem deixava a Fila do
+    # dia aberta e clicava depois recebia "Bad Request — The CSRF token has expired".
+    app.config["WTF_CSRF_TIME_LIMIT"] = None
     csrf.init_app(app)
     login_manager.login_view = "login"
+
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def _csrf_invalido(e):
+        """Token ausente ou inválido (página muito antiga, sessão trocada): volta com um aviso claro,
+        em vez da tela "Bad Request"."""
+        from flask import flash, jsonify, redirect, request, url_for
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json \
+                or request.form.get("ajax"):
+            return jsonify(ok=False, erro="sessao_expirada"), 400
+        flash("A página ficou aberta por muito tempo e a ação não foi aceita. "
+              "A tela foi atualizada: confira e tente de novo.", "warning")
+        return redirect(request.referrer or url_for("index"))
 
     with app.app_context():
         db.create_all()
