@@ -248,14 +248,20 @@ def register_workflow_routes(app):
     def wf_concluir_lote():
         ids = request.form.getlist("ids")
         n = 0
+        feitas = []
         for aid in ids:
             a = db.session.get(Activity, int(aid))
             if a and a.status in ABERTAS and _minha_ou_gestao(a):
                 a.status = "concluida"
                 a.done_at = datetime.utcnow()
                 a.done_by = current_user.id
+                feitas.append(a)
                 n += 1
         db.session.commit()
+        from team import movimentos           # líder do projeto é avisado, como na conclusão individual
+        for a in feitas:
+            movimentos.movimento_projeto(
+                a, f"{current_user.display_name} concluiu “{a.title[:90]}”.", current_user.id)
         log_audit(current_user.id, "atividades_lote", "activity", f"{n} concluídas")
         flash(f"{n} atividade(s) concluída(s).", "success")
         return redirect(request.referrer or url_for("team_atividades"))

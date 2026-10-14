@@ -6,6 +6,9 @@
   {% set est = a.effective_status(today) %}
   {% set s = SELO.get(est, ('nada', est)) %}
   <li class="fila-lin">
+    <label class="fl-sel" title="Selecionar para concluir em lote">
+      <input type="checkbox" class="fila-sel" name="ids" value="{{ a.id }}" form="form-lote-fila"
+             aria-label="Selecionar {{ a.title }}"/></label>
     <div class="fl-txt">
       <a href="/atividade/{{ a.id }}" class="fl-t">{{ a.title }}</a>
       <div class="fl-m">{{ a.kind_pt() }}{% if a.company %} · {{ a.company.name }}{% endif %}{% if a.competency %} · {{ a.competency.label }}{% endif %}</div>
@@ -217,20 +220,28 @@
       </form>
     </div>
 
+    {% if panel.overdue or panel.waiting or panel.today or panel.soon %}
+    <form method="post" action="/atividades/concluir-lote" id="form-lote-fila" class="fila-lote">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <label class="chk"><input type="checkbox" id="fila-todas"/> Selecionar todas</label>
+      <span class="fila-cont" id="fila-cont" aria-live="polite">nenhuma selecionada</span>
+      <button class="btn btn-primary btn-sm" type="submit" id="fila-concluir" disabled>{{ icone('check') }} Concluir selecionadas</button>
+    </form>
+    {% endif %}
     {% if panel.overdue %}
-    <div class="fila-sec sec-atraso">Atrasadas <b>{{ panel.n_overdue }}</b></div>
+    <div class="fila-sec sec-atraso"><label class="fila-sec-sel" title="Selecionar esta seção"><input type="checkbox" class="fila-sec-chk" aria-label="Selecionar todas as atrasadas"/></label>Atrasadas <b>{{ panel.n_overdue }}</b></div>
     <ul class="fila-lista">{% for a in panel.overdue %}{{ linha(a, 'atraso') }}{% endfor %}</ul>
     {% endif %}
     {% if panel.waiting %}
-    <div class="fila-sec sec-hoje" title="Entregas das empresas: vencidas ontem, ainda dentro da tolerância. Viram atraso sozinhas.">Aguardando envio <b>{{ panel.n_waiting }}</b></div>
+    <div class="fila-sec sec-hoje" title="Entregas das empresas: vencidas ontem, ainda dentro da tolerância. Viram atraso sozinhas."><label class="fila-sec-sel" title="Selecionar esta seção"><input type="checkbox" class="fila-sec-chk" aria-label="Selecionar todas as aguardando envio"/></label>Aguardando envio <b>{{ panel.n_waiting }}</b></div>
     <ul class="fila-lista">{% for a in panel.waiting %}{{ linha(a, 'hoje') }}{% endfor %}</ul>
     {% endif %}
     {% if panel.today %}
-    <div class="fila-sec sec-hoje">Vencem hoje <b>{{ panel.n_today }}</b></div>
+    <div class="fila-sec sec-hoje"><label class="fila-sec-sel" title="Selecionar esta seção"><input type="checkbox" class="fila-sec-chk" aria-label="Selecionar todas as que vencem hoje"/></label>Vencem hoje <b>{{ panel.n_today }}</b></div>
     <ul class="fila-lista">{% for a in panel.today %}{{ linha(a, 'hoje') }}{% endfor %}</ul>
     {% endif %}
     {% if panel.soon %}
-    <div class="fila-sec">Próximos 3 dias úteis <b>{{ panel.n_soon }}</b></div>
+    <div class="fila-sec"><label class="fila-sec-sel" title="Selecionar esta seção"><input type="checkbox" class="fila-sec-chk" aria-label="Selecionar todas dos próximos dias"/></label>Próximos 3 dias úteis <b>{{ panel.n_soon }}</b></div>
     <ul class="fila-lista">{% for a in panel.soon %}{{ linha(a, 'prox') }}{% endfor %}</ul>
     {% endif %}
     {% if not panel.overdue and not panel.today and not panel.soon and not panel.waiting %}
@@ -282,4 +293,39 @@
   </section>
   </div>
 </div>
+<script>
+(function(){
+  var form=document.getElementById('form-lote-fila'); if(!form) return;
+  var todas=document.getElementById('fila-todas'), cont=document.getElementById('fila-cont'),
+      btn=document.getElementById('fila-concluir');
+  function itens(){return Array.prototype.slice.call(document.querySelectorAll('.fila-sel'));}
+  function atualiza(){
+    var l=itens(), n=l.filter(function(c){return c.checked;}).length;
+    cont.textContent=n?(n+' selecionada'+(n>1?'s':'')+' de '+l.length):'nenhuma selecionada';
+    btn.disabled=!n;
+    todas.checked=n>0&&n===l.length; todas.indeterminate=n>0&&n<l.length;
+    document.querySelectorAll('.fila-sec-chk').forEach(function(s){
+      var ul=s.closest('.fila-sec').nextElementSibling; if(!ul) return;
+      var c=Array.prototype.slice.call(ul.querySelectorAll('.fila-sel')), k=c.filter(function(x){return x.checked;}).length;
+      s.checked=k>0&&k===c.length; s.indeterminate=k>0&&k<c.length;
+    });
+    itens().forEach(function(c){var li=c.closest('.fila-lin'); if(li) li.classList.toggle('fila-marcada',c.checked);});
+  }
+  document.addEventListener('change',function(e){
+    var t=e.target;
+    if(t.id==='fila-todas'){itens().forEach(function(c){c.checked=t.checked;});}
+    else if(t.classList&&t.classList.contains('fila-sec-chk')){
+      var ul=t.closest('.fila-sec').nextElementSibling;
+      if(ul) ul.querySelectorAll('.fila-sel').forEach(function(c){c.checked=t.checked;});
+    }
+    if(t.classList&&(t.classList.contains('fila-sel')||t.classList.contains('fila-sec-chk'))||t.id==='fila-todas') atualiza();
+  });
+  form.addEventListener('submit',function(e){
+    var n=itens().filter(function(c){return c.checked;}).length;
+    if(!n){e.preventDefault();return;}
+    if(!window.confirm('Concluir '+n+' atividade'+(n>1?'s':'')+'?')) e.preventDefault();
+  });
+  atualiza();
+})();
+</script>
 {% endblock %}
