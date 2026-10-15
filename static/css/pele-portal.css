@@ -86,3 +86,8 @@
    sobre fundo vermelho). Aqui continua um item de menu, só com o texto na cor de perigo. */
 .jf-pele a.danger,.jf-pele .user-menu a.danger{background:transparent;color:var(--jf-bad);border:0;border-top:1px solid var(--jf-line);}
 .jf-pele .user-menu a.danger:hover{background:var(--jf-paper-warn);color:var(--jf-bad);}
+
+/* 7) login: o nome "Controladoria" foi desenhado para a fonte condensada (96px). Em Georgia fica enorme e quebra
+   em "Controla-doria"; aqui cabe numa linha só. */
+.jf-pele .lg-nome{font-size:clamp(38px,4.2vw,62px);font-weight:700;line-height:1.05;letter-spacing:-.01em;hyphens:none;}
+.jf-pele .lg-frase{max-width:34ch;}
