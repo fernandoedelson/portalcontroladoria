@@ -25,6 +25,14 @@ from team.models_workflow import (ActivityNote, ActivityFile, Absence,
                                   DefinitionList, Definition, DigestSnapshot)
 
 ANEXO_DIR = os.path.join(Config.UPLOAD_DIR, "_anexos")
+
+
+def _anexo_dir():
+    """Pasta dos anexos: a de sempre no portal principal; uma subpasta própria em cada espaço de trabalho
+    (o anexo da atividade nº 1 de um espaço não pode colidir com o da nº 1 de outro)."""
+    import espacos
+    ws = espacos.atual()
+    return ANEXO_DIR if ws == espacos.PRINCIPAL else os.path.join(ANEXO_DIR, "ws_" + ws)
 ALLOWED_ANEXO = {".pdf", ".xlsx", ".xlsm", ".xls", ".csv", ".png", ".jpg",
                  ".jpeg", ".docx", ".pptx", ".txt", ".msg", ".eml", ".zip"}
 ABERTAS = ["pendente", "em_andamento", "bloqueada"]
@@ -353,7 +361,7 @@ def register_workflow_routes(app):
         if ext not in ALLOWED_ANEXO:
             flash(f"Formato {ext} não permitido.", "danger")
             return redirect(url_for("team_atividade", aid=aid))
-        pasta = os.path.join(ANEXO_DIR, str(aid))
+        pasta = os.path.join(_anexo_dir(), str(aid))
         os.makedirs(pasta, exist_ok=True)
         stamp = fuso.agora().strftime("%Y%m%d%H%M%S")
         nome = secure_filename(f"{stamp}_{f.filename}")

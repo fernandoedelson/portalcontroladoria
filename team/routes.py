@@ -20,6 +20,13 @@ from team import engine
 from team import alerts as team_alerts
 
 EVIDENCE_DIR = os.path.join(Config.UPLOAD_DIR, "_evidencias")
+
+
+def _evid_dir():
+    """Evidências: pasta de sempre no principal; subpasta própria em cada espaço de trabalho."""
+    import espacos
+    ws = espacos.atual()
+    return EVIDENCE_DIR if ws == espacos.PRINCIPAL else os.path.join(EVIDENCE_DIR, "ws_" + ws)
 ALLOWED_EVIDENCE = {".pdf", ".xlsx", ".xlsm", ".png", ".jpg", ".jpeg",
                     ".docx", ".pptx", ".csv", ".txt", ".msg"}
 
@@ -1319,7 +1326,7 @@ def register_team_routes(app):
             r.recorded_at = agora
             if conteudos:                # acrescenta (não substitui as anteriores)
                 from team.models import IndicatorEvidence
-                folder = os.path.join(EVIDENCE_DIR, str(i.id))
+                folder = os.path.join(_evid_dir(), str(i.id))
                 os.makedirs(folder, exist_ok=True)
                 db.session.flush()
                 for k, (nome, dados) in enumerate(conteudos):
@@ -1378,7 +1385,7 @@ def register_team_routes(app):
             if ext not in ALLOWED_EVIDENCE:
                 flash("Formato de evidência não permitido.", "danger")
                 return redirect(url_for("team_indicador", iid=i.id))
-            folder = os.path.join(EVIDENCE_DIR, str(i.id))
+            folder = os.path.join(_evid_dir(), str(i.id))
             os.makedirs(folder, exist_ok=True)
             fname = secure_filename(f"{datetime.utcnow():%Y%m%d%H%M%S}_{file.filename}")
             path = os.path.join(folder, fname)

@@ -14,7 +14,7 @@
   {% if not restrito %}<button class="adm-tab" data-tab="org">Organização <span class="cnt">{{ companies|length }}</span></button>
   <button class="adm-tab" data-tab="sistema">Sistema</button>
   <a class="adm-tab" href="/alertas">Alertas</a>
-  <a class="adm-tab" href="/avisos-empresas">Avisos às empresas</a>{% endif %}
+  <a class="adm-tab" href="/avisos-empresas">Avisos às empresas</a>{% if ws_atual == 'principal' and current_user.is_admin %}<a class="adm-tab" href="/admin/espacos">Espaços de trabalho</a>{% endif %}{% endif %}
 </div>
 
 <!-- Formularios das linhas editaveis (HTML nao permite <form> dentro de <tr>;

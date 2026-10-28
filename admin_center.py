@@ -775,6 +775,10 @@ def register_admin_routes(app):
         if User.query.filter_by(email=email).first():
             flash(f"Já existe usuário com o e-mail {email}.", "warning")
             return _back("org")
+        import espacos
+        if espacos.email_em_uso(email, exceto_slug=espacos.atual()):
+            flash(f"O e-mail {email} já está cadastrado em outro espaço do portal.", "warning")
+            return _back("org")
         pw = request.form.get("password") or DEFAULT_PASSWORD
         u = User(email=email, display_name=name, role=role,
                  company_id=_int(request.form.get("company_id")),
@@ -794,6 +798,10 @@ def register_admin_routes(app):
         dup = User.query.filter(User.email == email, User.id != uid).first()
         if dup:
             flash(f"O e-mail {email} já pertence a outro usuário.", "danger")
+            return _back("org")
+        import espacos
+        if email != (u.email or "").lower() and espacos.email_em_uso(email, exceto_slug=espacos.atual()):
+            flash(f"O e-mail {email} já está cadastrado em outro espaço do portal.", "danger")
             return _back("org")
         # nao permite remover o proprio acesso de admin (evita lockout)
         new_role = request.form.get("role") or u.role

@@ -235,18 +235,30 @@ def _avisar_tarefas(app, hoje, ate=None, coletor=None):
     return enviados
 
 
+def _um_ciclo(app):
+    """Um passo do agendador DENTRO do espaço corrente (cada espaço tem as próprias configurações)."""
+    if _s(_get(app, "scheduler_enabled", "1")) == "1":
+        from team import comunicacao
+        h, m = comunicacao.hora_envio()
+        agora = fuso.agora()
+        if (agora.hour, agora.minute) >= (h, m):
+            run_daily_tasks(app)
+
+
 def _loop(app):
     import time
+    import espacos
     while True:
         try:
             with app.app_context():
-                from models import get_setting
-                if _s(_get(app, "scheduler_enabled", "1")) == "1":
-                    from team import comunicacao
-                    h, m = comunicacao.hora_envio()
-                    agora = fuso.agora()
-                    if (agora.hour, agora.minute) >= (h, m):
-                        run_daily_tasks(app)
+                nomes = espacos.todos()         # principal + espaços de trabalho
+            for slug in nomes:
+                try:
+                    with app.app_context():
+                        with espacos.espaco(slug):
+                            _um_ciclo(app)
+                except Exception:
+                    _log(app, f"erro no ciclo do espaco {slug}:\n" + traceback.format_exc())
         except Exception:
             _log(app, "erro no loop:\n" + traceback.format_exc())
         time.sleep(CHECK_INTERVAL)

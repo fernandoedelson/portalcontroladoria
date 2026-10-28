@@ -12,7 +12,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   abort, jsonify)
+                   abort, jsonify, session)
 from flask_login import (LoginManager, login_user, logout_user, login_required,
                          current_user)
 from flask_wtf import CSRFProtect
@@ -31,6 +31,7 @@ from team.routes import register_team_routes
 from admin_center import register_admin_routes
 from workflow_routes import register_workflow_routes
 import scheduler
+import espacos
 from icons import register_icons
 
 login_manager = LoginManager()
@@ -46,6 +47,7 @@ def create_app(config=Config):
     app = Flask(__name__)
     app.config.from_object(config)
     db.init_app(app)
+    espacos.registra(app)           # escolhe o banco (principal ou espaço de trabalho) a cada requisição
     login_manager.init_app(app)
     # O token do formulário vale enquanto a sessão valer. O padrão era 1 hora: quem deixava a Fila do
     # dia aberta e clicava depois recebia "Bad Request — The CSRF token has expired".
@@ -115,6 +117,13 @@ def create_app(config=Config):
             db.session.rollback()
             app.logger.warning("Nao foi possivel semear os clusters: %s", e)
 
+    with app.app_context():          # espaços de trabalho já existentes: estrutura em dia (colunas novas etc.)
+        for _slug in espacos.slugs():
+            try:
+                espacos.prepara(app, _slug)
+            except Exception as e:
+                app.logger.warning("Nao foi possivel preparar o espaco %s: %s", _slug, e)
+
     register_icons(app)
     fuso.registra(app)       # filtros |local, |data_extenso, |dia_mes
     register_routes(app)
@@ -123,6 +132,8 @@ def create_app(config=Config):
     register_workflow_routes(app)
     from team.agenda_routes import register_agenda_routes
     register_agenda_routes(app)
+    from espacos_routes import register_espacos_routes
+    register_espacos_routes(app)
     scheduler.start(app)
     return app
 
@@ -168,16 +179,17 @@ _COLUNAS_NOVAS = [
 ]
 
 
-def _ensure_columns(app):
+def _ensure_columns(app, engine=None):
     from sqlalchemy import inspect, text
-    insp = inspect(db.engine)
+    engine = engine or db.engine          # sem argumento: o banco principal
+    insp = inspect(engine)
     for tabela, coluna, tipo in _COLUNAS_NOVAS:
         try:
             if tabela not in insp.get_table_names():
                 continue
             existentes = {c["name"] for c in insp.get_columns(tabela)}
             if coluna not in existentes:
-                with db.engine.begin() as conn:
+                with engine.begin() as conn:
                     conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}"))
                 app.logger.info("Coluna %s.%s adicionada.", tabela, coluna)
         except Exception as e:
@@ -283,8 +295,15 @@ def register_routes(app):
         if request.method == "POST":
             email = (request.form.get("email") or "").strip().lower()
             pw = request.form.get("password") or ""
+            ws = espacos.espaco_do_email(email)      # None = portal principal; senão, o espaço dessa pessoa
+            espacos.definir(ws)
             user = User.query.filter_by(email=email).first()
             if user and user.active and user.check_password(pw):
+                session.pop("ws", None)
+                session.pop("ws_id", None)
+                if ws:
+                    session["ws"] = ws
+                    session["ws_id"] = espacos.espaco_id(ws)
                 login_user(user)
                 user.last_login = datetime.utcnow()
                 db.session.commit()
@@ -300,6 +319,7 @@ def register_routes(app):
     def logout():
         log_audit(current_user.id, "logout", "user", current_user.email)
         logout_user()
+        session.pop("ws", None)
         return redirect(url_for("login"))
 
     @app.route("/change-password", methods=["GET", "POST"])

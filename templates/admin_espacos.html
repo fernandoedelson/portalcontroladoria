@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Espaços de trabalho{% endblock %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Espaços de trabalho</h1>
+    <div class="sub">Cada espaço é um portal completo e independente, com base vazia: quem entra nele cadastra, vê e recebe só o que é dele.
+      Nada do time da Controladoria aparece ali, e nada de lá aparece aqui. Todos usam o mesmo endereço, e o portal leva cada pessoa ao espaço do e-mail dela.</div></div>
+  <a href="/admin" class="btn btn-outline">← Administração</a>
+</div>
+
+<div class="card">
+  <h2>Novo espaço</h2>
+  <form method="post" action="/admin/espacos/criar" class="adm-grid">
+    {{ csrf() }}
+    <div class="form-row"><label class="field-label" for="esp-nome">Nome do espaço *</label>
+      <input class="input" id="esp-nome" name="nome" required placeholder="Ex.: RH"/></div>
+    <div class="form-row"><label class="field-label" for="esp-slug">Nome interno <span class="muted">(opcional)</span></label>
+      <input class="input" id="esp-slug" name="slug" placeholder="rh" pattern="[a-z0-9][a-z0-9_-]{1,30}"/></div>
+    <div class="form-row"><label class="field-label" for="esp-un">Primeiro usuário (administrador do espaço) *</label>
+      <input class="input" id="esp-un" name="admin_nome" required placeholder="Nome"/></div>
+    <div class="form-row"><label class="field-label" for="esp-ue">E-mail *</label>
+      <input class="input" id="esp-ue" type="email" name="admin_email" required placeholder="nome@jfsa.com.br"/></div>
+    <div class="form-row"><label class="field-label" for="esp-sn">Senha provisória * <span class="muted">(mín. 8; ela troca no 1º acesso)</span></label>
+      <input class="input" id="esp-sn" type="text" name="senha" minlength="8" required autocomplete="off"/></div>
+    <div class="form-row" style="align-self:end;"><button class="btn btn-primary" type="submit">{{ icone('plus') }} Criar espaço</button></div>
+  </form>
+  <p class="help-txt mt-1">O espaço nasce sem empresas, atividades, listas de e-mail ou indicadores. Os avisos e e-mails dele saem só para as pessoas e listas dele.</p>
+</div>
+
+<div class="card">
+  <h2>Espaços existentes ({{ lista|length }})</h2>
+  {% if lista %}
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th scope="col">Espaço</th><th scope="col">Nome interno</th><th scope="col">Usuários</th><th scope="col">Atividades</th><th scope="col">Tamanho</th><th scope="col">Ações</th></tr></thead>
+    <tbody>
+    {% for e in lista %}
+    <tr>
+      <td><strong>{{ e.nome }}</strong></td>
+      <td class="text-sm"><code>{{ e.slug }}</code></td>
+      <td class="text-sm">{{ e.usuarios }}</td><td class="text-sm">{{ e.atividades }}</td><td class="text-sm">{{ e.tamanho_kb }} KB</td>
+      <td>
+        <details class="esp-acao"><summary class="btn btn-outline btn-sm">Zerar</summary>
+          <form method="post" action="/admin/espacos/{{ e.slug }}/zerar" class="esp-form">{{ csrf() }}
+            <p class="help-txt">Apaga <strong>tudo</strong> do espaço e recria uma base vazia com um único usuário.</p>
+            <input class="input" name="admin_nome" placeholder="Nome do usuário" required aria-label="Nome do usuário"/>
+            <input class="input" type="email" name="admin_email" placeholder="E-mail" required aria-label="E-mail"/>
+            <input class="input" type="text" name="senha" minlength="8" placeholder="Senha provisória" required aria-label="Senha provisória" autocomplete="off"/>
+            <button class="btn btn-primary btn-sm" type="submit">Zerar espaço</button>
+          </form></details>
+        <details class="esp-acao"><summary class="btn btn-outline btn-danger btn-sm">Remover</summary>
+          <form method="post" action="/admin/espacos/{{ e.slug }}/remover" class="esp-form">{{ csrf() }}
+            <p class="help-txt">Apaga o espaço e todos os dados dele. Não dá para desfazer. Digite <code>{{ e.slug }}</code> para confirmar.</p>
+            <input class="input" name="confirma" placeholder="{{ e.slug }}" required aria-label="Confirmação"/>
+            <button class="btn btn-outline btn-danger btn-sm" type="submit">Remover espaço</button>
+          </form></details>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}
+  <div class="empty-box"><div class="empty-ico">{{ icone('users', 28) }}</div>
+    <p><strong>Nenhum espaço criado ainda.</strong></p>
+    <p class="text-muted text-sm">Crie o primeiro acima. Enquanto não houver espaços, o portal funciona exatamente como sempre.</p></div>
+  {% endif %}
+</div>
+<style>
+  .esp-acao{display:inline-block;vertical-align:top;margin:0 6px 6px 0;}
+  .esp-acao summary{list-style:none;cursor:pointer;}
+  .esp-acao summary::-webkit-details-marker{display:none;}
+  .esp-form{display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:12px;min-width:260px;
+    border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);}
+</style>
+{% endblock %}

@@ -7,7 +7,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-db = SQLAlchemy()
+from espacos import RoutingSession
+
+# A sessão escolhe o banco pelo espaço de trabalho (ver espacos.py); sem espaço, é o banco de sempre.
+db = SQLAlchemy(session_options={"class_": RoutingSession})
 
 
 # --------------------------------------------------------------------------

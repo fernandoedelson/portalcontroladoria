@@ -177,8 +177,11 @@ def envia_para_usuario(user_id, titulo, corpo, url="/", tag=None, itens=None):
 # --------------------------------------------------------------------------
 # Gancho: toda Notification nova tambem vira push (depois do commit)
 # --------------------------------------------------------------------------
-def _envia_lote(app, fila, forcar=False):
-    with app.app_context():
+def _envia_lote(app, fila, forcar=False, ws=None):
+    import contextlib
+    import espacos
+    ws = ws or espacos.atual()          # a thread do push nasce no principal: o espaço vem junto com a fila
+    with app.app_context(), (espacos.espaco(ws) if ws != espacos.atual() else contextlib.nullcontext()):
         import fuso
         if not forcar and not fuso.pode_avisar():
             # fim de semana/feriado: guarda para o próximo dia útil (o sininho já registrou)
@@ -268,10 +271,12 @@ def instala(app):
         fila = sess.info.pop("push_fila", None)
         if not fila:
             return
+        import espacos
+        ws = espacos.atual()
         if app.config.get("TESTING") or os.environ.get("PUSH_SINCRONO") == "1":
-            _envia_lote(app, fila)
+            _envia_lote(app, fila, ws=ws)
         else:
-            threading.Thread(target=_envia_lote, args=(app, fila), daemon=True).start()
+            threading.Thread(target=_envia_lote, args=(app, fila, False, ws), daemon=True).start()
 
     @event.listens_for(Session, "after_rollback")
     def _descarta(sess):
