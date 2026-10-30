@@ -179,8 +179,10 @@ def register_agenda_routes(app):
             set_setting("ag_offset_du", str(off))
         set_setting("ag_titulo", (f.get("titulo") or "").strip()[:120] or agenda.PADRAO["ag_titulo"])
         set_setting("ag_local", (f.get("local") or "").strip()[:240])
-        org = (f.get("organizador") or "").strip().lower()
-        set_setting("ag_organizador", org if "@" in org else "")
+        org = agenda.emails_da_lista(f.get("organizador"))
+        if len(org) > 3:
+            flash("Foram guardados só os 3 primeiros e-mails copiados.", "info")
+        set_setting("ag_organizador", ";".join(org[:3]))
         db.session.commit()
         flash("Configuração do agendamento salva.", "success")
         return _volta(_membro_arg())

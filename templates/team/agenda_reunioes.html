@@ -131,8 +131,8 @@
         <input class="input" type="number" name="antecedencia" min="0" max="720" value="{{ cfg('ag_antecedencia_h') }}"/></div>
       <div class="form-row"><label class="field-label">Até quantos dias à frente</label>
         <input class="input" type="number" name="janela" min="1" max="180" value="{{ cfg('ag_janela_dias') }}"/></div>
-      <div class="form-row"><label class="field-label">E-mail sempre copiado (participante fixo)</label>
-        <input class="input" type="email" name="organizador" value="{{ cfg('ag_organizador') }}" placeholder="voce@jfsa.com.br"/></div>
+      <div class="form-row"><label class="field-label">E-mails sempre copiados (até 3, separados por ;)</label>
+        <input class="input" type="text" name="organizador" value="{{ cfg('ag_organizador') }}" placeholder="voce@jfsa.com.br; outro@jfsa.com.br"/></div>
     </div>
     <div><button class="btn btn-primary" type="submit">{{ icone('check') }} Salvar</button></div>
   </form>

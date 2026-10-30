@@ -200,12 +200,20 @@ def copiar_lider(company_id):
     return bool(l and l.copiar_lider)
 
 
+def emails_da_lista(txt):
+    """Separa e-mails escritos com ; , ou espaço; descarta inválidos e repetidos."""
+    import re
+    vistos, out = set(), []
+    for e in re.split(r"[;,\s]+", (txt or "").strip().lower()):
+        if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", e) and e not in vistos:
+            vistos.add(e)
+            out.append(e)
+    return out
+
+
 def participantes_fixos(copia_lider=False):
-    """Sempre: o e-mail do organizador (seu). Com “copiar líder”: também a lista de líderes."""
-    lista = []
-    org = cfg("ag_organizador")
-    if org:
-        lista.append(org)
+    """Sempre: os e-mails fixos (até 3). Com “copiar líder”: também a lista de líderes."""
+    lista = emails_da_lista(cfg("ag_organizador"))
     if copia_lider:
         lista += [x.email for x in ListaEmail.query.filter_by(tipo="agenda", active=True).all()]
     return lista
