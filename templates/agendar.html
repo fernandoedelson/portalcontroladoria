@@ -56,6 +56,15 @@
       No e-mail há também o link para cancelar, se precisar.</p>
   </div>
 
+{% elif ja %}
+  <h1>Reunião já agendada</h1>
+  <div class="card ok">
+    <p>{% if link.company %}{{ link.company.name }}<br>{% endif %}<strong>{{ ja.inicio.strftime('%d/%m/%Y') }} às {{ ja.inicio.strftime('%H:%M') }}</strong> · {{ duracao }} min
+      {% if local %}<br>Local: {{ local }}{% endif %}</p>
+    <p class="muted">Outro responsável desta empresa já marcou, e o convite foi enviado a todos eles.
+      Para mudar o horário, quem marcou pode cancelar pelo link que veio no e-mail do convite e escolher outro aqui; ou responda ao e-mail da Controladoria.</p>
+  </div>
+
 {% else %}
   {% if link.teste_email %}<div class="erro" style="background:rgba(181,131,42,.14);color:var(--tinta);border-color:var(--ouro);"><strong>SIMULAÇÃO.</strong> Nada aqui avisa a empresa, o responsável ou a Liderança: os e-mails vão só para {{ link.teste_email }} e a reserva não ocupa a agenda real.</div>{% endif %}
   <h1>{{ titulo }}</h1>

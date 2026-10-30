@@ -435,7 +435,8 @@ def register_agenda_routes(app):
         if not l or not agenda.ativo():
             return render_template("agendar.html", indisponivel=True), 404
         erro, feito = None, None
-        if request.method == "POST":
+        ja = agenda.reuniao_ja_marcada(l)
+        if request.method == "POST" and not ja:
             try:
                 inicio = datetime.strptime(request.form.get("horario") or "", "%Y-%m-%dT%H:%M")
             except ValueError:
@@ -444,9 +445,13 @@ def register_agenda_routes(app):
                 erro = "Escolha um horário."
             else:
                 feito, erro = agenda.reservar(l, inicio, email=request.form.get("email"))
-        livres, mem = ({}, agenda.membro_da_empresa(l.company_id)) if feito else agenda.livres_do_link(l)
+        if feito:
+            ja = None
+        elif not ja:
+            ja = agenda.reuniao_ja_marcada(l)   # alguém pode ter marcado agora há pouco
+        livres, mem = ({}, agenda.membro_da_empresa(l.company_id)) if (feito or ja) else agenda.livres_do_link(l)
         dia = agenda.dia_reuniao(l.company_id) if l.company_id else None
-        return render_template("agendar.html", link=l, livres=livres, erro=erro, feito=feito,
+        return render_template("agendar.html", link=l, livres=livres, erro=erro, feito=feito, ja=ja,
                                titulo=agenda.cfg("ag_titulo"), local=agenda.cfg("ag_local"),
                                duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
                                responsavel=(mem.name if mem else None), dia=dia,

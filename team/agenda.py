@@ -278,12 +278,24 @@ def _enviar(r, cancelar=False):
 
 
 # ---------------------------------------------------------------- reservar
+def reuniao_ja_marcada(link):
+    """Só um responsável marca por empresa: se o ciclo já tem reunião, os demais não agendam.
+    Simulação e link geral (sem empresa) não são travados."""
+    if link.teste_email or not link.company_id:
+        return None
+    return reuniao_do_ciclo(link.company_id)
+
+
 def reservar(link, inicio, email=None):
     """Cria a reunião se o horário continua livre. Retorna (reuniao, erro).
 
     Quem marca é a própria empresa: o convite vai aos responsáveis cadastrados nela (e às
     demais pessoas do convite). Só se a empresa não tiver ninguém cadastrado é que se pede
     um e-mail (`email`)."""
+    ja = reuniao_ja_marcada(link)
+    if ja:
+        return None, (f"A reunião desta empresa já está marcada para "
+                      f"{ja.inicio.strftime('%d/%m/%Y')} às {ja.inicio.strftime('%H:%M')}.")
     contatos = contatos_da_empresa(link.company_id)
     email = (email or "").strip().lower()
     if not link.company_id:                 # link geral: não sabemos quem é, aí sim pede o e-mail
