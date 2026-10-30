@@ -13,7 +13,7 @@ import shutil
 from datetime import datetime
 from functools import wraps
 
-from flask import (render_template, request, redirect, url_for, flash, abort)
+from flask import (render_template, request, redirect, url_for, flash, abort, jsonify)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -324,6 +324,40 @@ def register_admin_routes(app):
               else "Nenhuma alteração para salvar.", "success" if alterados else "info")
         return _back("carteira")
 
+    @app.route("/admin/carteira/<int:aid>/contato", methods=["POST"])
+    @entidades_required
+    def admin_carteira_contato_incluir(aid):
+        """Inclui responsável(is) da empresa sem recarregar a tela (botão 'Incluir')."""
+        import re
+        from team.models_workflow import CompanyContact
+        a = db.session.get(CompanyAssignment, aid)
+        if not a:
+            return jsonify(ok=False, erro="Entidade não encontrada."), 404
+        permitidos = _ids_permitidos()
+        if permitidos is not None and a.id not in permitidos:
+            return jsonify(ok=False, erro="Sem permissão para esta entidade."), 403
+        nome = (request.form.get("nome") or "").strip()[:120] or None
+        brutos = [x for x in re.split(r"[;,\s]+", request.form.get("email") or "") if x]
+        if not brutos:
+            return jsonify(ok=False, erro="Informe o e-mail."), 400
+        ruins = [x for x in brutos if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", x)]
+        if ruins:
+            return jsonify(ok=False, erro="E-mail inválido: " + ", ".join(ruins)), 400
+        ja = {(ct.email or "").lower() for ct in a.company.contatos}
+        novos = []
+        for e in brutos:
+            if e.lower() in ja:
+                continue
+            ja.add(e.lower())
+            ct = CompanyContact(company_id=a.company_id, email=e[:160], name=nome if len(brutos) == 1 else None)
+            db.session.add(ct)
+            novos.append(ct)
+        db.session.commit()
+        if not novos:
+            return jsonify(ok=False, erro="Este e-mail já está na lista."), 409
+        log_audit(current_user.id, "contato_empresa_incluido", "company", str(a.company_id))
+        return jsonify(ok=True, contatos=[{"id": c.id, "nome": c.name or "", "email": c.email} for c in novos])
+
     def _salva_contatos(a, pref):
         """Contatos da empresa (quem recebe o aviso de prazo) — ficam no cadastro dela."""
         from team.models_workflow import CompanyContact
@@ -349,14 +383,17 @@ def register_admin_routes(app):
             if (ct.email, ct.name) != (email[:160], (nome[:120] if nome else None)):
                 ct.email, ct.name = email[:160], (nome[:120] if nome else None)
                 n += 1
-        novo = (request.form.get(f"{pref}novo_email") or "").strip()
-        if novo and "@" in novo:
-            db.session.add(CompanyContact(
-                company_id=c.id, email=novo[:160],
-                name=(request.form.get(f"{pref}novo_nome") or "").strip()[:120] or None))
-            n += 1
-        elif novo:
-            flash(f"E-mail inválido em {c.name}: {novo}", "danger")
+        import re
+        brutos = [x for x in re.split(r"[;,\s]+", request.form.get(f"{pref}novo_email") or "") if x]
+        nome_novo = (request.form.get(f"{pref}novo_nome") or "").strip()[:120] or None
+        for novo in brutos:
+            if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", novo):
+                db.session.add(CompanyContact(
+                    company_id=c.id, email=novo[:160],
+                    name=nome_novo if len(brutos) == 1 else None))
+                n += 1
+            else:
+                flash(f"E-mail inválido em {c.name}: {novo}", "danger")
         return n
 
     def _regra_cluster(a, membro_antes, cluster_antes):

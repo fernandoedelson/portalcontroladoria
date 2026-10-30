@@ -414,16 +414,20 @@
                   <option value="consolidado" {{ 'selected' if a.company.grupo_report=='consolidado' }}>Consolidado</option>
                   <option value="demais" {{ 'selected' if a.company.grupo_report=='demais' }}>Demais</option></select></label>
               <label class="chk chk-sm" style="display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;"><input type="checkbox" name="{{ P }}avisar" value="1" {{ 'checked' if a.company.avisar_prazo }}/> Enviar o aviso de prazo a esta empresa</label>
+              <div class="ct-lista" data-prefixo="{{ P }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:.45rem;">
               {% for ct in a.company.contatos %}
               <div class="flex gap-1 mb-1" style="flex-wrap:wrap;">
                 <input class="input input-sm" name="{{ P }}ct{{ ct.id }}_nome" value="{{ ct.name or '' }}" placeholder="nome" style="width:140px;"/>
                 <input class="input input-sm" type="email" name="{{ P }}ct{{ ct.id }}_email" value="{{ ct.email }}" style="width:230px;"/>
                 <label class="chk chk-sm" style="display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;"><input type="checkbox" name="{{ P }}ct{{ ct.id }}_excluir" value="1"/> remover</label>
               </div>
-              {% else %}<span class="text-muted text-sm">Nenhum responsável cadastrado.</span>{% endfor %}
-              <div class="flex gap-1" style="flex-wrap:wrap;align-items:center;"><span class="text-muted text-sm">Novo:</span>
+              {% else %}<span class="text-muted text-sm ct-vazio">Nenhum responsável cadastrado.</span>{% endfor %}
+              </div>
+              <div class="flex gap-1 ct-novo" data-aid="{{ a.id }}" style="flex-wrap:wrap;align-items:center;"><span class="text-muted text-sm">Novo:</span>
                 <input class="input input-sm" name="{{ P }}novo_nome" placeholder="nome" style="width:140px;"/>
-                <input class="input input-sm" type="email" name="{{ P }}novo_email" placeholder="email@empresa.com" style="width:230px;"/>
+                <input class="input input-sm" type="text" name="{{ P }}novo_email" placeholder="email@empresa.com" style="width:230px;"/>
+                <button type="button" class="btn btn-outline btn-sm ct-incluir">Incluir</button>
+                <span class="text-sm ct-msg" role="status"></span>
               </div>
             </div>
           </div>
@@ -714,6 +718,41 @@ document.querySelectorAll('.ent-mais').forEach(function(b){
     var d=document.getElementById(b.getAttribute('aria-controls')), abre=d.hidden;
     d.hidden=!abre; b.setAttribute('aria-expanded', abre); b.textContent=abre?'Fechar':'Detalhes';
   });
+});
+// ==== Entidades: incluir responsável da empresa sem recarregar a tela ====
+document.querySelectorAll('.ct-incluir').forEach(function(b){
+  var box=b.closest('.ct-novo'), msg=box.querySelector('.ct-msg');
+  var nome=box.querySelector('input[name$="novo_nome"]'), mail=box.querySelector('input[name$="novo_email"]');
+  var lista=box.parentNode.querySelector('.ct-lista'), P=lista.getAttribute('data-prefixo');
+  function aviso(t,erro){ msg.textContent=t; msg.style.color=erro?'var(--danger,#b3261e)':'var(--success,#1b7a3d)'; }
+  function linha(c){
+    var d=document.createElement('div'); d.className='flex gap-1 mb-1'; d.style.flexWrap='wrap';
+    var n=document.createElement('input'); n.className='input input-sm'; n.name=P+'ct'+c.id+'_nome'; n.value=c.nome; n.placeholder='nome'; n.style.width='140px';
+    var e=document.createElement('input'); e.className='input input-sm'; e.type='email'; e.name=P+'ct'+c.id+'_email'; e.value=c.email; e.style.width='230px';
+    var l=document.createElement('label'); l.className='chk chk-sm'; l.style.cssText='display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;';
+    var x=document.createElement('input'); x.type='checkbox'; x.name=P+'ct'+c.id+'_excluir'; x.value='1';
+    l.appendChild(x); l.appendChild(document.createTextNode(' remover'));
+    d.appendChild(n); d.appendChild(e); d.appendChild(l); return d;
+  }
+  function incluir(){
+    if(!mail.value.trim()){ aviso('Informe o e-mail.',true); mail.focus(); return; }
+    b.disabled=true; aviso('Incluindo…',false);
+    var fd=new FormData(); fd.append('nome',nome.value); fd.append('email',mail.value);
+    fetch('/admin/carteira/'+box.getAttribute('data-aid')+'/contato',{method:'POST',body:fd})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok&&j.ok,j:j}; }); })
+      .then(function(res){
+        if(!res.ok){ aviso(res.j.erro||'Não foi possível incluir.',true); return; }
+        var v=lista.querySelector('.ct-vazio'); if(v) v.remove();
+        res.j.contatos.forEach(function(c){ lista.appendChild(linha(c)); });
+        nome.value=''; mail.value='';
+        aviso(res.j.contatos.length>1?res.j.contatos.length+' responsáveis incluídos.':'Incluído.',false);
+        mail.focus();
+      })
+      .catch(function(){ aviso('Falha de conexão. Tente de novo.',true); })
+      .then(function(){ b.disabled=false; });
+  }
+  b.addEventListener('click',incluir);
+  mail.addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); incluir(); } });
 });
 // ==== Carteira: marcar entidades para mover de cluster ====
 (function(){
