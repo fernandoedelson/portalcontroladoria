@@ -744,6 +744,8 @@ class AgendaLink(db.Model):
     teste_email = db.Column(db.String(160))
     # copiar os líderes (perfil Liderança + lista de líderes) no convite desta empresa
     copiar_lider = db.Column(db.Boolean, default=False)
+    # local / link do Teams desta empresa; vazio = o geral da configuração
+    local = db.Column(db.String(300))
     company = db.relationship("Company")
 
     @property

@@ -355,6 +355,17 @@ def register_agenda_routes(app):
         flash("Dia da reunião da empresa atualizado.", "success")
         return _volta(_membro_arg())
 
+    @app.route("/agenda-reunioes/link/<int:cid>/local", methods=["POST"])
+    @controladoria_required
+    def team_agenda_link_local(cid):
+        """Local / link do Teams de UMA empresa (vazio = usa o geral)."""
+        l = agenda.link_da_empresa(cid)
+        l.local = (request.form.get("local") or "").strip()[:300] or None
+        db.session.commit()
+        log_audit(current_user.id, "agenda_local_empresa", "company", str(cid))
+        flash("Local / link do Teams da empresa salvo." if l.local else "Empresa volta a usar o local geral.", "success")
+        return _volta(_membro_arg())
+
     @app.route("/agenda-reunioes/teste", methods=["POST"])
     @controladoria_required
     def team_agenda_teste():
@@ -454,7 +465,7 @@ def register_agenda_routes(app):
         livres, mem = ({}, agenda.membro_da_empresa(l.company_id)) if (feito or ja) else agenda.livres_do_link(l)
         dia = agenda.dia_reuniao(l.company_id) if l.company_id else None
         return render_template("agendar.html", link=l, livres=livres, erro=erro, feito=feito, ja=ja,
-                               titulo=agenda.cfg("ag_titulo"), local=agenda.cfg("ag_local"),
+                               titulo=agenda.cfg("ag_titulo"), local=agenda.local_da_empresa(l.company_id),
                                duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
                                responsavel=(mem.name if mem else None), dia=dia,
                                precisa_email=(not l.company_id and not l.teste_email),

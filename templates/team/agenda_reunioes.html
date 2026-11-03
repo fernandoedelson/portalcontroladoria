@@ -186,8 +186,9 @@
     <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="0"/>
       <button class="btn btn-outline btn-sm" type="submit">Não copiar em nenhuma</button></form>
   </div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Copiar líder</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Copiar líder</th><th scope="col">Local / link do Teams</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
     <tr><th scope="row">Link geral (sem empresa)</th><td class="text-sm">agenda geral</td><td class="text-sm">qualquer dia das janelas</td><td class="text-sm">—</td>
+      <td class="text-sm text-muted">o da configuração geral</td>
       <td class="text-sm">{% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:100%;min-width:240px;"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if geral %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/0/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if geral.active else 'Ativar' }}</button></form>
@@ -206,6 +207,12 @@
         </form></td>
       <td class="text-center"><form method="post" action="/agenda-reunioes/link/{{ c.id }}/lider">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
         <input type="checkbox" name="copiar" value="1" {{ 'checked' if l and l.copiar_lider }} onchange="this.form.submit()" aria-label="Copiar líder no convite de {{ c.name }}"/></form></td>
+      <td class="text-sm">
+        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/local" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+          <input class="input input-sm" type="text" name="local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" style="width:100%;min-width:200px;"/>
+          <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
+        </form></td>
       <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:240px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if l %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if l.active else 'Ativar' }}</button></form>

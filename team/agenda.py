@@ -167,6 +167,12 @@ def _esc(t):
     return (t or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
+def local_da_empresa(company_id):
+    """Local / link do Teams da empresa; sem o dela, vale o da configuração geral."""
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first() if company_id else None
+    return (l.local or "").strip() if (l and l.local) else cfg("ag_local")
+
+
 def ics(r, participantes, cancelar=False, organizador=None):
     from team import alerts
     org = organizador or alerts.SMTP_FROM or "controladoria@jfsa.com.br"
@@ -178,8 +184,9 @@ def ics(r, participantes, cancelar=False, organizador=None):
               f"SUMMARY:{_esc(cfg('ag_titulo'))}" + (f" — {_esc(r.company.name)}" if r.company else ""),
               f"STATUS:{'CANCELLED' if cancelar else 'CONFIRMED'}",
               f"ORGANIZER;CN=Controladoria J&F:mailto:{org}"]
-    if cfg("ag_local"):
-        linhas.append(f"LOCATION:{_esc(cfg('ag_local'))}")
+    local = local_da_empresa(r.company_id)
+    if local:
+        linhas.append(f"LOCATION:{_esc(local)}")
     linhas.append(f"DESCRIPTION:{_esc('Reunião de resultados com a Controladoria J&F.')}")
     linhas += ["TRANSP:OPAQUE", "X-MICROSOFT-CDO-BUSYSTATUS:BUSY"]
     for e in participantes:
@@ -273,7 +280,7 @@ def _enviar(r, cancelar=False):
         assunto = f"{titulo} — {quando}"
         corpo = (f"{titulo}" + (f" — {empresa}" if empresa else "") + f".\nQuando: {quando} ({cfg_int('ag_duracao', 30)} min)\n"
                  + (f"Com: {r.member.name}\n" if r.member else "")
-                 + (f"Local: {cfg('ag_local')}\n" if cfg("ag_local") else "")
+                 + (f"Local: {local_da_empresa(r.company_id)}\n" if local_da_empresa(r.company_id) else "")
                  + f"\nPara cancelar ou remarcar: {alerts.PORTAL_URL.rstrip('/')}/agendar/cancelar/{r.token_cancelar}\n")
     if simulado:
         assunto, corpo = "[SIMULAÇÃO] " + assunto, simulado + corpo
@@ -419,7 +426,7 @@ def enviar_teste(email, company_id):
     corpo = (f"[TESTE] Reunião marcada para {quando} ({cfg_int('ag_duracao', 30)} min)"
              + (f" — {c.name}" if c else "") + ".\n"
              + (f"Com: {mem.name}\n" if mem else "")
-             + (f"Local: {cfg('ag_local')}\n" if cfg("ag_local") else "")
+             + (f"Local: {local_da_empresa(company_id)}\n" if local_da_empresa(company_id) else "")
              + "\nEste é um convite de teste: nenhuma reserva foi criada. O convite aparece na própria mensagem, com os botões Aceitar/Recusar do Outlook.\n"
              f"Link da página que a empresa usa: {url_para_empresa(company_id) or '(agendamento desligado)'}\n")
     return alerts.send_email(email, f"[TESTE] Reunião confirmada: Controladoria J&F — {quando}",

@@ -176,6 +176,7 @@ _COLUNAS_NOVAS = [
     ("agenda_links", "teste_email", "VARCHAR(160)"),
     ("agenda_reunioes", "teste", "BOOLEAN DEFAULT 0"),
     ("agenda_links", "copiar_lider", "BOOLEAN DEFAULT 0"),
+    ("agenda_links", "local", "VARCHAR(300)"),
 ]
 
 
