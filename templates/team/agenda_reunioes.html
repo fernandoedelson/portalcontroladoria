@@ -210,7 +210,8 @@
       <td class="text-sm">
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/local" class="flex gap-1 items-center" style="flex-wrap:wrap;">
           {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-          <input class="input input-sm" type="text" name="local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" style="width:100%;min-width:200px;"/>
+          <input class="input input-sm" type="text" name="local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" title="{{ 'Link próprio desta empresa' if l and l.local else 'Usando o link padrão da configuração geral' }}" style="width:100%;min-width:200px;background:{{ 'rgba(46,106,83,.16)' if l and l.local else 'rgba(181,131,42,.20)' }};"/>
+          <span class="text-sm" style="font-weight:600;{{ 'color:#2E6A53;' if l and l.local else 'color:#8a6420;' }}">{{ 'próprio' if l and l.local else 'padrão' }}</span>
           <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
         </form></td>
       <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:240px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
