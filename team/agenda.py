@@ -181,7 +181,7 @@ def ics(r, participantes, cancelar=False, organizador=None):
               "BEGIN:VEVENT", f"UID:{r.uid}", f"SEQUENCE:{r.sequencia or 0}",
               f"DTSTAMP:{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
               f"DTSTART:{_utc(r.inicio)}", f"DTEND:{_utc(r.fim)}",
-              f"SUMMARY:{_esc(cfg('ag_titulo'))}" + (f" — {_esc(r.company.name)}" if r.company else ""),
+              "SUMMARY:" + _esc((f"{r.company.name} - " if r.company else "") + cfg('ag_titulo')),
               f"STATUS:{'CANCELLED' if cancelar else 'CONFIRMED'}",
               f"ORGANIZER;CN=Controladoria J&F:mailto:{org}"]
     local = local_da_empresa(r.company_id)
@@ -273,11 +273,12 @@ def _enviar(r, cancelar=False):
     quando = f"{r.inicio.strftime('%d/%m/%Y')} às {r.inicio.strftime('%H:%M')}"
     empresa = r.company.name if r.company else ""
     titulo = cfg("ag_titulo")
+    prefixo = f"{empresa} - " if empresa else ""
     if cancelar:
-        assunto = f"Cancelada: {titulo} — {quando}"
+        assunto = f"Cancelada: {prefixo}{titulo} — {quando}"
         corpo = f"A reunião de {quando} foi cancelada.\n"
     else:
-        assunto = f"{titulo} — {quando}"
+        assunto = f"{prefixo}{titulo} — {quando}"
         corpo = (f"{titulo}" + (f" — {empresa}" if empresa else "") + f".\nQuando: {quando} ({cfg_int('ag_duracao', 30)} min)\n"
                  + (f"Com: {r.member.name}\n" if r.member else "")
                  + (f"Local: {local_da_empresa(r.company_id)}\n" if local_da_empresa(r.company_id) else "")
