@@ -90,13 +90,17 @@
 
 {% if reunioes %}
 <div class="card" id="reunioes">
-  <h2>Reuniões de resultados <span class="text-muted text-sm">· {{ reunioes.agendadas }} de {{ reunioes.total }} agendadas</span></h2>
+  <div class="flex gap-1 items-center" style="justify-content:space-between;flex-wrap:wrap;">
+    <h2 style="margin:0;">Reuniões de resultados <span class="text-muted text-sm">· <span id="reu-ag">{{ reunioes.agendadas }}</span> de <span id="reu-tot">{{ reunioes.total }}</span> agendadas</span></h2>
+    <button type="button" class="btn btn-outline btn-sm" id="reu-filtro" aria-pressed="false"
+            title="Mostra só as empresas marcadas para receber o aviso de prazo">Só empresas com envio de aviso</button>
+  </div>
   <p class="text-muted text-sm mb-1">Acompanhamento para a liderança. Agendas separadas por responsável: reuniões de clusters diferentes podem coincidir no horário. O líder ou o responsável da empresa pode marcar a reunião à mão (não envia convite).</p>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia previsto</th><th scope="col">Reunião agendada</th><th scope="col">Marcar à mão</th></tr></thead>
+    <thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia previsto</th><th scope="col">Reunião agendada</th><th scope="col">Marcar à mão</th><th scope="col">2º dia</th></tr></thead>
     <tbody>
     {% for x in reunioes.linhas %}
-    <tr>
+    <tr data-avisar="{{ 1 if x.avisar else 0 }}" data-ag="{{ 1 if x.reuniao else 0 }}">
       <td>{{ x.empresa.name }}</td>
       <td class="text-sm">{{ x.resp.name if x.resp else '—' }}</td>
       <td class="text-sm">{{ ['seg','ter','qua','qui','sex','sáb','dom'][x.dia.weekday()] ~ ' ' ~ x.dia.strftime('%d/%m') if x.dia else '—' }}</td>
@@ -114,10 +118,37 @@
           <input class="input" type="time" name="hora" required aria-label="Hora" style="width:104px;"/>
           <button class="btn btn-outline btn-sm" type="submit">Marcar</button></form>
         {% else %}<span class="text-sm text-muted">—</span>{% endif %}</td>
+      <td class="text-sm">{% if x.pode and x.dia and not x.reuniao %}
+        <form method="post" action="/agenda-reunioes/link/{{ x.empresa.id }}/estender" style="display:inline;">{{ csrf() }}
+          <input type="hidden" name="voltar" value="report"/>
+          {% if x.extra %}<span style="font-weight:600;color:#2E6A53;">liberado</span>
+          <button class="btn btn-outline btn-sm" type="submit" name="acao" value="fechar">Fechar</button>
+          {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
+        </form>
+        {% elif x.extra %}<span style="font-weight:600;color:#2E6A53;">liberado</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody></table></div>
 </div>
+<script>
+(function(){
+  var b=document.getElementById('reu-filtro'); if(!b) return;
+  var linhas=document.querySelectorAll('#reunioes tbody tr[data-avisar]');
+  function aplica(so){
+    var ag=0, tot=0;
+    linhas.forEach(function(tr){
+      var some = so && tr.getAttribute('data-avisar')==='0';
+      tr.hidden = some;
+      if(!some){ tot++; if(tr.getAttribute('data-ag')==='1') ag++; }
+    });
+    document.getElementById('reu-ag').textContent=ag; document.getElementById('reu-tot').textContent=tot;
+    b.setAttribute('aria-pressed', so?'true':'false');
+    b.classList.toggle('btn-primary', so); b.classList.toggle('btn-outline', !so);
+    b.textContent = so ? 'Mostrando só empresas com envio · ver todas' : 'Só empresas com envio de aviso';
+  }
+  b.addEventListener('click', function(){ aplica(b.getAttribute('aria-pressed')!=='true'); });
+})();
+</script>
 {% endif %}
 
 {% if current_user.is_controladoria %}

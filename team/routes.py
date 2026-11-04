@@ -2077,7 +2077,9 @@ def register_team_routes(app):
                 pode = current_user.is_controladoria or bool(
                     resp and resp.user_id and resp.user_id == current_user.id)
                 linhas.append({"empresa": c, "resp": resp, "pode": pode,
-                               "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu})
+                               "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu,
+                               "extra": len(agenda.dias_reuniao(c.id, comp)) > 1,
+                               "avisar": bool(c.avisar_prazo)})
         linhas.sort(key=lambda x: (x["reuniao"] is None, x["reuniao"].inicio if x["reuniao"] else datetime.max,
                                    x["empresa"].name))
         reunioes = {"linhas": linhas, "agendadas": sum(1 for x in linhas if x["reuniao"]),

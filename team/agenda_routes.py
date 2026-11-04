@@ -356,9 +356,12 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/estender", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_link_estender(cid):
-        """Libera (ou fecha) o dia útil seguinte ao da reunião só para esta empresa."""
+        """Libera (ou fecha) o dia útil seguinte ao da reunião só para esta empresa.
+        Gestão: qualquer empresa; profissional: as da própria carteira."""
+        if not _pode_marcar(cid):
+            abort(403)
         if request.form.get("acao") == "fechar":
             agenda.fecha_dia_extra(cid)
             log_audit(current_user.id, "agenda_dia_extra_fechado", "company", str(cid))
@@ -370,6 +373,8 @@ def register_agenda_routes(app):
                 flash(f"Liberado também {ate:%d/%m} para esta empresa (vale só neste ciclo).", "success")
             else:
                 flash("A empresa ainda não tem dia de reunião definido.", "warning")
+        if request.form.get("voltar") == "report":
+            return redirect(url_for("team_report_fechamento") + "#reunioes")
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/local", methods=["POST"])

@@ -2,6 +2,20 @@
 {% block title %}Agenda de reuniões{% endblock %}
 {% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
 {% block content %}
+<style>
+  .ag-dia, .ag-local { vertical-align: top; }
+  .ag-dia-topo { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
+  .ag-extra { display:inline-flex; align-items:center; gap:.4rem; margin:0; }
+  .ag-dia-edita { display:flex; align-items:center; gap:.4rem; margin:.5rem 0 0; padding-top:.5rem; border-top:1px dashed rgba(127,127,127,.35); }
+  .ag-local-form { display:flex; align-items:center; gap:.4rem; margin:0; }
+  .ag-local-form .input { flex:1 1 auto; min-width:180px; }
+  .ag-pill { display:inline-block; margin-top:.35rem; padding:.05rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700; letter-spacing:.02em; }
+  .ag-extra .ag-pill { margin-top:0; }
+  .ag-pill-ok { background:rgba(46,106,83,.16); color:#2E6A53; }
+  .ag-pill-pad { background:rgba(181,131,42,.20); color:#8a6420; }
+  .ag-link { background:none; border:0; padding:0; font:inherit; font-size:.78rem; text-decoration:underline; cursor:pointer; color:inherit; opacity:.8; }
+</style>
+
 <div class="page-head">
   <div><h1>Agenda de reuniões</h1>
     <div class="sub">Cada responsável tem a sua agenda. A empresa marca sempre no dia útil seguinte ao prazo dela, com o responsável dela. Reuniões de pessoas diferentes podem acontecer ao mesmo tempo.</div></div>
@@ -197,30 +211,33 @@
     {% for e in empresas %}{% set c = e.c %}{% set l = e.link %}
     <tr><th scope="row">{{ c.name }}</th>
       <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}{% if not c.contatos|selectattr('active')|list %}<div class="text-muted">sem e-mail de responsável da empresa cadastrado</div>{% endif %}</td>
-      <td class="text-sm">
-        <div><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong> <span class="text-muted">({{ e.regra }})</span></div>
-        {% if e.dia %}<form method="post" action="/agenda-reunioes/link/{{ c.id }}/estender" class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
+      <td class="text-sm ag-dia">
+        <div class="ag-dia-topo">
+          <div><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong> <span class="text-muted">({{ e.regra }})</span></div>
+          {% if e.dia %}<form method="post" action="/agenda-reunioes/link/{{ c.id }}/estender" class="ag-extra">
+            {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+            {% if l and l.estende_ate and l.estende_ate > e.dia %}
+            <span class="ag-pill ag-pill-ok" title="Esta empresa também pode marcar neste dia (só neste ciclo)">+ {{ l.estende_ate.strftime('%d/%m') }} liberado</span>
+            <button class="ag-link" type="submit" name="acao" value="fechar">fechar</button>
+            {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
+          </form>{% endif %}
+        </div>
+        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="ag-dia-edita">
           {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-          {% if l and l.estende_ate and l.estende_ate > e.dia %}
-          <span class="text-sm" style="font-weight:600;color:#2E6A53;">+ liberado também {{ l.estende_ate.strftime('%d/%m') }}</span>
-          <button class="btn btn-outline btn-sm" type="submit" name="acao" value="fechar">Fechar dia extra</button>
-          {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
-        </form>{% endif %}
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
-          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+          <span class="text-muted">Mudar:</span>
           <input class="input input-sm" type="number" name="offset_du" min="0" max="15" placeholder="d.u." title="Dias úteis após o prazo de entrega (vazio = regra geral)" value="{{ e.link.offset_du if e.link and e.link.offset_du is not none else '' }}" style="width:64px;"/>
           <input class="input input-sm" type="date" name="dia_fixo" title="Ou uma data fixa" value="{{ e.link.dia_fixo.isoformat() if e.link and e.link.dia_fixo else '' }}" style="width:140px;"/>
           <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
         </form></td>
       <td class="text-center"><form method="post" action="/agenda-reunioes/link/{{ c.id }}/lider">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
         <input type="checkbox" name="copiar" value="1" {{ 'checked' if l and l.copiar_lider }} onchange="this.form.submit()" aria-label="Copiar líder no convite de {{ c.name }}"/></form></td>
-      <td class="text-sm">
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/local" class="flex gap-1 items-center" style="flex-wrap:wrap;">
+      <td class="text-sm ag-local">
+        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/local" class="ag-local-form">
           {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-          <input class="input input-sm" type="text" name="local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" title="{{ 'Link próprio desta empresa' if l and l.local else 'Usando o link padrão da configuração geral' }}" style="width:100%;min-width:200px;background:{{ 'rgba(46,106,83,.16)' if l and l.local else 'rgba(181,131,42,.20)' }};"/>
-          <span class="text-sm" style="font-weight:600;{{ 'color:#2E6A53;' if l and l.local else 'color:#8a6420;' }}">{{ 'próprio' if l and l.local else 'padrão' }}</span>
+          <input class="input input-sm" type="text" name="local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" title="{{ 'Link próprio desta empresa' if l and l.local else 'Usando o link padrão da configuração geral' }}" style="background:{{ 'rgba(46,106,83,.16)' if l and l.local else 'rgba(181,131,42,.20)' }};"/>
           <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
-        </form></td>
+        </form>
+        <span class="ag-pill {{ 'ag-pill-ok' if l and l.local else 'ag-pill-pad' }}">{{ 'link próprio' if l and l.local else 'link padrão' }}</span></td>
       <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:240px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if l %}<div class="flex gap-1" style="justify-content:flex-end;">
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if l.active else 'Ativar' }}</button></form>
