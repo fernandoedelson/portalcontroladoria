@@ -41,7 +41,7 @@
 
   <div class="card">
     <h2>Registrar resultado</h2>
-    {% if outros_paineis and current_user.is_controladoria %}
+    {% if outros_paineis and current_user.is_team %}
     <div class="med-aviso">
       {{ icone("gauge") }}
       <span>Este indicador está em <strong>{{ outros_paineis + 1 }} painéis</strong>.
@@ -94,7 +94,7 @@
         {% for e in r.evidencias %}
         <div class="ev-item"><a href="/indicador/evidencia/{{ e.id }}">{{ e.name or 'arquivo' }}</a>
           <span class="text-sm text-muted">por {{ users.get(e.sent_by).display_name if e.sent_by and users.get(e.sent_by) else '—' }}{% if e.sent_at %}, {{ (e.sent_at|local).strftime('%d/%m %H:%M') }}{% endif %}</span>
-          {% if current_user.is_controladoria %}
+          {% if current_user.is_team %}
           <button class="ev-x" type="submit" form="evx-{{ e.id }}" title="Remover esta evidência" aria-label="Remover {{ e.name }}">×</button>
           {% endif %}</div>
         {% endfor %}

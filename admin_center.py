@@ -82,15 +82,9 @@ def register_admin_routes(app):
         return not current_user.is_controladoria
 
     def _ids_permitidos():
-        """None = sem limite; senão, ids das entidades dos clusters da pessoa."""
-        if not _restrito():
-            return None
-        m = TeamMember.query.filter_by(user_id=current_user.id).first()
-        if not m:
-            return set()
-        return {a.id for a in CompanyAssignment.query.join(
-            Cluster, CompanyAssignment.cluster_id == Cluster.id)
-            .filter(Cluster.member_id == m.id).all()}
+        """None = sem limite. Entidades são um recurso de todo o time (o profissional só
+        tem a visão restrita em atividades, projetos e indicadores)."""
+        return None
 
     # ==================================================================
     # PAGINA PRINCIPAL

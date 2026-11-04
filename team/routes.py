@@ -46,16 +46,6 @@ def register_team_routes(app):
             return f(*a, **k)
         return wrap
 
-    def controladoria_required(f):
-        """Gestão da área (cronograma, etc.): admin/controladoria só."""
-        @wraps(f)
-        @login_required
-        def wrap(*a, **k):
-            if not current_user.is_controladoria:
-                abort(403)
-            return f(*a, **k)
-        return wrap
-
     def _current_competency():
         return app._current_competency()
 
@@ -517,10 +507,10 @@ def register_team_routes(app):
         return render_template("team/prazo_aviso.html", rev=rev, a=a,
                                movimento=movimentos.movimento_do_prazo(rev.old_date, rev.new_date),
                                quem=(rev.user.display_name if rev.user else "—"),
-                               pode_reenviar=current_user.is_controladoria)
+                               pode_reenviar=current_user.is_team)
 
     @app.route("/prazo/<int:rid>/reenviar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_prazo_reenviar(rid):
         """Reenvia o e-mail da mudança de prazo à Liderança, aos líderes do projeto e a quem pediu o reenvio."""
         from team.models_workflow import DeadlineRevision
@@ -1069,9 +1059,11 @@ def register_team_routes(app):
             return None
 
     @app.route("/indicador/<int:iid>/peso", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_indicador_peso(iid):
         i = db.session.get(Indicator, iid) or abort(404)
+        if not _indicador_e_meu(i):
+            abort(403)
         try:
             i.weight = _peso(request.form.get("weight"))
         except ValueError:
@@ -1138,7 +1130,7 @@ def register_team_routes(app):
 
     # ---------------- Catálogo de indicadores (definições reutilizáveis) -------
     @app.route("/indicadores/catalogo")
-    @controladoria_required
+    @team_required
     def team_indicador_catalogo():
         from team.models import IndicatorDef
         defs = (IndicatorDef.query
@@ -1162,7 +1154,7 @@ def register_team_routes(app):
         d.sort_order = _int(form.get("sort_order")) or d.sort_order or 100
 
     @app.route("/catalogo/indicador", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_indicador_def_new():
         from team.models import IndicatorDef
         d = IndicatorDef(title="Novo indicador")
@@ -1173,7 +1165,7 @@ def register_team_routes(app):
         return redirect(url_for("team_indicador_catalogo"))
 
     @app.route("/catalogo/indicador/<int:did>", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_indicador_def_edit(did):
         from team.models import IndicatorDef
         d = db.session.get(IndicatorDef, did) or abort(404)
@@ -1188,7 +1180,7 @@ def register_team_routes(app):
         return redirect(url_for("team_indicador_catalogo"))
 
     @app.route("/catalogo/indicador/<int:did>/toggle", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_indicador_def_toggle(did):
         from team.models import IndicatorDef
         d = db.session.get(IndicatorDef, did) or abort(404)
@@ -1197,7 +1189,7 @@ def register_team_routes(app):
         return redirect(url_for("team_indicador_catalogo"))
 
     @app.route("/catalogo/indicador/<int:did>/excluir", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_indicador_def_delete(did):
         from team.models import IndicatorDef
         d = db.session.get(IndicatorDef, did) or abort(404)
@@ -1211,6 +1203,15 @@ def register_team_routes(app):
         return redirect(url_for("team_indicador_catalogo"))
 
     # ---------------- Medição única: um indicador do catálogo, todos os painéis --
+    def _indicador_e_meu(i):
+        """Profissional só enxerga/mexe nos indicadores dele (do membro ou de painel pessoal dele)."""
+        sid = _scoped_member_id()
+        if sid is None:
+            return True
+        from team.models_workflow import Panel
+        pan = db.session.get(Panel, i.panel_id) if i.panel_id else None
+        return i.member_id == sid or bool(pan and pan.owner_member_id == sid)
+
     def _usos_ativos(did):
         """Indicadores (um por painel) que usam a definição, só painéis ativos."""
         from team.models_workflow import Panel
@@ -1218,10 +1219,10 @@ def register_team_routes(app):
                 .outerjoin(Panel, Indicator.panel_id == Panel.id)
                 .filter(db.or_(Panel.id.is_(None), Panel.active.is_(True)))
                 .order_by(db.func.lower(Panel.name)).all())
-        return [i for i in inds if not (i.member and not i.member.active)]
+        return [i for i in inds if not (i.member and not i.member.active) and _indicador_e_meu(i)]
 
     @app.route("/indicadores/medir", methods=["GET", "POST"])
-    @controladoria_required
+    @team_required
     def team_indicador_medir():
         from team.models import IndicatorDef
         if request.method == "POST":
@@ -1419,11 +1420,13 @@ def register_team_routes(app):
         return send_file(e.path, as_attachment=True, download_name=e.name or "evidencia")
 
     @app.route("/indicador/evidencia/<int:eid>/excluir", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_evidencia_excluir(eid):
         from team.models import IndicatorEvidence
         e = db.session.get(IndicatorEvidence, eid) or abort(404)
         iid = e.result.indicator_id
+        if not _indicador_e_meu(db.session.get(Indicator, iid)):
+            abort(403)
         if os.path.exists(e.path):
             try:
                 os.remove(e.path)
@@ -1761,7 +1764,7 @@ def register_team_routes(app):
     # CAPACIDADE — mapa de calor pessoa x dia util
     # ==================================================================
     @app.route("/capacidade")
-    @controladoria_required
+    @team_required
     def team_capacidade():
         """Onde a carga se concentra no calendario do fechamento.
 
@@ -1950,7 +1953,7 @@ def register_team_routes(app):
                 (pascoa + timedelta(days=60), "Corpus Christi")]
 
     @app.route("/feriados")
-    @controladoria_required
+    @team_required
     def team_feriados():
         from engine.calendar_br import feriados_nacionais, deadline_for_competency
         from team.models_workflow import Feriado
@@ -1976,7 +1979,7 @@ def register_team_routes(app):
                                prazos=prazos, hoje=hoje)
 
     @app.route("/feriados/incluir", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_feriado_incluir():
         from engine.calendar_br import invalida
         from team.models_workflow import Feriado
@@ -1994,7 +1997,7 @@ def register_team_routes(app):
         return redirect(url_for("team_feriados", ano=d.year))
 
     @app.route("/feriados/ignorar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_feriado_ignorar():
         """Liga/desliga um feriado NACIONAL (ignorado = vira dia útil aqui)."""
         from engine.calendar_br import invalida
@@ -2017,7 +2020,7 @@ def register_team_routes(app):
         return redirect(url_for("team_feriados", ano=d.year))
 
     @app.route("/feriados/<int:fid>/remover", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_feriado_remover(fid):
         from engine.calendar_br import invalida
         from team.models_workflow import Feriado
@@ -2030,7 +2033,7 @@ def register_team_routes(app):
         return redirect(url_for("team_feriados", ano=ano))
 
     @app.route("/feriados/recalcular", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_feriados_recalcular():
         """Refaz os prazos das competências não fechadas e sincroniza as atividades
         em aberto do cronograma (concluídas ficam como estão)."""
@@ -2074,8 +2077,7 @@ def register_team_routes(app):
                 vistos.add(c.id)
                 reu = agenda.reuniao_do_ciclo(c.id, comp)
                 resp = agenda.membro_da_empresa(c.id)
-                pode = current_user.is_controladoria or bool(
-                    resp and resp.user_id and resp.user_id == current_user.id)
+                pode = current_user.is_team
                 linhas.append({"empresa": c, "resp": resp, "pode": pode,
                                "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu,
                                "extra": len(agenda.dias_reuniao(c.id, comp)) > 1,
@@ -2090,10 +2092,10 @@ def register_team_routes(app):
             ultimo=(get_setting(f"report_enviado_{comp.id}") if comp else None),
             competencias=Competency.query.order_by(
                 Competency.year.desc(), Competency.month.desc()).limit(12).all(),
-            ver_nomes=current_user.is_controladoria)
+            ver_nomes=current_user.is_team)
 
     @app.route("/report-fechamento/config", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_report_config():
         set_setting("report_ativo", "1" if request.form.get("ativo") else "0")
         du = request.form.get("inicio_du", type=int)
@@ -2103,7 +2105,7 @@ def register_team_routes(app):
         return redirect(url_for("team_report_fechamento"))
 
     @app.route("/report-fechamento/enviar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_report_enviar():
         from team import report_fechamento as rf
         comp = _current_competency()
@@ -2141,10 +2143,10 @@ def register_team_routes(app):
             desligadas=com.etapas_desligadas(current_user.id),
             hora=com.hora_envio_txt(),
             email_on=team_alerts.EMAIL_ENABLED, email_via=team_alerts.email_via(),
-            pode_listas=current_user.is_controladoria)
+            pode_listas=current_user.is_team)
 
     @app.route("/comunicacao/ferias-dias", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_comunicacao_ferias_dias():
         from team import ferias_aviso
         n = ferias_aviso.salva_antecedencia(request.form.get("dias"))
@@ -2155,7 +2157,7 @@ def register_team_routes(app):
         return redirect(url_for("team_comunicacao") + "#envios")
 
     @app.route("/comunicacao/tolerancia", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_comunicacao_tolerancia():
         from team.models import salva_tolerancia_entrega
         n = salva_tolerancia_entrega(request.form.get("dias"))
@@ -2169,7 +2171,7 @@ def register_team_routes(app):
         return redirect(url_for("team_comunicacao") + "#envios")
 
     @app.route("/comunicacao/horario", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_comunicacao_horario():
         from team import comunicacao as com
         if com.salva_hora_envio(request.form.get("hora")):
@@ -2187,7 +2189,7 @@ def register_team_routes(app):
         return redirect(url_for("team_comunicacao") + "#regua")
 
     @app.route("/comunicacao/lista/adicionar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_lista_adicionar():
         from team import comunicacao as com
         from team.models_workflow import ListaEmail
@@ -2209,7 +2211,7 @@ def register_team_routes(app):
         return redirect(url_for("team_comunicacao") + "#listas")
 
     @app.route("/comunicacao/lista/<int:lid>/<acao>", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_lista_acao(lid, acao):
         from team.models_workflow import ListaEmail
         x = db.session.get(ListaEmail, lid) or abort(404)

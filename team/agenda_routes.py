@@ -25,21 +25,12 @@ def register_agenda_routes(app):
             return f(*a, **k)
         return wrap
 
-    def controladoria_required(f):
-        @wraps(f)
-        @login_required
-        def wrap(*a, **k):
-            if not current_user.is_controladoria:
-                abort(403)
-            return f(*a, **k)
-        return wrap
-
     def _meu_membro():
         return TeamMember.query.filter_by(user_id=current_user.id).first()
 
     def _pode_agenda(member_id):
-        """Gestão vê/edita qualquer agenda; o profissional, só a própria."""
-        if current_user.is_controladoria:
+        """Todo o time vê e edita qualquer agenda."""
+        if current_user.is_team:
             return True
         m = _meu_membro()
         return bool(m and member_id == m.id)
@@ -63,8 +54,8 @@ def register_agenda_routes(app):
     # MARCAR À MÃO (acompanhamento no Report do Fechamento)
     # ==================================================================
     def _pode_marcar(company_id):
-        """Gestão marca para qualquer empresa; o responsável da carteira, só para as dele."""
-        if current_user.is_controladoria:
+        """Qualquer pessoa do time marca a reunião de qualquer empresa."""
+        if current_user.is_team:
             return True
         m = _meu_membro()
         resp = agenda.membro_da_empresa(company_id)
@@ -108,7 +99,7 @@ def register_agenda_routes(app):
     @team_required
     def team_agenda_reunioes():
         from team.models_workflow import ListaEmail
-        gestao = current_user.is_controladoria
+        gestao = current_user.is_team
         membro_id = _membro_arg()
         if not _pode_agenda(membro_id):
             membro_id = (_meu_membro().id if _meu_membro() else None)
@@ -164,7 +155,7 @@ def register_agenda_routes(app):
             fixos=ListaEmail.query.filter_by(tipo="agenda").count())
 
     @app.route("/agenda-reunioes/config", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_config():
         f = request.form
         set_setting("ag_ativo", "1" if f.get("ativo") else "0")
@@ -275,7 +266,7 @@ def register_agenda_routes(app):
         if d2 <= d1:
             flash("O fim precisa ser depois do início.", "warning")
             return _volta(mid)
-        para_todos = bool(request.form.get("todos")) and current_user.is_controladoria
+        para_todos = bool(request.form.get("todos")) and current_user.is_team
         db.session.add(AgendaBloqueio(member_id=(None if para_todos else mid), inicio=d1, fim=d2,
                                       motivo=(request.form.get("motivo") or "").strip()[:160] or None))
         db.session.commit()
@@ -286,7 +277,7 @@ def register_agenda_routes(app):
     @team_required
     def team_agenda_bloqueio_del(bid):
         b = db.session.get(AgendaBloqueio, bid) or abort(404)
-        if b.member_id is None and not current_user.is_controladoria:
+        if b.member_id is None and not current_user.is_team:
             abort(403)
         if b.member_id is not None and not _pode_agenda(b.member_id):
             abort(403)
@@ -296,7 +287,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg() if mid is None else mid)
 
     @app.route("/agenda-reunioes/link/<int:cid>/<acao>", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_link(cid, acao):
         """cid = id da empresa (0 = link geral)."""
         comp = cid or None
@@ -313,7 +304,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/lider", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_link_lider(cid):
         """Liga/desliga “copiar líder” no convite desta empresa."""
         l = agenda.link_da_empresa(cid or None)
@@ -324,7 +315,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/lider-todas", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_link_lider_todas():
         valor = request.form.get("valor") == "1"
         n = 0
@@ -338,7 +329,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/dia", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_link_dia(cid):
         """Define o dia da reunião de UMA empresa: data fixa, ou N dias úteis após o prazo,
         ou volta para a regra geral (campos vazios)."""
@@ -378,7 +369,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/local", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_link_local(cid):
         """Local / link do Teams de UMA empresa (vazio = usa o geral)."""
         l = agenda.link_da_empresa(cid)
@@ -389,7 +380,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/teste", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_teste():
         """Convite de teste para o e-mail de quem clicou (ninguém mais recebe)."""
         cid = request.form.get("company_id", type=int) or None
@@ -404,7 +395,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/simular", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_simular():
         """Simula a jornada: e-mail de aviso com o link de agendamento -> a empresa marca ->
         convite -> cancelamento. TUDO chega só ao e-mail indicado; nada vai às pessoas reais
@@ -443,7 +434,7 @@ def register_agenda_routes(app):
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/simulacao/<int:lid>/encerrar", methods=["POST"])
-    @controladoria_required
+    @team_required
     def team_agenda_simulacao_encerrar(lid):
         l = AgendaLink.query.filter(AgendaLink.id == lid, AgendaLink.teste_email.isnot(None)).first() or abort(404)
         agenda.encerrar_simulacao(l)

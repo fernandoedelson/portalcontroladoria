@@ -5,7 +5,7 @@
 <div class="page-head">
   <div><h1>Comunicação</h1>
     <div class="sub">Quem recebe cada e-mail do portal e quais avisos chegam até você.</div></div>
-  {% if current_user.is_controladoria %}<a href="/alertas" class="btn btn-outline">{{ icone('bell') }} Matriz de alertas</a>{% endif %}
+  {% if current_user.is_team %}<a href="/alertas" class="btn btn-outline">{{ icone('bell') }} Matriz de alertas</a>{% endif %}
 </div>
 
 <div class="kpi-grid">

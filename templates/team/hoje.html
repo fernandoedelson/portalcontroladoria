@@ -34,7 +34,7 @@
 <div class="page-head">
   <div><h1>Painel do Dia</h1>
     <div class="sub">{{ today|dia_mes|capitalize }}{% if regua and regua.du_hoje %} · {{ regua.du_hoje }}º dia útil do fechamento de {{ comp.label }}{% endif %}</div></div>
-  {% if current_user.is_controladoria %}<a href="/resumo" class="btn btn-outline">{{ icone('send') }} Enviar resumo</a>{% endif %}
+  {% if current_user.is_team %}<a href="/resumo" class="btn btn-outline">{{ icone('send') }} Enviar resumo</a>{% endif %}
 </div>
 
 {% if regua and regua.total %}
@@ -134,7 +134,7 @@
             {% else %}<i class="text-muted">sem escala</i>{% endif %}
           </span>
           <span class="met-res">
-            {% if it.outcome == 'sem' %}{% if current_user.is_controladoria %}<a class="st st-pendente met-medir"
+            {% if it.outcome == 'sem' %}{% if current_user.is_team %}<a class="st st-pendente met-medir"
               href="/indicadores/medir?def_id={{ it.ind.indicator_def_id or 0 }}{{ '&competency_id=%d'|format(comp.id) if comp }}"
               title="Medir “{{ it.ind.title }}”">medir agora</a>{% else %}<span class="st st-pendente">não medido</span>{% endif %}
             {% else %}<span class="st st-{{ 'atingido' if it.outcome in ['atingido','superado'] else ('parcial' if it.outcome=='parcial' else ('cancelada' if it.outcome=='na' else 'reprovado')) }}">
@@ -149,7 +149,7 @@
     </details>
     {% endfor %}
   </div>
-  {% if current_user.is_controladoria %}
+  {% if current_user.is_team %}
   <p class="help-txt rg-nota">{{ metas|sum(attribute='medidos') }} de {{ metas|sum(attribute='total') }} medidos ·
     <a href="/indicadores/medir">abrir a fila de medição</a>. Clique numa pessoa para ver os indicadores dela.</p>
   {% endif %}
@@ -196,7 +196,7 @@
 <section class="card vazio-card">
   <h2>Nenhuma atividade de fechamento em {{ comp.label }}</h2>
   <p class="text-muted">A régua aparece quando o cronograma gera as atividades da competência.
-    {% if current_user.is_controladoria %}<a href="/cronograma">Gerar no Cronograma</a>.{% endif %}</p>
+    {% if current_user.is_team %}<a href="/cronograma">Gerar no Cronograma</a>.{% endif %}</p>
 </section>
 {% endif %}
 

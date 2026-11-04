@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Administração</h1>
-    <div class="sub">{% if restrito %}Entidades dos clusters sob a sua responsabilidade: responsável, entregas, aviso de prazo e contatos.{% else %}Cadastro dos dados-mestre: time, carteira, empresas, usuários e template.{% endif %}</div></div>
+    <div class="sub">{% if restrito %}Entidades: responsável, entregas, aviso de prazo e contatos.{% else %}Cadastro dos dados-mestre: time, carteira, empresas, usuários e template.{% endif %}</div></div>
 </div>
 
 <div class="adm-tabs" id="adm-tabs">
@@ -442,7 +442,7 @@
     {% else %}
       <div class="empty-box"><div class="empty-ico">{{ icone('table', 30) }}</div>
         <p><strong>Nenhuma entidade cadastrada.</strong></p>
-        <p class="text-muted text-sm">{% if restrito %}Quando a Controladoria indicar você como responsável por um cluster, as entidades dele aparecem aqui.{% else %}Inclua as empresas acima para distribuir os painéis entre o time.{% endif %}</p></div>
+        <p class="text-muted text-sm">{% if restrito %}Ainda não há entidades cadastradas.{% else %}Inclua as empresas acima para distribuir os painéis entre o time.{% endif %}</p></div>
     {% endif %}
   </div>
 </section>

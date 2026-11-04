@@ -563,7 +563,7 @@ def register_workflow_routes(app):
     # RESUMO SEMANAL
     # ------------------------------------------------------------------
     @app.route("/resumo", methods=["GET", "POST"])
-    @team_required
+    @any_team_required
     def wf_resumo():
         if request.method == "POST" and not fuso.pode_avisar():
             from models import set_setting
@@ -593,7 +593,7 @@ def register_workflow_routes(app):
                                snap=None, enviados=enviados, html=previa)
 
     @app.route("/resumo/enviar-lideranca", methods=["POST"])
-    @team_required
+    @any_team_required
     def wf_resumo_enviar_lideranca():
         """Manda o resumo do fechamento (com a tabela) só para as pessoas com perfil Liderança.
         Não grava foto nem avisa a lista do resumo semanal."""
@@ -624,7 +624,7 @@ def register_workflow_routes(app):
         return redirect(url_for("wf_resumo"))
 
     @app.route("/resumo/<int:sid>")
-    @team_required
+    @any_team_required
     def wf_resumo_ver(sid):
         snap = db.session.get(DigestSnapshot, sid) or abort(404)
         enviados = (DigestSnapshot.query.order_by(DigestSnapshot.created_at.desc())
@@ -1098,7 +1098,7 @@ def register_workflow_routes(app):
             return None
 
     @app.route("/atas")
-    @team_required
+    @any_team_required
     def atas():
         f_emp = request.args.get("company_id", type=int)
         f_tipo = request.args.get("tipo")
@@ -1114,7 +1114,7 @@ def register_workflow_routes(app):
                                f_emp=f_emp, f_tipo=f_tipo)
 
     @app.route("/atas/nova", methods=["GET", "POST"])
-    @team_required
+    @any_team_required
     def ata_nova():
         if request.method == "POST" and request.form.get("etapa") == "salvar":
             return _ata_salvar()
@@ -1193,7 +1193,7 @@ def register_workflow_routes(app):
         return redirect(url_for("ata_detail", aid=ata.id))
 
     @app.route("/atas/importar", methods=["POST"])
-    @team_required
+    @any_team_required
     def atas_importar():
         """Importa VÁRIAS atas de uma vez (histórico) — só arquiva, sem criar tarefas."""
         try:
@@ -1224,14 +1224,14 @@ def register_workflow_routes(app):
         return redirect(url_for("atas"))
 
     @app.route("/ata/<int:aid>")
-    @team_required
+    @any_team_required
     def ata_detail(aid):
         ata = db.session.get(AtaReuniao, aid) or abort(404)
         return render_template("team/ata_detail.html", ata=ata,
                                mm={m.id: m for m in TeamMember.query.all()})
 
     @app.route("/ata/<int:aid>/excluir", methods=["POST"])
-    @team_required
+    @any_team_required
     def ata_excluir(aid):
         ata = db.session.get(AtaReuniao, aid) or abort(404)
         db.session.delete(ata)
