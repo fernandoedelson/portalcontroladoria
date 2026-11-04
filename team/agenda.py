@@ -100,6 +100,43 @@ def dia_reuniao(company_id, comp=None):
     return add_business_days(prazo, max(off, 0)) if off else prazo
 
 
+def dias_reuniao(company_id, comp=None):
+    """Dias em que a empresa pode marcar: o dia da reunião e, se a Controladoria liberou,
+    os dias úteis seguintes até `estende_ate`. A liberação é por empresa e some sozinha
+    quando o ciclo muda (a data limite fica para trás do novo dia)."""
+    dia = dia_reuniao(company_id, comp)
+    if not dia:
+        return []
+    dias = [dia]
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first() if company_id else None
+    if l and l.estende_ate and l.estende_ate > dia:
+        d = dia + timedelta(days=1)
+        while d <= l.estende_ate:
+            if fuso.dia_util(d):
+                dias.append(d)
+            d += timedelta(days=1)
+    return dias
+
+
+def libera_dia_extra(company_id, comp=None):
+    """Libera +1 dia útil depois do dia da reunião (só esta empresa). Retorna o novo dia ou None."""
+    from team.engine import add_business_days
+    dia = dia_reuniao(company_id, comp)
+    if not dia:
+        return None
+    l = link_da_empresa(company_id)
+    l.estende_ate = add_business_days(dia, 1)
+    db.session.commit()
+    return l.estende_ate
+
+
+def fecha_dia_extra(company_id):
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first()
+    if l and l.estende_ate:
+        l.estende_ate = None
+        db.session.commit()
+
+
 def regra_do_dia(company_id):
     """Texto curto de como o dia da empresa é definido (para a tela)."""
     l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first()
@@ -132,13 +169,13 @@ def horarios_livres(member_id=None, company_id=None, ref=None):
     ocupados += [(b.inicio, b.fim) for b in AgendaBloqueio.query.filter(
         AgendaBloqueio.fim > ref,
         db.or_(AgendaBloqueio.member_id.is_(None), AgendaBloqueio.member_id == member_id)).all()]
-    so_dia = dia_reuniao(company_id) if company_id else None
-    if company_id and not so_dia:
+    so_dias = dias_reuniao(company_id) if company_id else None
+    if company_id and not so_dias:
         return {}
     out = {}
     d = ref.date()
     while d <= limite:
-        if (so_dia is None or d == so_dia) and d.weekday() in janelas and fuso.dia_util(d):
+        if (so_dias is None or d in so_dias) and d.weekday() in janelas and fuso.dia_util(d):
             for ini, fim in janelas[d.weekday()]:
                 cur = datetime.combine(d, ini)
                 fim_dt = datetime.combine(d, fim)

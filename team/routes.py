@@ -2066,23 +2066,22 @@ def register_team_routes(app):
             comp = db.session.get(Competency, cid) or comp
         q = rf.montar(comp, fuso.hoje())
         reunioes = None
-        if current_user.is_controladoria:
-            from team import agenda
-            linhas, vistos = [], set()
-            for g, _rot in rf.GRUPOS:
-                for l in q["grupos"][g]:
-                    c = l["empresa"]
-                    vistos.add(c.id)
-                    reu = agenda.reuniao_do_ciclo(c.id, comp)
-                    resp = agenda.membro_da_empresa(c.id)
-                    pode = current_user.is_controladoria or bool(
-                        resp and resp.user_id and resp.user_id == current_user.id)
-                    linhas.append({"empresa": c, "resp": resp, "pode": pode,
-                                   "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu})
-            linhas.sort(key=lambda x: (x["reuniao"] is None, x["reuniao"].inicio if x["reuniao"] else datetime.max,
-                                       x["empresa"].name))
-            reunioes = {"linhas": linhas, "agendadas": sum(1 for x in linhas if x["reuniao"]),
-                        "total": len(linhas)}
+        from team import agenda
+        linhas, vistos = [], set()
+        for g, _rot in rf.GRUPOS:
+            for l in q["grupos"][g]:
+                c = l["empresa"]
+                vistos.add(c.id)
+                reu = agenda.reuniao_do_ciclo(c.id, comp)
+                resp = agenda.membro_da_empresa(c.id)
+                pode = current_user.is_controladoria or bool(
+                    resp and resp.user_id and resp.user_id == current_user.id)
+                linhas.append({"empresa": c, "resp": resp, "pode": pode,
+                               "dia": agenda.dia_reuniao(c.id, comp), "reuniao": reu})
+        linhas.sort(key=lambda x: (x["reuniao"] is None, x["reuniao"].inicio if x["reuniao"] else datetime.max,
+                                   x["empresa"].name))
+        reunioes = {"linhas": linhas, "agendadas": sum(1 for x in linhas if x["reuniao"]),
+                    "total": len(linhas)}
         return render_template(
             "team/report_fechamento.html", q=q, docs=rf.DOCS, grupos=rf.GRUPOS, reunioes=reunioes,
             ligado=rf.ligado(), inicio_du=rf.config("report_inicio_du"),

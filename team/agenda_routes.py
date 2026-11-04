@@ -355,6 +355,23 @@ def register_agenda_routes(app):
         flash("Dia da reunião da empresa atualizado.", "success")
         return _volta(_membro_arg())
 
+    @app.route("/agenda-reunioes/link/<int:cid>/estender", methods=["POST"])
+    @controladoria_required
+    def team_agenda_link_estender(cid):
+        """Libera (ou fecha) o dia útil seguinte ao da reunião só para esta empresa."""
+        if request.form.get("acao") == "fechar":
+            agenda.fecha_dia_extra(cid)
+            log_audit(current_user.id, "agenda_dia_extra_fechado", "company", str(cid))
+            flash("Dia extra fechado: a empresa volta a só ter o dia da reunião.", "success")
+        else:
+            ate = agenda.libera_dia_extra(cid)
+            if ate:
+                log_audit(current_user.id, "agenda_dia_extra_liberado", "company", f"{cid} até {ate}")
+                flash(f"Liberado também {ate:%d/%m} para esta empresa (vale só neste ciclo).", "success")
+            else:
+                flash("A empresa ainda não tem dia de reunião definido.", "warning")
+        return _volta(_membro_arg())
+
     @app.route("/agenda-reunioes/link/<int:cid>/local", methods=["POST"])
     @controladoria_required
     def team_agenda_link_local(cid):
@@ -468,6 +485,7 @@ def register_agenda_routes(app):
                                titulo=agenda.cfg("ag_titulo"), local=agenda.local_da_empresa(l.company_id),
                                duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
                                responsavel=(mem.name if mem else None), dia=dia,
+                               dias_ok=(agenda.dias_reuniao(l.company_id) if l.company_id else []),
                                precisa_email=(not l.company_id and not l.teste_email),
                                pre_email=request.form.get("email", ""))
 

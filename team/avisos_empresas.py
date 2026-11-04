@@ -124,6 +124,8 @@ def _dados(empresa, comp, prazo, du, agendar=None):
         if d:
             dados["dia_reuniao"] = f"{_DIAS_EXT[d.weekday()]}, {d.strftime('%d/%m/%Y')}"
         dados["agendar"] = agendar if agendar is not None else agenda.url_para_empresa(empresa.id)
+        if agendar is None and agenda.reuniao_do_ciclo(empresa.id, comp):
+            dados["agendar"] = dados["dia_reuniao"] = ""      # já tem reunião (inclusive marcada por nós): não cobra agendamento
     except Exception:
         if agendar is not None:
             dados["agendar"] = agendar

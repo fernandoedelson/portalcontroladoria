@@ -746,6 +746,8 @@ class AgendaLink(db.Model):
     copiar_lider = db.Column(db.Boolean, default=False)
     # local / link do Teams desta empresa; vazio = o geral da configuração
     local = db.Column(db.String(300))
+    # liberação do dia seguinte ao da reunião, só desta empresa: vale até esta data e some sozinha no ciclo seguinte
+    estende_ate = db.Column(db.Date)
     company = db.relationship("Company")
 
     @property

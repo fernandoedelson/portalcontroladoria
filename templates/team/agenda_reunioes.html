@@ -199,6 +199,13 @@
       <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}{% if not c.contatos|selectattr('active')|list %}<div class="text-muted">sem e-mail de responsável da empresa cadastrado</div>{% endif %}</td>
       <td class="text-sm">
         <div><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong> <span class="text-muted">({{ e.regra }})</span></div>
+        {% if e.dia %}<form method="post" action="/agenda-reunioes/link/{{ c.id }}/estender" class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
+          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+          {% if l and l.estende_ate and l.estende_ate > e.dia %}
+          <span class="text-sm" style="font-weight:600;color:#2E6A53;">+ liberado também {{ l.estende_ate.strftime('%d/%m') }}</span>
+          <button class="btn btn-outline btn-sm" type="submit" name="acao" value="fechar">Fechar dia extra</button>
+          {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
+        </form>{% endif %}
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
           {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
           <input class="input input-sm" type="number" name="offset_du" min="0" max="15" placeholder="d.u." title="Dias úteis após o prazo de entrega (vazio = regra geral)" value="{{ e.link.offset_du if e.link and e.link.offset_du is not none else '' }}" style="width:64px;"/>
