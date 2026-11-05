@@ -178,6 +178,7 @@ _COLUNAS_NOVAS = [
     ("agenda_links", "copiar_lider", "BOOLEAN DEFAULT 0"),
     ("agenda_links", "local", "VARCHAR(300)"),
     ("agenda_links", "estende_ate", "DATE"),
+    ("agenda_links", "duracao", "INTEGER"),
 ]
 
 

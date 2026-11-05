@@ -139,7 +139,7 @@
         <input class="input" name="local" value="{{ cfg('ag_local') }}" placeholder="https://teams.microsoft.com/... ou sala"/></div>
       <div class="form-row"><label class="field-label">Reunião: dias úteis após o prazo de entrega (padrão geral)</label>
         <input class="input" type="number" name="offset_du" min="0" max="15" value="{{ cfg('ag_offset_du') }}"/></div>
-      <div class="form-row"><label class="field-label">Duração (minutos)</label>
+      <div class="form-row"><label class="field-label">Duração padrão (minutos) — cada empresa pode ter a sua, em “Links por empresa”</label>
         <input class="input" type="number" name="duracao" min="10" max="240" value="{{ cfg('ag_duracao') }}"/></div>
       <div class="form-row"><label class="field-label">Antecedência mínima (horas)</label>
         <input class="input" type="number" name="antecedencia" min="0" max="720" value="{{ cfg('ag_antecedencia_h') }}"/></div>
@@ -200,8 +200,20 @@
     <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="0"/>
       <button class="btn btn-outline btn-sm" type="submit">Não copiar em nenhuma</button></form>
   </div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Copiar líder</th><th scope="col">Local / link do Teams</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
+  <form method="post" action="/agenda-reunioes/duracao-segmento" class="flex gap-1 items-center mb-1" style="flex-wrap:wrap;">
+    {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+    <span class="text-sm"><strong>Duração por segmento:</strong></span>
+    <select class="input input-sm" name="segmento" required aria-label="Segmento" style="width:auto;">
+      <option value="">— segmento —</option>
+      {% for sg in segmentos %}<option value="{{ sg }}">{{ sg }}</option>{% endfor %}
+    </select>
+    <input class="input input-sm" type="number" name="duracao" min="10" max="480" step="5" placeholder="min" aria-label="Duração em minutos" style="width:84px;"/>
+    <button class="btn btn-outline btn-sm" type="submit" title="Aplica a todas as empresas do segmento. Vazio = volta à duração padrão.">Aplicar às empresas do segmento</button>
+    <span class="text-muted text-sm">Ex.: Energia → 90 min. Vazio volta ao padrão.</span>
+  </form>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Copiar líder</th><th scope="col">Duração</th><th scope="col">Local / link do Teams</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
     <tr><th scope="row">Link geral (sem empresa)</th><td class="text-sm">agenda geral</td><td class="text-sm">qualquer dia das janelas</td><td class="text-sm">—</td>
+      <td class="text-sm text-muted">padrão ({{ cfg('ag_duracao') }} min)</td>
       <td class="text-sm text-muted">o da configuração geral</td>
       <td class="text-sm">{% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:100%;min-width:240px;"/>{% else %}—{% endif %}</td>
       <td class="text-right">{% if geral %}<div class="flex gap-1" style="justify-content:flex-end;">
@@ -231,6 +243,13 @@
         </form></td>
       <td class="text-center"><form method="post" action="/agenda-reunioes/link/{{ c.id }}/lider">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
         <input type="checkbox" name="copiar" value="1" {{ 'checked' if l and l.copiar_lider }} onchange="this.form.submit()" aria-label="Copiar líder no convite de {{ c.name }}"/></form></td>
+      <td class="text-sm ag-dur">
+        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/duracao" class="ag-local-form">
+          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+          <input class="input input-sm" type="number" name="duracao" min="10" max="480" step="5" placeholder="{{ cfg('ag_duracao') }}" aria-label="Duração da reunião de {{ c.name }}, em minutos" value="{{ l.duracao if l and l.duracao else '' }}" title="{{ 'Duração própria desta empresa' if l and l.duracao else 'Usando a duração padrão' }}" style="width:76px;min-width:0;background:{{ 'rgba(46,106,83,.16)' if l and l.duracao else 'rgba(181,131,42,.20)' }};"/>
+          <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
+        </form>
+        <span class="ag-pill {{ 'ag-pill-ok' if l and l.duracao else 'ag-pill-pad' }}">{{ 'duração própria' if l and l.duracao else 'duração padrão' }}</span></td>
       <td class="text-sm ag-local">
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/local" class="ag-local-form">
           {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>

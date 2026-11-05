@@ -10,7 +10,7 @@ from flask_login import login_required, current_user
 
 from models import db, Company, log_audit, set_setting
 from team import agenda
-from team.models import TeamMember
+from team.models import TeamMember, CompanyAssignment
 from team.models_workflow import AgendaJanela, AgendaBloqueio, AgendaLink, Reuniao
 
 
@@ -139,6 +139,7 @@ def register_agenda_routes(app):
         return render_template(
             "team/agenda_reunioes.html", cfg=agenda.cfg, ativo=agenda.ativo(), dias=agenda.DIAS,
             gestao=gestao, membros=membros, membro_id=membro_id,
+            segmentos=sorted({a.segment for a in CompanyAssignment.query.all() if a.segment}),
             membro=(db.session.get(TeamMember, membro_id) if membro_id else None),
             janelas=AgendaJanela.query.filter(AgendaJanela.member_id == membro_id)
             .order_by(AgendaJanela.weekday, AgendaJanela.inicio).all(),
@@ -368,6 +369,48 @@ def register_agenda_routes(app):
             return redirect(url_for("team_report_fechamento") + "#reunioes")
         return _volta(_membro_arg())
 
+    def _minutos(txt):
+        try:
+            n = int(txt)
+        except (TypeError, ValueError):
+            return None
+        return n if 10 <= n <= 480 else None
+
+    @app.route("/agenda-reunioes/link/<int:cid>/duracao", methods=["POST"])
+    @team_required
+    def team_agenda_link_duracao(cid):
+        """Duração da reunião de UMA empresa (vazio = usa a padrão)."""
+        txt = (request.form.get("duracao") or "").strip()
+        n = _minutos(txt)
+        if txt and n is None:
+            flash("Informe a duração em minutos, entre 10 e 480.", "warning")
+            return _volta(_membro_arg())
+        l = agenda.link_da_empresa(cid)
+        l.duracao = n
+        db.session.commit()
+        log_audit(current_user.id, "agenda_duracao_empresa", "company", f"{cid}: {n}")
+        flash(f"Duração da reunião da empresa: {n} min." if n else "Empresa volta a usar a duração padrão.", "success")
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/duracao-segmento", methods=["POST"])
+    @team_required
+    def team_agenda_duracao_segmento():
+        """Mesma duração para todas as empresas de um segmento (ex.: Distribuição de energia)."""
+        seg = (request.form.get("segmento") or "").strip()
+        txt = (request.form.get("duracao") or "").strip()
+        n = _minutos(txt)
+        if not seg or (txt and n is None):
+            flash("Escolha o segmento e uma duração entre 10 e 480 minutos.", "warning")
+            return _volta(_membro_arg())
+        ids = [a.company_id for a in CompanyAssignment.query.filter_by(segment=seg).all()]
+        for cid in ids:
+            agenda.link_da_empresa(cid).duracao = n
+        db.session.commit()
+        log_audit(current_user.id, "agenda_duracao_segmento", "segment", f"{seg}: {n} ({len(ids)} empresas)")
+        flash(f"{len(ids)} empresa(s) de {seg}: reunião de {n} min." if n
+              else f"{len(ids)} empresa(s) de {seg} voltam à duração padrão.", "success")
+        return _volta(_membro_arg())
+
     @app.route("/agenda-reunioes/link/<int:cid>/local", methods=["POST"])
     @team_required
     def team_agenda_link_local(cid):
@@ -479,7 +522,7 @@ def register_agenda_routes(app):
         dia = agenda.dia_reuniao(l.company_id) if l.company_id else None
         return render_template("agendar.html", link=l, livres=livres, erro=erro, feito=feito, ja=ja,
                                titulo=agenda.cfg("ag_titulo"), local=agenda.local_da_empresa(l.company_id),
-                               duracao=agenda.cfg_int("ag_duracao", 30), dias=agenda.DIAS,
+                               duracao=agenda.duracao_da_empresa(l.company_id), dias=agenda.DIAS,
                                responsavel=(mem.name if mem else None), dia=dia,
                                dias_ok=(agenda.dias_reuniao(l.company_id) if l.company_id else []),
                                precisa_email=(not l.company_id and not l.teste_email),

@@ -154,7 +154,7 @@ def horarios_livres(member_id=None, company_id=None, ref=None):
     empresa (dia útil seguinte ao prazo). Reuniões de responsáveis diferentes podem
     se sobrepor; para o mesmo responsável, não."""
     ref = ref or fuso.agora()
-    dur = timedelta(minutes=cfg_int("ag_duracao", 30))
+    dur = timedelta(minutes=duracao_da_empresa(company_id))
     minimo = ref + timedelta(hours=cfg_int("ag_antecedencia_h", 24))
     limite = ref.date() + timedelta(days=cfg_int("ag_janela_dias", 30))
     janelas = {}
@@ -202,6 +202,13 @@ def _utc(dt_local):
 
 def _esc(t):
     return (t or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def duracao_da_empresa(company_id):
+    """Duração da reunião em minutos: a definida para a empresa ou, sem ela, a padrão."""
+    l = AgendaLink.query.filter_by(company_id=company_id, teste_email=None).first() if company_id else None
+    padrao = cfg_int("ag_duracao", 30)
+    return l.duracao if (l and l.duracao and 10 <= l.duracao <= 480) else padrao
 
 
 def local_da_empresa(company_id):
@@ -316,7 +323,7 @@ def _enviar(r, cancelar=False):
         corpo = f"A reunião de {quando} foi cancelada.\n"
     else:
         assunto = f"{prefixo}{titulo} — {quando}"
-        corpo = (f"{titulo}" + (f" — {empresa}" if empresa else "") + f".\nQuando: {quando} ({cfg_int('ag_duracao', 30)} min)\n"
+        corpo = (f"{titulo}" + (f" — {empresa}" if empresa else "") + f".\nQuando: {quando} ({duracao_da_empresa(r.company_id)} min)\n"
                  + (f"Com: {r.member.name}\n" if r.member else "")
                  + (f"Local: {local_da_empresa(r.company_id)}\n" if local_da_empresa(r.company_id) else "")
                  + f"\nPara cancelar ou remarcar: {alerts.PORTAL_URL.rstrip('/')}/agendar/cancelar/{r.token_cancelar}\n")
@@ -366,7 +373,7 @@ def reservar(link, inicio, email=None):
     r = Reuniao(link_id=link.id, company_id=link.company_id, teste=bool(link.teste_email),
                 member_id=(mem.id if mem else None),
                 nome=(c.name if c else "Reunião")[:120], email=(contatos[0] if contatos else "")[:160],
-                inicio=inicio, fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
+                inicio=inicio, fim=inicio + timedelta(minutes=duracao_da_empresa(link.company_id)),
                 uid=f"{uuid.uuid4()}@controladoria-jf", token_cancelar=secrets.token_urlsafe(16))
     db.session.add(r)
     db.session.commit()
@@ -408,7 +415,7 @@ def registrar_manual(company_id, inicio, comp=None):
         return None, (f"Essa data é anterior ao ciclo atual (começa em "
                       f"{inicio_do_ciclo(comp).strftime('%d/%m')}). Escolha uma data a partir dele.")
     mem = membro_da_empresa(company_id)
-    fim = inicio + timedelta(minutes=cfg_int("ag_duracao", 30))
+    fim = inicio + timedelta(minutes=duracao_da_empresa(company_id))
     if mem:                              # a agenda é do responsável: não sobrepõe outra reunião dele
         choque = Reuniao.query.filter(
             Reuniao.member_id == mem.id, Reuniao.status == "marcada",
@@ -455,13 +462,13 @@ def enviar_teste(email, company_id):
     else:
         inicio = datetime.combine(fuso.hoje() + timedelta(days=1), time(9, 0))
     r = Reuniao(nome="Teste de agendamento", email=email,
-                inicio=inicio, fim=inicio + timedelta(minutes=cfg_int("ag_duracao", 30)),
+                inicio=inicio, fim=inicio + timedelta(minutes=duracao_da_empresa(company_id)),
                 uid=f"teste-{uuid.uuid4()}@controladoria-jf", token_cancelar=secrets.token_urlsafe(8),
                 sequencia=0, company_id=company_id)
     r.company, r.member = c, mem
     convite = (ics(r, [email]), "REQUEST")
     quando = f"{inicio.strftime('%d/%m/%Y')} às {inicio.strftime('%H:%M')}"
-    corpo = (f"[TESTE] Reunião marcada para {quando} ({cfg_int('ag_duracao', 30)} min)"
+    corpo = (f"[TESTE] Reunião marcada para {quando} ({duracao_da_empresa(company_id)} min)"
              + (f" — {c.name}" if c else "") + ".\n"
              + (f"Com: {mem.name}\n" if mem else "")
              + (f"Local: {local_da_empresa(company_id)}\n" if local_da_empresa(company_id) else "")

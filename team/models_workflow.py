@@ -748,6 +748,8 @@ class AgendaLink(db.Model):
     local = db.Column(db.String(300))
     # liberação do dia seguinte ao da reunião, só desta empresa: vale até esta data e some sozinha no ciclo seguinte
     estende_ate = db.Column(db.Date)
+    # duração da reunião desta empresa, em minutos; vazio = a duração padrão da configuração geral
+    duracao = db.Column(db.Integer)
     company = db.relationship("Company")
 
     @property
