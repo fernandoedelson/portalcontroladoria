@@ -81,6 +81,35 @@ def register_agenda_routes(app):
         flash(f"Reunião de {r.nome} marcada em {ini:%d/%m às %H:%M}. Nenhum convite foi enviado.", "success")
         return volta
 
+    @app.route("/agenda/<int:rid>/remarcar", methods=["POST"])
+    @team_required
+    def team_agenda_remarcar(rid):
+        """Remarca a reunião de uma empresa: cancela o convite anterior e cria o novo."""
+        volta = redirect(url_for("team_report_fechamento") + "#reunioes")
+        r = db.session.get(Reuniao, rid) or abort(404)
+        if not _pode_marcar(r.company_id):
+            abort(403)
+        try:
+            ini = datetime.strptime(f"{request.form.get('data', '')} {request.form.get('hora', '')}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            flash("Informe a nova data e a hora da reunião.", "warning")
+            return volta
+        antes = r.inicio
+        novo, erro = agenda.remarcar(r, ini)
+        if erro:
+            flash(erro, "warning")
+            return volta
+        log_audit(current_user.id, "reuniao_remarcada", "reuniao",
+                  f"{r.id}->{novo.id} {r.nome} {antes:%d/%m %H:%M} -> {ini:%d/%m %H:%M}")
+        if novo.link_id is None:
+            flash(f"Reunião de {novo.nome} remarcada de {antes:%d/%m %H:%M} para {ini:%d/%m às %H:%M}. Nenhum convite foi enviado.", "success")
+        else:
+            falhas = getattr(novo, "_falhas", [])
+            flash(f"Reunião de {novo.nome} remarcada para {ini:%d/%m às %H:%M}. O convite anterior foi cancelado e o novo foi enviado a todos."
+                  + (f" Atenção: falha em {len(falhas)} envio(s)." if falhas else ""),
+                  "warning" if falhas else "success")
+        return volta
+
     @app.route("/agenda/manual/<int:rid>/remover", methods=["POST"])
     @team_required
     def team_agenda_manual_remover(rid):

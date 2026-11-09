@@ -89,6 +89,7 @@
 {% endif %}
 
 {% if reunioes %}
+<style>.rf-remarca{display:inline-block;margin-left:.4rem;vertical-align:top;}.rf-remarca summary{list-style:none;cursor:pointer;display:inline-block;}.rf-remarca summary::-webkit-details-marker{display:none;}</style>
 <div class="card" id="reunioes">
   <div class="flex gap-1 items-center" style="justify-content:space-between;flex-wrap:wrap;">
     <h2 style="margin:0;">Reuniões de resultados <span class="text-muted text-sm">· <span id="reu-ag">{{ reunioes.agendadas }}</span> de <span id="reu-tot">{{ reunioes.total }}</span> agendadas</span></h2>
@@ -111,7 +112,21 @@
           {% if x.pode %}<form method="post" action="/agenda/manual/{{ x.reuniao.id }}/remover" style="display:inline;"
                 onsubmit="return confirm('Remover a reunião de {{ x.empresa.name }}?');">{{ csrf() }}
             <button class="btn btn-outline btn-sm btn-danger" type="submit" aria-label="Remover reunião de {{ x.empresa.name }}">{{ icone('trash') }}</button></form>{% endif %}
+          {% if x.pode %}<details class="rf-remarca">
+            <summary class="btn btn-outline btn-sm" title="A empresa pediu para mudar: cancela o convite e cria o novo">Remarcar</summary>
+            <form method="post" action="/agenda/{{ x.reuniao.id }}/remarcar" class="flex gap-1 items-center" style="flex-wrap:nowrap;margin-top:.4rem;"
+                  onsubmit="return confirm('Remarcar a reunião de {{ x.empresa.name }}? {{ 'O convite anterior será cancelado e um novo será enviado a todos.' if x.reuniao.link_id else 'Nenhum convite é enviado (reunião marcada à mão).' }}');">{{ csrf() }}
+              <input class="input" type="date" name="data" required aria-label="Nova data da reunião de {{ x.empresa.name }}" style="width:150px;"/>
+              <input class="input" type="time" name="hora" required aria-label="Nova hora" style="width:104px;"/>
+              <button class="btn btn-primary btn-sm" type="submit">Confirmar</button></form></details>{% endif %}
         {% elif x.reuniao %}<span class="text-sm text-muted">pela empresa</span>
+          {% if x.pode %}<details class="rf-remarca">
+            <summary class="btn btn-outline btn-sm" title="A empresa pediu para mudar: cancela o convite e cria o novo">Remarcar</summary>
+            <form method="post" action="/agenda/{{ x.reuniao.id }}/remarcar" class="flex gap-1 items-center" style="flex-wrap:nowrap;margin-top:.4rem;"
+                  onsubmit="return confirm('Remarcar a reunião de {{ x.empresa.name }}? {{ 'O convite anterior será cancelado e um novo será enviado a todos.' if x.reuniao.link_id else 'Nenhum convite é enviado (reunião marcada à mão).' }}');">{{ csrf() }}
+              <input class="input" type="date" name="data" required aria-label="Nova data da reunião de {{ x.empresa.name }}" style="width:150px;"/>
+              <input class="input" type="time" name="hora" required aria-label="Nova hora" style="width:104px;"/>
+              <button class="btn btn-primary btn-sm" type="submit">Confirmar</button></form></details>{% endif %}
         {% elif x.pode %}<form method="post" action="/agenda/manual" class="flex gap-1 items-center" style="flex-wrap:nowrap;">{{ csrf() }}
           <input type="hidden" name="company_id" value="{{ x.empresa.id }}"/>
           <input class="input" type="date" name="data" required aria-label="Data da reunião de {{ x.empresa.name }}" style="width:150px;"/>

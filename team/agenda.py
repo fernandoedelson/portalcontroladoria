@@ -391,6 +391,38 @@ def cancelar(r):
         _enviar(r, cancelar=True)
 
 
+def remarcar(r, inicio, comp=None):
+    """A empresa pediu para mudar (ligou, sem acesso à máquina): a Controladoria marca a nova data.
+
+    Cancela o convite anterior (aviso de cancelamento a todos) e cria uma reunião nova, com
+    convite novo. Reunião marcada à mão segue sem convite. Retorna (nova, erro); em erro nada muda."""
+    if r.status != "marcada" or r.teste:
+        return None, "Só dá para remarcar uma reunião marcada."
+    if inicio < fuso.agora():
+        return None, "A nova data precisa ser futura."
+    if inicio.date() < inicio_do_ciclo(comp):
+        return None, (f"Essa data é anterior ao ciclo atual (começa em "
+                      f"{inicio_do_ciclo(comp).strftime('%d/%m')}). Escolha uma data a partir dele.")
+    fim = inicio + timedelta(minutes=duracao_da_empresa(r.company_id))
+    if r.member_id:                      # a agenda é do responsável: não sobrepõe outra reunião dele
+        choque = Reuniao.query.filter(
+            Reuniao.id != r.id, Reuniao.member_id == r.member_id, Reuniao.status == "marcada",
+            db.or_(Reuniao.teste.is_(False), Reuniao.teste.is_(None)),
+            Reuniao.inicio < fim, Reuniao.fim > inicio).first()
+        if choque:
+            return None, (f"O responsável já tem a reunião de {choque.nome} às "
+                          f"{choque.inicio.strftime('%H:%M')} nesse dia.")
+    novo = Reuniao(link_id=r.link_id, company_id=r.company_id, member_id=r.member_id, teste=False,
+                   nome=r.nome, email=r.email, inicio=inicio, fim=fim,
+                   uid=f"{uuid.uuid4()}@controladoria-jf", token_cancelar=secrets.token_urlsafe(16))
+    db.session.add(novo)
+    db.session.commit()
+    cancelar(r)                          # aviso de cancelamento do convite anterior
+    if novo.link_id is not None:         # convite novo a todos os participantes
+        novo._falhas = _enviar(novo)
+    return novo, None
+
+
 def inicio_do_ciclo(comp=None):
     """Primeiro dia (data) em que uma reunião do ciclo atual é contada: 1º dia útil do mês seguinte à competência."""
     from models import current_competency
