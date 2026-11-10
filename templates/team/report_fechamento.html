@@ -96,7 +96,7 @@
     <button type="button" class="btn btn-outline btn-sm" id="reu-filtro" aria-pressed="false"
             title="Mostra só as empresas marcadas para receber o aviso de prazo">Só empresas com envio de aviso</button>
   </div>
-  <p class="text-muted text-sm mb-1">Acompanhamento para a liderança. Agendas separadas por responsável: reuniões de clusters diferentes podem coincidir no horário. O líder ou o responsável da empresa pode marcar a reunião à mão (não envia convite).</p>
+  <p class="text-muted text-sm mb-1">Acompanhamento para a liderança. Agendas separadas por responsável: reuniões de clusters diferentes podem coincidir no horário. Quem é do time pode marcar a reunião à mão (por telefone, p.ex.): o convite sai a todos os envolvidos da empresa.</p>
   <div class="tbl-wrap"><table class="tbl">
     <thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia previsto</th><th scope="col">Reunião agendada</th><th scope="col">Marcar à mão</th><th scope="col">2º dia</th></tr></thead>
     <tbody>
@@ -110,12 +110,12 @@
       <td>{% if x.reuniao and not x.reuniao.link_id %}
           <span class="text-sm text-muted">marcada à mão</span>
           {% if x.pode %}<form method="post" action="/agenda/manual/{{ x.reuniao.id }}/remover" style="display:inline;"
-                onsubmit="return confirm('Remover a reunião de {{ x.empresa.name }}?');">{{ csrf() }}
+                onsubmit="return confirm('Remover a reunião de {{ x.empresa.name }}? O cancelamento será enviado a todos os envolvidos.');">{{ csrf() }}
             <button class="btn btn-outline btn-sm btn-danger" type="submit" aria-label="Remover reunião de {{ x.empresa.name }}">{{ icone('trash') }}</button></form>{% endif %}
           {% if x.pode %}<details class="rf-remarca">
             <summary class="btn btn-outline btn-sm" title="A empresa pediu para mudar: cancela o convite e cria o novo">Remarcar</summary>
             <form method="post" action="/agenda/{{ x.reuniao.id }}/remarcar" class="flex gap-1 items-center" style="flex-wrap:nowrap;margin-top:.4rem;"
-                  onsubmit="return confirm('Remarcar a reunião de {{ x.empresa.name }}? {{ 'O convite anterior será cancelado e um novo será enviado a todos.' if x.reuniao.link_id else 'Nenhum convite é enviado (reunião marcada à mão).' }}');">{{ csrf() }}
+                  onsubmit="return confirm('Remarcar a reunião de {{ x.empresa.name }}? O convite anterior será cancelado e um novo será enviado a todos os envolvidos da empresa.');">{{ csrf() }}
               <input class="input" type="date" name="data" required aria-label="Nova data da reunião de {{ x.empresa.name }}" style="width:150px;"/>
               <input class="input" type="time" name="hora" required aria-label="Nova hora" style="width:104px;"/>
               <button class="btn btn-primary btn-sm" type="submit">Confirmar</button></form></details>{% endif %}
@@ -123,7 +123,7 @@
           {% if x.pode %}<details class="rf-remarca">
             <summary class="btn btn-outline btn-sm" title="A empresa pediu para mudar: cancela o convite e cria o novo">Remarcar</summary>
             <form method="post" action="/agenda/{{ x.reuniao.id }}/remarcar" class="flex gap-1 items-center" style="flex-wrap:nowrap;margin-top:.4rem;"
-                  onsubmit="return confirm('Remarcar a reunião de {{ x.empresa.name }}? {{ 'O convite anterior será cancelado e um novo será enviado a todos.' if x.reuniao.link_id else 'Nenhum convite é enviado (reunião marcada à mão).' }}');">{{ csrf() }}
+                  onsubmit="return confirm('Remarcar a reunião de {{ x.empresa.name }}? O convite anterior será cancelado e um novo será enviado a todos os envolvidos da empresa.');">{{ csrf() }}
               <input class="input" type="date" name="data" required aria-label="Nova data da reunião de {{ x.empresa.name }}" style="width:150px;"/>
               <input class="input" type="time" name="hora" required aria-label="Nova hora" style="width:104px;"/>
               <button class="btn btn-primary btn-sm" type="submit">Confirmar</button></form></details>{% endif %}

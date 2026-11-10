@@ -78,7 +78,9 @@ def register_agenda_routes(app):
             flash(erro, "warning")
             return volta
         log_audit(current_user.id, "reuniao_manual", "reuniao", f"{r.id} {r.nome} {ini:%d/%m %H:%M}")
-        flash(f"Reunião de {r.nome} marcada em {ini:%d/%m às %H:%M}. Nenhum convite foi enviado.", "success")
+        falhas = getattr(r, "_falhas", [])
+        flash(f"Reunião de {r.nome} marcada em {ini:%d/%m às %H:%M}. O convite foi enviado a todos os envolvidos da empresa."
+              + (f" Atenção: falha em {len(falhas)} envio(s)." if falhas else ""), "warning" if falhas else "success")
         return volta
 
     @app.route("/agenda/<int:rid>/remarcar", methods=["POST"])
@@ -101,13 +103,10 @@ def register_agenda_routes(app):
             return volta
         log_audit(current_user.id, "reuniao_remarcada", "reuniao",
                   f"{r.id}->{novo.id} {r.nome} {antes:%d/%m %H:%M} -> {ini:%d/%m %H:%M}")
-        if novo.link_id is None:
-            flash(f"Reunião de {novo.nome} remarcada de {antes:%d/%m %H:%M} para {ini:%d/%m às %H:%M}. Nenhum convite foi enviado.", "success")
-        else:
-            falhas = getattr(novo, "_falhas", [])
-            flash(f"Reunião de {novo.nome} remarcada para {ini:%d/%m às %H:%M}. O convite anterior foi cancelado e o novo foi enviado a todos."
-                  + (f" Atenção: falha em {len(falhas)} envio(s)." if falhas else ""),
-                  "warning" if falhas else "success")
+        falhas = getattr(novo, "_falhas", [])
+        flash(f"Reunião de {novo.nome} remarcada para {ini:%d/%m às %H:%M}. O convite anterior foi cancelado e o novo foi enviado a todos."
+              + (f" Atenção: falha em {len(falhas)} envio(s)." if falhas else ""),
+              "warning" if falhas else "success")
         return volta
 
     @app.route("/agenda/manual/<int:rid>/remover", methods=["POST"])
@@ -118,7 +117,7 @@ def register_agenda_routes(app):
             abort(403)                   # só as marcadas à mão; as da empresa seguem o fluxo próprio
         agenda.cancelar(r)
         log_audit(current_user.id, "reuniao_manual_removida", "reuniao", str(rid))
-        flash(f"Reunião de {r.nome} removida.", "success")
+        flash(f"Reunião de {r.nome} removida e o cancelamento foi enviado a todos os envolvidos.", "success")
         return redirect(url_for("team_report_fechamento") + "#reunioes")
 
     # ==================================================================
@@ -448,15 +447,13 @@ def register_agenda_routes(app):
         from team import avisos_empresas as av
         c = db.session.get(Company, cid) or abort(404)
         reu = agenda.reuniao_do_ciclo(cid)
-        if reu and reu.link_id is not None:
+        if reu:
             falhas = agenda.reenviar_convite(reu)
             log_audit(current_user.id, "agenda_convite_reenviado", "reuniao", f"{reu.id} {c.name}")
             if falhas:
                 flash(f"Convite de {c.name} reenviado, com falha em {len(falhas)} envio(s).", "warning")
             else:
                 flash(f"Convite da reunião de {c.name} ({reu.inicio:%d/%m às %H:%M}) reenviado a todos os participantes.", "success")
-        elif reu:
-            flash(f"A reunião de {c.name} foi marcada à mão e não tem convite. Para a empresa receber um, use Remarcar com o link.", "info")
         else:
             ok, msg = av.reenvia_link(c, quem=current_user.id)
             if ok:

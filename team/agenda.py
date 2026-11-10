@@ -387,15 +387,14 @@ def cancelar(r):
     r.status = "cancelada"
     r.sequencia = (r.sequencia or 0) + 1
     db.session.commit()
-    if r.link_id is not None:           # reunião marcada à mão não gerou convite: não há o que cancelar por e-mail
-        _enviar(r, cancelar=True)
+    _enviar(r, cancelar=True)           # inclusive a marcada à mão: todos recebem o cancelamento
 
 
 def remarcar(r, inicio, comp=None):
     """A empresa pediu para mudar (ligou, sem acesso à máquina): a Controladoria marca a nova data.
 
     Cancela o convite anterior (aviso de cancelamento a todos) e cria uma reunião nova, com
-    convite novo. Reunião marcada à mão segue sem convite. Retorna (nova, erro); em erro nada muda."""
+    convite novo, também para a reunião marcada à mão. Retorna (nova, erro); em erro nada muda."""
     if r.status != "marcada" or r.teste:
         return None, "Só dá para remarcar uma reunião marcada."
     if inicio < fuso.agora():
@@ -418,8 +417,7 @@ def remarcar(r, inicio, comp=None):
     db.session.add(novo)
     db.session.commit()
     cancelar(r)                          # aviso de cancelamento do convite anterior
-    if novo.link_id is not None:         # convite novo a todos os participantes
-        novo._falhas = _enviar(novo)
+    novo._falhas = _enviar(novo)         # convite novo a todos os participantes
     return novo, None
 
 
@@ -442,10 +440,11 @@ def inicio_do_ciclo(comp=None):
 
 
 def registrar_manual(company_id, inicio, comp=None):
-    """O líder marca a reunião à mão (sem convite por e-mail). Retorna (reuniao, erro).
+    """A Controladoria marca a reunião à mão (por telefone, p.ex.) e o convite sai a todos os
+    envolvidos da empresa, como na marcação pelo link. Retorna (reuniao, erro).
 
     Vale para o fluxo automático ainda em validação: a reunião entra no acompanhamento do report
-    como qualquer outra. Não envia convite; o responsável é o da carteira da empresa."""
+    como qualquer outra. O responsável é o da carteira da empresa."""
     c = db.session.get(Company, company_id) if company_id else None
     if not c:
         return None, "Empresa não encontrada."
@@ -469,6 +468,7 @@ def registrar_manual(company_id, inicio, comp=None):
                 token_cancelar=secrets.token_urlsafe(16))
     db.session.add(r)
     db.session.commit()
+    r._falhas = _enviar(r)               # convite a todos os envolvidos da empresa
     return r, None
 
 
