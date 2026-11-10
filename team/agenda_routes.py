@@ -164,7 +164,8 @@ def register_agenda_routes(app):
                 mem = agenda.membro_da_empresa(c.id)
                 empresas.append({"c": c, "link": links.get(c.id), "resp": mem,
                                  "dia": agenda.dia_reuniao(c.id),
-                                 "regra": agenda.regra_do_dia(c.id)})
+                                 "regra": agenda.regra_do_dia(c.id),
+                                 "reuniao": agenda.reuniao_do_ciclo(c.id)})
         return render_template(
             "team/agenda_reunioes.html", cfg=agenda.cfg, ativo=agenda.ativo(), dias=agenda.DIAS,
             gestao=gestao, membros=membros, membro_id=membro_id,
@@ -438,6 +439,33 @@ def register_agenda_routes(app):
         log_audit(current_user.id, "agenda_duracao_segmento", "segment", f"{seg}: {n} ({len(ids)} empresas)")
         flash(f"{len(ids)} empresa(s) de {seg}: reunião de {n} min." if n
               else f"{len(ids)} empresa(s) de {seg} voltam à duração padrão.", "success")
+        return _volta(_membro_arg())
+
+    @app.route("/agenda-reunioes/link/<int:cid>/reenviar", methods=["POST"])
+    @team_required
+    def team_agenda_link_reenviar(cid):
+        """Reenvia o e-mail da reunião: o convite, se já está marcada; senão, o e-mail com o link."""
+        from team import avisos_empresas as av
+        c = db.session.get(Company, cid) or abort(404)
+        reu = agenda.reuniao_do_ciclo(cid)
+        if reu and reu.link_id is not None:
+            falhas = agenda.reenviar_convite(reu)
+            log_audit(current_user.id, "agenda_convite_reenviado", "reuniao", f"{reu.id} {c.name}")
+            if falhas:
+                flash(f"Convite de {c.name} reenviado, com falha em {len(falhas)} envio(s).", "warning")
+            else:
+                flash(f"Convite da reunião de {c.name} ({reu.inicio:%d/%m às %H:%M}) reenviado a todos os participantes.", "success")
+        elif reu:
+            flash(f"A reunião de {c.name} foi marcada à mão e não tem convite. Para a empresa receber um, use Remarcar com o link.", "info")
+        else:
+            ok, msg = av.reenvia_link(c, quem=current_user.id)
+            if ok:
+                log_audit(current_user.id, "agenda_link_reenviado", "company", f"{cid} {c.name}")
+                flash(f"Link de agendamento de {c.name} reenviado para {msg}.", "success")
+            else:
+                flash(msg, "warning")
+        if request.form.get("voltar") == "report":
+            return redirect(url_for("team_report_fechamento") + "#reunioes")
         return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/local", methods=["POST"])

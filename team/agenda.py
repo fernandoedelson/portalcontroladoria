@@ -423,6 +423,12 @@ def remarcar(r, inicio, comp=None):
     return novo, None
 
 
+def reenviar_convite(r):
+    """Manda de novo o convite da reunião marcada (mesmo evento: o Outlook atualiza, não duplica).
+    Retorna a lista de falhas de envio."""
+    return _enviar(r)
+
+
 def inicio_do_ciclo(comp=None):
     """Primeiro dia (data) em que uma reunião do ciclo atual é contada: 1º dia útil do mês seguinte à competência."""
     from models import current_competency

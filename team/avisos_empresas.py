@@ -120,9 +120,9 @@ def _dados(empresa, comp, prazo, du, agendar=None):
              "hoje": fuso.hoje().strftime("%d/%m/%Y"), "dia_reuniao": "", "agendar": ""}
     try:
         from team import agenda
-        d = agenda.dia_reuniao(empresa.id, comp)
-        if d:
-            dados["dia_reuniao"] = f"{_DIAS_EXT[d.weekday()]}, {d.strftime('%d/%m/%Y')}"
+        ds = agenda.dias_reuniao(empresa.id, comp)
+        if ds:
+            dados["dia_reuniao"] = " ou ".join(f"{_DIAS_EXT[d.weekday()]}, {d.strftime('%d/%m/%Y')}" for d in ds)
         dados["agendar"] = agendar if agendar is not None else agenda.url_para_empresa(empresa.id)
         if agendar is None and agenda.reuniao_do_ciclo(empresa.id, comp):
             dados["agendar"] = dados["dia_reuniao"] = ""      # já tem reunião (inclusive marcada por nós): não cobra agendamento
@@ -183,6 +183,21 @@ def envia(kind, empresa, emails, comp, prazo, du, quem=None, dry_run=False, ref=
     db.session.add(log)
     db.session.commit()
     return ok, (err or "")
+
+
+def reenvia_link(empresa, quem=None):
+    """Reenvia à empresa o e-mail com o link de agendamento (mesmo texto do lembrete).
+    Retorna (ok, mensagem). Vale para todos os contatos ativos da empresa."""
+    from team import agenda
+    comp = current_competency()
+    emails = [x.email for x in empresa.contatos if x.active and x.email]
+    if not emails:
+        return False, "A empresa não tem responsável com e-mail cadastrado (Admin › Entidades › Detalhes)."
+    if not agenda.url_para_empresa(empresa.id):
+        return False, "O link da empresa está desativado ou o agendamento está desligado."
+    prazo, du = prazo_da_empresa(empresa.id, comp)
+    ok, det = envia("lembrete", empresa, emails, comp, prazo, du, quem=quem, ref=fuso.hoje())
+    return ok, (", ".join(emails) if ok else (det or "falha no envio"))
 
 
 def emails_de_controle():

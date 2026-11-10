@@ -139,6 +139,9 @@
           {% if x.extra %}<span style="font-weight:600;color:#2E6A53;">liberado</span>
           <button class="btn btn-outline btn-sm" type="submit" name="acao" value="fechar">Fechar</button>
           {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
+          <button class="btn btn-outline btn-sm" type="submit" formaction="/agenda-reunioes/link/{{ x.empresa.id }}/reenviar"
+                  onclick="return confirm('Reenviar à {{ x.empresa.name }} o e-mail com o link de agendamento?');"
+                  title="Reenvia o e-mail com o link de agendamento">Reenviar link</button>
         </form>
         {% elif x.extra %}<span style="font-weight:600;color:#2E6A53;">liberado</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
     </tr>

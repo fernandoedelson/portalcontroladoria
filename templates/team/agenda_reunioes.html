@@ -232,6 +232,7 @@
             <span class="ag-pill ag-pill-ok" title="Esta empresa também pode marcar neste dia (só neste ciclo)">+ {{ l.estende_ate.strftime('%d/%m') }} liberado</span>
             <button class="ag-link" type="submit" name="acao" value="fechar">fechar</button>
             {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
+            <button class="btn btn-outline btn-sm" type="submit" formaction="/agenda-reunioes/link/{{ c.id }}/reenviar" onclick="return confirm('{{ 'Reenviar o convite da reunião marcada para todos os participantes?' if e.dia and l and e.reuniao else 'Reenviar à ' ~ c.name ~ ' o e-mail com o link de agendamento?' }}');" title="Reenvia o e-mail da reunião (o convite, se já está marcada; senão, o e-mail com o link)">Reenviar link</button>
           </form>{% endif %}
         </div>
         <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="ag-dia-edita">
