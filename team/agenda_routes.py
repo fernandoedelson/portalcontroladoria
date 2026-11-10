@@ -161,7 +161,8 @@ def register_agenda_routes(app):
         if gestao:
             for c in Company.query.filter_by(active=True).order_by(Company.name).all():
                 mem = agenda.membro_da_empresa(c.id)
-                empresas.append({"c": c, "link": links.get(c.id), "resp": mem,
+                asg = CompanyAssignment.query.filter_by(company_id=c.id).first()
+                empresas.append({"c": c, "link": links.get(c.id), "resp": mem, "aid": asg.id if asg else 0,
                                  "dia": agenda.dia_reuniao(c.id),
                                  "regra": agenda.regra_do_dia(c.id),
                                  "reuniao": agenda.reuniao_do_ciclo(c.id)})
@@ -315,6 +316,47 @@ def register_agenda_routes(app):
         db.session.delete(b)
         db.session.commit()
         return _volta(_membro_arg() if mid is None else mid)
+
+    @app.route("/agenda-reunioes/links/salvar", methods=["POST"])
+    @team_required
+    def team_agenda_links_salvar():
+        """Salva de uma vez as linhas editadas de 'Links por empresa'."""
+        f, alterados, avisou = request.form, 0, False
+        for c in Company.query.filter_by(active=True).all():
+            if f.get(f"c{c.id}_presente") != "1":
+                continue
+            l = AgendaLink.query.filter_by(company_id=c.id, teste_email=None).first()
+            fixo_txt, off = f.get(f"c{c.id}_dia_fixo"), f.get(f"c{c.id}_offset_du", type=int)
+            try:
+                fixo = datetime.strptime(fixo_txt, "%Y-%m-%d").date() if fixo_txt else None
+            except ValueError:
+                fixo = None
+            off = off if (off is not None and 0 <= off <= 15 and not fixo) else None
+            dur_txt = (f.get(f"c{c.id}_duracao") or "").strip()
+            dur = _minutos(dur_txt)
+            if dur_txt and dur is None and not avisou:
+                flash("Duração fora do limite (10 a 480 minutos): mantive a anterior onde o valor era inválido.", "warning")
+                avisou = True
+            local = (f.get(f"c{c.id}_local") or "").strip()[:300] or None
+            lider = bool(f.get(f"c{c.id}_lider"))
+            if l or fixo or off is not None or dur or local or lider:   # não cria link à toa
+                l = l or agenda.link_da_empresa(c.id)
+                antes = (l.dia_fixo, l.offset_du, l.duracao, l.local, bool(l.copiar_lider))
+                l.dia_fixo, l.offset_du = fixo, off
+                if dur or not dur_txt:
+                    l.duracao = dur
+                l.local, l.copiar_lider = local, lider
+                if antes != (l.dia_fixo, l.offset_du, l.duracao, l.local, bool(l.copiar_lider)):
+                    alterados += 1
+            avisar = bool(f.get(f"c{c.id}_avisar"))
+            if bool(c.avisar_prazo) != avisar:
+                c.avisar_prazo = avisar
+                alterados += 1
+        db.session.commit()
+        log_audit(current_user.id, "agenda_links_salvos", "company", f"{alterados} alteradas")
+        flash(f"{alterados} empresa(s) salva(s)." if alterados else "Nenhuma alteração para salvar.",
+              "success" if alterados else "info")
+        return _volta(_membro_arg())
 
     @app.route("/agenda-reunioes/link/<int:cid>/<acao>", methods=["POST"])
     @team_required

@@ -3,17 +3,28 @@
 {% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endmacro %}
 {% block content %}
 <style>
-  .ag-dia, .ag-local { vertical-align: top; }
-  .ag-dia-topo { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
-  .ag-extra { display:inline-flex; align-items:center; gap:.4rem; margin:0; }
-  .ag-dia-edita { display:flex; align-items:center; gap:.4rem; margin:.5rem 0 0; padding-top:.5rem; border-top:1px dashed rgba(127,127,127,.35); }
-  .ag-local-form { display:flex; align-items:center; gap:.4rem; margin:0; }
-  .ag-local-form .input { flex:1 1 auto; min-width:180px; }
-  .ag-pill { display:inline-block; margin-top:.35rem; padding:.05rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700; letter-spacing:.02em; }
-  .ag-extra .ag-pill { margin-top:0; }
+  .ag-pill { display:inline-block; padding:.05rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700; letter-spacing:.02em; white-space:nowrap; }
   .ag-pill-ok { background:rgba(46,106,83,.16); color:#2E6A53; }
   .ag-pill-pad { background:rgba(181,131,42,.20); color:#8a6420; }
   .ag-link { background:none; border:0; padding:0; font:inherit; font-size:.78rem; text-decoration:underline; cursor:pointer; color:inherit; opacity:.8; }
+  .ag-tab td, .ag-tab th { vertical-align:top; }
+  .ag-emp { display:flex; flex-direction:column; align-items:flex-start; gap:.3rem; }
+  .ag-dia-txt { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+  .ag-dia-in { display:flex; align-items:center; gap:.35rem; margin-top:.4rem; }
+  .ag-acoes { display:flex; align-items:center; justify-content:flex-end; gap:.35rem; flex-wrap:wrap; }
+  .ag-in-ok { background:rgba(46,106,83,.16) !important; }
+  .ag-in-pad { background:rgba(181,131,42,.20) !important; }
+  .ag-det > td { background:rgba(127,127,127,.06); }
+  .ag-det-grid { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:1.4rem; padding:.4rem .2rem; }
+  @media (max-width:900px){ .ag-det-grid { grid-template-columns:1fr; } }
+  .ag-ct-lista { list-style:none; margin:.4rem 0; padding:0; display:flex; flex-direction:column; gap:.25rem; }
+  .ag-ct-lista li { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+  .ag-ct-novo { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; margin:.4rem 0; }
+  .ag-lote { margin-bottom:.8rem; }
+  .ag-lote summary { list-style:none; cursor:pointer; display:inline-block; }
+  .ag-lote summary::-webkit-details-marker { display:none; }
+  .ag-lote-corpo { display:flex; flex-direction:column; gap:.6rem; padding:.7rem 0 .2rem; }
+  .ag-lote-corpo form { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; margin:0; }
 </style>
 
 <div class="page-head">
@@ -191,80 +202,189 @@
   </form>
 </div>
 
-<div class="card">
+<div class="card" id="links-empresa">
   <h2>Links por empresa</h2>
-  <p class="text-muted text-sm mb-2">O link da empresa entra no e-mail de aviso de prazo (marcador <code>{agendar}</code>). Quem tem o link vê só os horários livres do responsável da empresa, no dia da reunião, e o nome da empresa.</p>
-  <div class="flex gap-1 mb-1" style="flex-wrap:wrap;">
-    <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="1"/>
-      <button class="btn btn-outline btn-sm" type="submit">Copiar líder em todas</button></form>
-    <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="0"/>
-      <button class="btn btn-outline btn-sm" type="submit">Não copiar em nenhuma</button></form>
-  </div>
-  <form method="post" action="/agenda-reunioes/duracao-segmento" class="flex gap-1 items-center mb-1" style="flex-wrap:wrap;">
-    {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-    <span class="text-sm"><strong>Duração por segmento:</strong></span>
-    <select class="input input-sm" name="segmento" required aria-label="Segmento" style="width:auto;">
-      <option value="">— segmento —</option>
-      {% for sg in segmentos %}<option value="{{ sg }}">{{ sg }}</option>{% endfor %}
-    </select>
-    <input class="input input-sm" type="number" name="duracao" min="10" max="480" step="5" placeholder="min" aria-label="Duração em minutos" style="width:84px;"/>
-    <button class="btn btn-outline btn-sm" type="submit" title="Aplica a todas as empresas do segmento. Vazio = volta à duração padrão.">Aplicar às empresas do segmento</button>
-    <span class="text-muted text-sm">Ex.: Energia → 90 min. Vazio volta ao padrão.</span>
-  </form>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião (você define)</th><th scope="col">Copiar líder</th><th scope="col">Duração</th><th scope="col">Local / link do Teams</th><th scope="col">Link</th><th scope="col" style="width:210px;"></th></tr></thead><tbody>
-    <tr><th scope="row">Link geral (sem empresa)</th><td class="text-sm">agenda geral</td><td class="text-sm">qualquer dia das janelas</td><td class="text-sm">—</td>
-      <td class="text-sm text-muted">padrão ({{ cfg('ag_duracao') }} min)</td>
-      <td class="text-sm text-muted">o da configuração geral</td>
-      <td class="text-sm">{% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:100%;min-width:240px;"/>{% else %}—{% endif %}</td>
-      <td class="text-right">{% if geral %}<div class="flex gap-1" style="justify-content:flex-end;">
+  <p class="text-muted text-sm mb-2">Cada empresa tem o seu link, o seu dia, a sua duração e o seu link do Teams. Edite quantas linhas quiser e clique em <strong>Salvar alterações</strong> uma vez.
+    Em <strong>Detalhes</strong> ficam os responsáveis da empresa (quem recebe os convites) e o link de agendamento.</p>
+
+  <details class="ag-lote">
+    <summary class="btn btn-outline btn-sm">Ações em lote e link geral</summary>
+    <div class="ag-lote-corpo">
+      <div class="flex gap-1" style="flex-wrap:wrap;">
+        <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="1"/>
+          <button class="btn btn-outline btn-sm" type="submit">Copiar líder em todas</button></form>
+        <form method="post" action="/agenda-reunioes/link/lider-todas">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/><input type="hidden" name="valor" value="0"/>
+          <button class="btn btn-outline btn-sm" type="submit">Não copiar em nenhuma</button></form>
+      </div>
+      <form method="post" action="/agenda-reunioes/duracao-segmento">
+        {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+        <span class="text-sm"><strong>Duração por segmento:</strong></span>
+        <select class="input input-sm" name="segmento" required aria-label="Segmento" style="width:auto;">
+          <option value="">— segmento —</option>
+          {% for sg in segmentos %}<option value="{{ sg }}">{{ sg }}</option>{% endfor %}
+        </select>
+        <input class="input input-sm" type="number" name="duracao" min="10" max="480" step="5" placeholder="min" aria-label="Duração em minutos" style="width:84px;"/>
+        <button class="btn btn-outline btn-sm" type="submit" title="Aplica a todas as empresas do segmento. Vazio = volta à duração padrão.">Aplicar ao segmento</button>
+        <span class="text-muted text-sm">Ex.: Energia → 90 min. Vazio volta ao padrão.</span>
+      </form>
+      <div class="flex gap-1 items-center" style="flex-wrap:wrap;">
+        <span class="text-sm"><strong>Link geral (sem empresa):</strong></span>
+        {% if geral %}<input class="input input-sm" readonly value="{{ url_publica(geral) }}" onclick="this.select()" style="width:340px;max-width:100%;"/>
         <form method="post" action="/agenda-reunioes/link/0/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if geral.active else 'Ativar' }}</button></form>
-        <form method="post" action="/agenda-reunioes/link/0/renovar" onsubmit="return confirm('Gerar novo link? O atual deixa de funcionar.');">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Renovar</button></form></div>
-        {% else %}<form method="post" action="/agenda-reunioes/link/0/criar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Criar</button></form>{% endif %}</td></tr>
+        <form method="post" action="/agenda-reunioes/link/0/renovar" onsubmit="return confirm('Gerar novo link? O atual deixa de funcionar.');">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Renovar</button></form>
+        {% else %}<form method="post" action="/agenda-reunioes/link/0/criar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Criar link geral</button></form>{% endif %}
+      </div>
+    </div>
+  </details>
+
+  <form method="post" action="/agenda-reunioes/links/salvar" id="form-links">
+    {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
+    <div class="barra-salvar" id="barra-links">
+      <span id="cont-links">Nenhuma alteração pendente</span>
+      <button class="btn btn-primary btn-toque" type="submit">{{ icone('check') }} Salvar alterações</button>
+    </div>
+    <div class="tbl-wrap"><table class="tbl ag-tab"><thead><tr>
+      <th scope="col">Empresa</th><th scope="col">Responsável</th><th scope="col">Dia da reunião</th>
+      <th scope="col">Duração (min)</th><th scope="col">Local / link do Teams</th><th scope="col">Copiar líder</th><th scope="col"></th></tr></thead><tbody>
     {% for e in empresas %}{% set c = e.c %}{% set l = e.link %}
-    <tr><th scope="row">{{ c.name }}</th>
-      <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}{% if not c.contatos|selectattr('active')|list %}<div class="text-muted">sem e-mail de responsável da empresa cadastrado</div>{% endif %}</td>
-      <td class="text-sm ag-dia">
-        <div class="ag-dia-topo">
-          <div><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong> <span class="text-muted">({{ e.regra }})</span></div>
-          {% if e.dia %}<form method="post" action="/agenda-reunioes/link/{{ c.id }}/estender" class="ag-extra">
-            {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-            {% if l and l.estende_ate and l.estende_ate > e.dia %}
-            <span class="ag-pill ag-pill-ok" title="Esta empresa também pode marcar neste dia (só neste ciclo)">+ {{ l.estende_ate.strftime('%d/%m') }} liberado</span>
-            <button class="ag-link" type="submit" name="acao" value="fechar">fechar</button>
-            {% else %}<button class="btn btn-outline btn-sm" type="submit" name="acao" value="liberar" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}
-            <button class="btn btn-outline btn-sm" type="submit" formaction="/agenda-reunioes/link/{{ c.id }}/reenviar" onclick="return confirm('{{ 'Reenviar o convite da reunião marcada para todos os participantes?' if e.dia and l and e.reuniao else 'Reenviar à ' ~ c.name ~ ' o e-mail com o link de agendamento?' }}');" title="Reenvia o e-mail da reunião (o convite, se já está marcada; senão, o e-mail com o link)">Reenviar link</button>
-          </form>{% endif %}
-        </div>
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/dia" class="ag-dia-edita">
-          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-          <span class="text-muted">Mudar:</span>
-          <input class="input input-sm" type="number" name="offset_du" min="0" max="15" placeholder="d.u." title="Dias úteis após o prazo de entrega (vazio = regra geral)" value="{{ e.link.offset_du if e.link and e.link.offset_du is not none else '' }}" style="width:64px;"/>
-          <input class="input input-sm" type="date" name="dia_fixo" title="Ou uma data fixa" value="{{ e.link.dia_fixo.isoformat() if e.link and e.link.dia_fixo else '' }}" style="width:140px;"/>
-          <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
-        </form></td>
-      <td class="text-center"><form method="post" action="/agenda-reunioes/link/{{ c.id }}/lider">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-        <input type="checkbox" name="copiar" value="1" {{ 'checked' if l and l.copiar_lider }} onchange="this.form.submit()" aria-label="Copiar líder no convite de {{ c.name }}"/></form></td>
-      <td class="text-sm ag-dur">
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/duracao" class="ag-local-form">
-          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-          <input class="input input-sm" type="number" name="duracao" min="10" max="480" step="5" placeholder="{{ cfg('ag_duracao') }}" aria-label="Duração da reunião de {{ c.name }}, em minutos" value="{{ l.duracao if l and l.duracao else '' }}" title="{{ 'Duração própria desta empresa' if l and l.duracao else 'Usando a duração padrão' }}" style="width:76px;min-width:0;background:{{ 'rgba(46,106,83,.16)' if l and l.duracao else 'rgba(181,131,42,.20)' }};"/>
-          <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
-        </form>
-        <span class="ag-pill {{ 'ag-pill-ok' if l and l.duracao else 'ag-pill-pad' }}">{{ 'duração própria' if l and l.duracao else 'duração padrão' }}</span></td>
-      <td class="text-sm ag-local">
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/local" class="ag-local-form">
-          {{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/>
-          <input class="input input-sm" type="text" name="local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" title="{{ 'Link próprio desta empresa' if l and l.local else 'Usando o link padrão da configuração geral' }}" style="background:{{ 'rgba(46,106,83,.16)' if l and l.local else 'rgba(181,131,42,.20)' }};"/>
-          <button class="btn btn-outline btn-sm" type="submit">Salvar</button>
-        </form>
-        <span class="ag-pill {{ 'ag-pill-ok' if l and l.local else 'ag-pill-pad' }}">{{ 'link próprio' if l and l.local else 'link padrão' }}</span></td>
-      <td class="text-sm">{% if l %}<input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;min-width:240px;{{ 'opacity:.5;' if not l.active }}"/>{% else %}—{% endif %}</td>
-      <td class="text-right">{% if l %}<div class="flex gap-1" style="justify-content:flex-end;">
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/alternar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">{{ 'Desativar' if l.active else 'Ativar' }}</button></form>
-        <form method="post" action="/agenda-reunioes/link/{{ c.id }}/renovar" onsubmit="return confirm('Gerar novo link? O atual deixa de funcionar.');">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Renovar</button></form></div>
-        {% else %}<form method="post" action="/agenda-reunioes/link/{{ c.id }}/criar">{{ csrf() }}<button class="btn btn-outline btn-sm" type="submit">Criar</button></form>{% endif %}</td></tr>
+    {% set ativos = c.contatos|selectattr('active')|list %}
+    {% set ext = (l and l.estende_ate and e.dia and l.estende_ate > e.dia) %}
+    <tr data-linha="{{ c.id }}">
+      <th scope="row"><div class="ag-emp"><span>{{ c.name }}</span>
+        {% if e.reuniao %}<span class="ag-pill ag-pill-ok" title="Reunião marcada neste ciclo">marcada {{ e.reuniao.inicio.strftime('%d/%m %H:%M') }}</span>{% endif %}
+        {% if not ativos %}<span class="ag-pill ag-pill-pad" title="Cadastre em Detalhes quem recebe os convites">sem responsável da empresa</span>{% endif %}</div></th>
+      <td class="text-sm">{{ e.resp.name if e.resp else '— sem responsável na carteira —' }}</td>
+      <td class="text-sm">
+        <input type="hidden" name="c{{ c.id }}_presente" value="1"/>
+        <div class="ag-dia-txt"><strong>{% if e.dia %}{{ dias[e.dia.weekday()][:3] }} {{ e.dia.strftime('%d/%m') }}{% else %}—{% endif %}</strong>
+          <span class="text-muted">({{ e.regra }})</span>
+          {% if ext %}<span class="ag-pill ag-pill-ok" title="Esta empresa também pode marcar neste dia (só neste ciclo)">+ {{ l.estende_ate.strftime('%d/%m') }} liberado</span>{% endif %}</div>
+        <div class="ag-dia-in">
+          <input class="input input-sm" type="number" name="c{{ c.id }}_offset_du" min="0" max="15" placeholder="d.u." title="Dias úteis após o prazo de entrega (vazio = regra geral)" value="{{ l.offset_du if l and l.offset_du is not none else '' }}" style="width:62px;"/>
+          <input class="input input-sm" type="date" name="c{{ c.id }}_dia_fixo" title="Ou uma data fixa" value="{{ l.dia_fixo.isoformat() if l and l.dia_fixo else '' }}" style="width:138px;"/>
+        </div></td>
+      <td class="text-sm"><input class="input input-sm ag-tint {{ 'ag-in-ok' if l and l.duracao else 'ag-in-pad' }}" type="number" name="c{{ c.id }}_duracao" min="10" max="480" step="5" placeholder="{{ cfg('ag_duracao') }}" aria-label="Duração da reunião de {{ c.name }}, em minutos" value="{{ l.duracao if l and l.duracao else '' }}" title="Verde: duração própria · âmbar: usa a padrão ({{ cfg('ag_duracao') }} min)" style="width:78px;"/></td>
+      <td class="text-sm"><input class="input input-sm ag-tint {{ 'ag-in-ok' if l and l.local else 'ag-in-pad' }}" type="text" name="c{{ c.id }}_local" maxlength="300" placeholder="{{ cfg('ag_local') or 'https://teams.microsoft.com/...' }}" aria-label="Local ou link do Teams de {{ c.name }}" value="{{ l.local if l and l.local else '' }}" title="Verde: link próprio · âmbar: usa o da configuração geral" style="width:100%;min-width:190px;"/></td>
+      <td class="text-center"><input type="checkbox" name="c{{ c.id }}_lider" value="1" {{ 'checked' if l and l.copiar_lider }} aria-label="Copiar líder no convite de {{ c.name }}"/></td>
+      <td class="text-right"><div class="ag-acoes">
+        {% if e.dia %}{% if ext %}<button type="submit" form="f-est-{{ c.id }}" name="acao" value="fechar" class="btn btn-outline btn-sm" title="Volta a só ter o dia da reunião">Fechar 2º dia</button>
+        {% else %}<button type="submit" form="f-est-{{ c.id }}" name="acao" value="liberar" class="btn btn-outline btn-sm" title="Abre o dia útil seguinte só para esta empresa, neste ciclo">Liberar 2º dia</button>{% endif %}{% endif %}
+        <button type="submit" form="f-reenv-{{ c.id }}" class="btn btn-outline btn-sm" onclick="return confirm('{{ 'Reenviar o convite da reunião marcada para todos os participantes?' if e.reuniao else 'Reenviar à ' ~ c.name ~ ' o e-mail com o link de agendamento?' }}');" title="Reenvia o e-mail da reunião (o convite, se já está marcada; senão, o e-mail com o link)">Reenviar link</button>
+        <button type="button" class="btn btn-outline btn-sm ag-mais" aria-expanded="false" aria-controls="agdet-{{ c.id }}">Detalhes</button></div></td>
+    </tr>
+    <tr class="ag-det" id="agdet-{{ c.id }}" hidden><td colspan="7"><div class="ag-det-grid">
+      <div>
+        <strong>Responsáveis da empresa</strong> <span class="text-muted text-sm">(recebem os convites e o aviso de prazo)</span>
+        <ul class="ag-ct-lista">{% for ct in ativos %}<li data-ct="{{ ct.id }}"><span>{{ ct.name or '—' }}</span> <span class="text-muted">{{ ct.email }}</span>
+          <button type="button" class="ag-link ag-ct-x" data-ct="{{ ct.id }}" aria-label="Remover {{ ct.email }}">remover</button></li>{% endfor %}</ul>
+        <div class="text-muted text-sm ag-ct-vazio" {{ 'hidden' if ativos }}>Nenhum responsável cadastrado.</div>
+        <div class="ag-ct-novo" data-aid="{{ e.aid }}"><span class="text-muted text-sm">Novo:</span>
+          <input class="input input-sm ag-ct-nome" type="text" placeholder="nome" style="width:140px;"/>
+          <input class="input input-sm ag-ct-mail" type="text" placeholder="email@empresa.com (vários: separe por ;)" style="width:260px;"/>
+          <button type="button" class="btn btn-outline btn-sm ag-ct-add">Incluir</button>
+          <span class="text-sm ag-ct-msg" role="status"></span></div>
+        <label class="chk chk-sm" style="display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;"><input type="checkbox" name="c{{ c.id }}_avisar" value="1" {{ 'checked' if c.avisar_prazo }}/> Enviar o aviso de prazo a esta empresa</label>
+      </div>
+      <div>
+        <strong>Link de agendamento</strong>
+        {% if l %}<div class="flex gap-1 items-center mt-1" style="flex-wrap:wrap;">
+          <input class="input input-sm" readonly value="{{ url_publica(l) }}" onclick="this.select()" style="width:100%;max-width:340px;{{ 'opacity:.5;' if not l.active }}"/>
+          <button type="submit" form="f-alt-{{ c.id }}" class="btn btn-outline btn-sm">{{ 'Desativar' if l.active else 'Ativar' }}</button>
+          <button type="submit" form="f-ren-{{ c.id }}" class="btn btn-outline btn-sm" onclick="return confirm('Gerar novo link? O atual deixa de funcionar.');">Renovar</button></div>
+        {% else %}<div class="mt-1"><button type="submit" form="f-cri-{{ c.id }}" class="btn btn-outline btn-sm">Criar link</button></div>{% endif %}
+      </div>
+    </div></td></tr>
     {% endfor %}
-  </tbody></table></div>
+    </tbody></table></div>
+  </form>
+
+  <div hidden>
+    {% for e in empresas %}{% set c = e.c %}
+    {% for fid, acao in (('f-est', 'estender'), ('f-reenv', 'reenviar'), ('f-alt', 'alternar'), ('f-ren', 'renovar'), ('f-cri', 'criar')) %}
+    <form id="{{ fid }}-{{ c.id }}" method="post" action="/agenda-reunioes/link/{{ c.id }}/{{ acao }}">{{ csrf() }}<input type="hidden" name="membro" value="{{ membro_id or 0 }}"/></form>
+    {% endfor %}
+    {% endfor %}
+  </div>
 </div>
+
+<script>
+(function(){
+  // ---- abrir/fechar os detalhes da empresa
+  document.querySelectorAll('.ag-mais').forEach(function(b){
+    b.addEventListener('click', function(){
+      var d=document.getElementById(b.getAttribute('aria-controls')), abre=d.hidden;
+      d.hidden=!abre; b.setAttribute('aria-expanded', abre); b.textContent=abre?'Fechar':'Detalhes';
+    });
+  });
+  // ---- uma barra de salvar só: conta as linhas alteradas
+  var form=document.getElementById('form-links'); if(!form) return;
+  var barra=document.getElementById('barra-links'), cont=document.getElementById('cont-links'), ini=new Map();
+  form.querySelectorAll('input,select').forEach(function(el){
+    if(el.type==='hidden') return;
+    ini.set(el, el.type==='checkbox'?el.checked:el.value);
+  });
+  function revisar(){
+    var linhas=new Set();
+    ini.forEach(function(v,el){
+      var atual=el.type==='checkbox'?el.checked:el.value;
+      var tr=el.closest('[data-linha]') || (el.closest('.ag-det') && document.querySelector('[data-linha="'+el.closest('.ag-det').id.replace('agdet-','')+'"]'));
+      if(atual!==v && tr) linhas.add(tr);
+    });
+    form.querySelectorAll('[data-linha]').forEach(function(tr){ tr.classList.remove('linha-alterada'); });
+    linhas.forEach(function(tr){ tr.classList.add('linha-alterada'); });
+    var n=linhas.size; barra.classList.toggle('ativa', n>0);
+    cont.textContent = n===0 ? 'Nenhuma alteração pendente' : (n===1 ? '1 empresa alterada — não esqueça de salvar' : n+' empresas alteradas — não esqueça de salvar');
+    return n;
+  }
+  form.addEventListener('input', function(ev){
+    if(ev.target.classList.contains('ag-tint')){ ev.target.classList.toggle('ag-in-ok', !!ev.target.value); ev.target.classList.toggle('ag-in-pad', !ev.target.value); }
+    revisar();
+  });
+  form.addEventListener('change', revisar);
+  var salvando=false; form.addEventListener('submit', function(){ salvando=true; });
+  window.addEventListener('beforeunload', function(e){ if(!salvando && revisar()>0){ e.preventDefault(); e.returnValue=''; } });
+
+  // ---- responsáveis da empresa: incluir e remover sem recarregar
+  function aviso(box, t, erro){ var m=box.querySelector('.ag-ct-msg'); m.textContent=t; m.style.color=erro?'var(--danger,#b3261e)':'var(--success,#1b7a3d)'; }
+  function itemLista(ct){
+    var li=document.createElement('li'); li.setAttribute('data-ct', ct.id);
+    var a=document.createElement('span'); a.textContent=ct.nome||'—';
+    var b=document.createElement('span'); b.className='text-muted'; b.textContent=ct.email;
+    var x=document.createElement('button'); x.type='button'; x.className='ag-link ag-ct-x'; x.setAttribute('data-ct', ct.id); x.textContent='remover';
+    li.appendChild(a); li.appendChild(document.createTextNode(' ')); li.appendChild(b); li.appendChild(document.createTextNode(' ')); li.appendChild(x); return li;
+  }
+  document.querySelectorAll('.ag-ct-novo').forEach(function(box){
+    var det=box.closest('.ag-det'), lista=det.querySelector('.ag-ct-lista'), vazio=det.querySelector('.ag-ct-vazio');
+    var nome=box.querySelector('.ag-ct-nome'), mail=box.querySelector('.ag-ct-mail'), btn=box.querySelector('.ag-ct-add');
+    function incluir(){
+      if(!mail.value.trim()){ aviso(box,'Informe o e-mail.',true); mail.focus(); return; }
+      btn.disabled=true; aviso(box,'Incluindo…',false);
+      var fd=new FormData(); fd.append('nome',nome.value); fd.append('email',mail.value);
+      fetch('/admin/carteira/'+box.getAttribute('data-aid')+'/contato',{method:'POST',body:fd})
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok&&j.ok,j:j}; }); })
+        .then(function(res){
+          if(!res.ok){ aviso(box,res.j.erro||'Não foi possível incluir.',true); return; }
+          res.j.contatos.forEach(function(ct){ lista.appendChild(itemLista(ct)); });
+          vazio.hidden=true; nome.value=''; mail.value=''; aviso(box,'Incluído.',false); mail.focus();
+        })
+        .catch(function(){ aviso(box,'Falha de conexão. Tente de novo.',true); })
+        .then(function(){ btn.disabled=false; });
+    }
+    btn.addEventListener('click', incluir);
+    mail.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); incluir(); } });
+    lista.addEventListener('click', function(ev){
+      var x=ev.target.closest('.ag-ct-x'); if(!x) return;
+      if(!confirm('Remover este responsável da empresa? Ele deixa de receber os convites.')) return;
+      fetch('/admin/carteira/contato/'+x.getAttribute('data-ct')+'/remover',{method:'POST'})
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok&&j.ok,j:j}; }); })
+        .then(function(res){
+          if(!res.ok){ aviso(box,res.j.erro||'Não foi possível remover.',true); return; }
+          x.closest('li').remove(); vazio.hidden = lista.children.length>0; aviso(box,'Removido.',false);
+        })
+        .catch(function(){ aviso(box,'Falha de conexão. Tente de novo.',true); });
+    });
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}

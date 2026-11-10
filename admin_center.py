@@ -352,6 +352,20 @@ def register_admin_routes(app):
         log_audit(current_user.id, "contato_empresa_incluido", "company", str(a.company_id))
         return jsonify(ok=True, contatos=[{"id": c.id, "nome": c.name or "", "email": c.email} for c in novos])
 
+    @app.route("/admin/carteira/contato/<int:ctid>/remover", methods=["POST"])
+    @entidades_required
+    def admin_carteira_contato_remover(ctid):
+        """Remove um responsável da empresa sem recarregar a tela."""
+        from team.models_workflow import CompanyContact
+        ct = db.session.get(CompanyContact, ctid)
+        if not ct:
+            return jsonify(ok=False, erro="Responsável não encontrado."), 404
+        empresa = ct.company_id
+        db.session.delete(ct)
+        db.session.commit()
+        log_audit(current_user.id, "contato_empresa_removido", "company", str(empresa))
+        return jsonify(ok=True)
+
     def _salva_contatos(a, pref):
         """Contatos da empresa (quem recebe o aviso de prazo) — ficam no cadastro dela."""
         from team.models_workflow import CompanyContact
