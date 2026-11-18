@@ -34,6 +34,24 @@
       {% endif %}
     </div>
 
+    <form method="post" action="/tarefa/nova" class="tl-add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="list_id" value="{{ l.id }}"/>
+      <input class="input" type="text" name="title" placeholder="Nova tarefa…" required aria-label="Título da tarefa"/>
+      <input class="input" type="date" name="due_date" title="Vencimento (opcional)" aria-label="Vencimento"/>
+      <label class="tl-aviso-novo" title="Quando avisar (precisa de vencimento)">
+        {{ icone('bell') }}
+        <select class="input tl-aviso-sel" name="remind_days" aria-label="Aviso da tarefa">
+          <option value="-1">Sem aviso</option>
+          <option value="0">No dia</option>
+          <option value="1">1 dia antes</option>
+          <option value="2">2 dias antes</option>
+          <option value="7">1 semana antes</option>
+        </select>
+      </label>
+      <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Adicionar</button>
+    </form>
+
     {% set ns = namespace(total=0) %}
     {% for bkey, blabel in buckets %}
       {% set items = l.tasks | selectattr('grupo','equalto',bkey) | list %}
@@ -114,24 +132,6 @@
       {% endif %}
     {% endfor %}
     {% if ns.total == 0 %}<p class="text-muted text-sm" style="padding:.4rem .3rem;">Nenhuma tarefa nesta lista ainda.</p>{% endif %}
-
-    <form method="post" action="/tarefa/nova" class="tl-add">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <input type="hidden" name="list_id" value="{{ l.id }}"/>
-      <input class="input" type="text" name="title" placeholder="Nova tarefa…" required aria-label="Título da tarefa"/>
-      <input class="input" type="date" name="due_date" title="Vencimento (opcional)" aria-label="Vencimento"/>
-      <label class="tl-aviso-novo" title="Quando avisar (precisa de vencimento)">
-        {{ icone('bell') }}
-        <select class="input tl-aviso-sel" name="remind_days" aria-label="Aviso da tarefa">
-          <option value="-1">Sem aviso</option>
-          <option value="0">No dia</option>
-          <option value="1">1 dia antes</option>
-          <option value="2">2 dias antes</option>
-          <option value="7">1 semana antes</option>
-        </select>
-      </label>
-      <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Adicionar</button>
-    </form>
   </section>
   {% endfor %}
 </div>
