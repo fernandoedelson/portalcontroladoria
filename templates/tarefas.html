@@ -50,6 +50,8 @@
         </select>
       </label>
       <button class="btn btn-primary btn-sm" type="submit">{{ icone('plus') }} Adicionar</button>
+      <button class="btn btn-outline btn-sm tl-amanha" type="button" data-amanha="{{ amanha.isoformat() }}"
+              title="Adiciona já com vencimento amanhã ({{ amanha.strftime('%d/%m') }}) e aviso no dia">Amanhã</button>
     </form>
 
     {% set ns = namespace(total=0) %}
@@ -171,5 +173,17 @@
     f.addEventListener('submit',function(e){ var t=f.elements['title']; if(!t.value.trim()){ e.preventDefault(); t.focus(); } });
   });
 })();
+</script>
+<script>
+// Botão "Amanhã": preenche o vencimento (dia seguinte) e o aviso "no dia" e já adiciona a tarefa
+document.querySelectorAll('.tl-amanha').forEach(function(b){
+  b.addEventListener('click', function(){
+    var f=b.closest('form'), t=f.elements['title'];
+    if(!t.value.trim()){ t.focus(); return; }          // precisa do título antes
+    f.elements['due_date'].value=b.getAttribute('data-amanha');
+    f.elements['remind_days'].value='0';
+    f.submit();
+  });
+});
 </script>
 {% endblock %}

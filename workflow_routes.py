@@ -807,7 +807,8 @@ def register_workflow_routes(app):
             db.session.commit()
             listas = [l]
         hoje = fuso.hoje()
-        return render_template("tarefas.html", listas=listas, hoje=hoje)
+        return render_template("tarefas.html", listas=listas, hoje=hoje,
+                               amanha=hoje + timedelta(days=1))
 
     @app.route("/tarefas/lista/nova", methods=["POST"])
     @login_required
